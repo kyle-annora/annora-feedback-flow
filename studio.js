@@ -39,7 +39,7 @@ function savedTour(storageKey){
   return null;
 }
 let tour=savedTour(createViewKey)||savedTour(viewKey);
-let page='case',filter='all',tab='checks',search='',navOpen=false,asideOpen=false,activeSource=-1,timer=null,notifyTimer=null,priorOwner=null;
+let page='case',filter='all',tab='checks',search='',navOpen=false,asideOpen=false,activeSource=-1,timer=null,notifyTimer=null,priorOwner=null,panelStage=null;
 const selected=()=>data.items.find(x=>x.id===data.current);
 const here=()=>tour?tour.frames[tour.index].case:selected().c;
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -192,7 +192,6 @@ function footer(c,v){
   const buttons=actions(c,v);
   return buttons?'<div class="action-strip"><div class="action-btns" id="actions">'+buttons+'</div></div>':'';
 }
-function revisionList(c){return c.versions.length?'<div class="revision-list"><span>'+I('history',14)+'Version history</span>'+c.versions.map(a=>btn('ver:'+a.rev,'V'+a.rev,'file','revision-tag')).join('')+'</div>':'';}
 function transport(){
   if(!tour)return '';
   const last=tour.index===tour.frames.length-1;
@@ -221,21 +220,28 @@ function progressRow(c){
     return '<li data-phase="'+state+'"'+(state==='current'?' aria-current="step"':'')+'><span class="phase-index" aria-hidden="true">'+(state==='done'?I('check',12):i+1)+'</span><span class="phase-label">'+phase+'</span><span class="sr">: '+reason+'</span></li>';
   }).join('')+'</ol>';
 }
-function historyActivity(c){
-  if(!c.trail.length)return '';
-  return '<section class="history-activity"><h3>Activity</h3><ol class="activities">'+[...c.trail].reverse().map(row=>{
-    const date=new Date(row.at);
-    const at=Number.isFinite(date.getTime())?'<time datetime="'+esc(row.at)+'">'+esc(date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))+'</time>':'';
-    return '<li>'+avatar(row.actor)+'<div><b>'+esc(row.actor)+'</b> '+at+'<p>'+esc(row.text)+'</p></div></li>';
-  }).join('')+'</ol></section>';
-}
-function historyDetails(c,v){
-  if(c.stage==='draft'&&!c.trail.length)return '';
-  const latest=c.versions.at(-1);
-  const answer=c.answer?'<div class="history-copy"><h3>Requester’s answer</h3><p>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</p>'+(c.stage==='published'?alternateAnswer(c,v):'')+'</div>':'';
-  const version=latest?'<div class="history-copy"><h3>Submitted proposal · V'+esc(latest.rev)+'</h3><p>'+esc(latest.candidate)+'</p></div>':'';
-  return '<details class="record-history"><summary>'+I('history',15)+'<span>Feedback &amp; version history</span>'+I('down',14)+'</summary><div class="history-content">'+
-    (c.stage==='draft'?'':sourceArea(c))+answer+version+revisionList(c)+historyActivity(c)+'</div></details>';
+function contextPanel(c,v){
+  const sourceHeader='<div class="side-head"><h3>Original feedback</h3></div>';
+  let source;
+  if(c.stage==='draft'){
+    source='<p class="context-note">You can edit the current request in the main workspace.</p>';
+  }else if(!tour&&!c.versions.length){
+    source='<label class="sr" for="source">Original feedback</label><textarea id="source" rows="3" maxlength="2000">'+esc(c.text)+'</textarea>';
+  }else{
+    source='<p class="context-source">'+esc(c.text||'No feedback yet')+'</p>';
+  }
+  const answer=c.answer?'<section class="history-copy"><h3>Requester’s answer</h3><p>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</p>'+
+    (c.stage==='published'?alternateAnswer(c,v):'')+'</section>':'';
+  const request=c.adjustment?'<section class="history-copy"><h3>Requested changes</h3><p>'+esc(c.adjustment)+'</p></section>':'';
+  const versions=c.versions.length
+    ? '<div class="version-list">'+[...c.versions].reverse().map(version=>{
+        const preview=version.candidate.length>150?version.candidate.slice(0,147)+'…':version.candidate;
+        return '<button data-go="ver:'+version.rev+'"><span><b>V'+version.rev+'</b><small>Submitted proposal</small></span>'+
+          I('external',13)+'<p>'+esc(preview)+'</p></button>';
+      }).join('')+'</div>'
+    : '<p class="context-note">No versions have been submitted yet.</p>';
+  return '<div class="context-panel"><section class="history-copy context-original">'+sourceHeader+source+'</section>'+
+    answer+request+'<section class="history-copy"><h3>Version history</h3>'+versions+'</section></div>';
 }
 function stageCopy(c,v){
   const rev='V'+c.rev;
@@ -276,12 +282,12 @@ function stageTask(c,v){
   else if(usesChecks(c))body=related(c,v)+candidateSection(c,v)+footer(c,v);
   else body=receiptFacts(c)+(complete?(tour?btn('exit','Finish walkthrough','check','record-back'):btn('filter:all','Back to inbox','back','record-back')):footer(c,v))+
     (!complete&&alternateAnswer(c,v)?'<div class="thread-notes">'+alternateAnswer(c,v)+'</div>':'');
-  if(usesChecks(c))body+='<button id="mobaside" class="mobile-insight" data-go="mobileaside" aria-label="View acceptance checks"></button>';
+
   return '<section class="stage-task" data-stage="'+esc(c.stage)+'" aria-labelledby="task-title"><div class="stage-eyebrow">'+prefix+esc(label)+'</div><h2 class="stage-title" id="task-title">'+esc(title)+'</h2><p class="stage-lead">'+esc(lead)+'</p>'+body+'</section>';
 }
 function doc(c,v){
   return '<div class="doc" id="doc"><div class="docbody flow-record"><header class="record-header"><div class="record-context">'+fileTag()+'<span>WinQuote</span><span aria-hidden="true">/</span><span>Feedback</span></div><h1 id="title">'+esc(label(c))+'</h1></header>'+
-    progressRow(c)+stageTask(c,v)+historyDetails(c,v)+'</div></div>';
+    progressRow(c)+stageTask(c,v)+'<button id="mobaside" class="mobile-insight" data-go="mobileaside" aria-label="Open feedback details"></button>'+'</div></div>';
 }
 function evidenceList(v){
 if(v.question)return '<div class="pending-proof">'+I('ask',19)+'<b>One question to resolve</b><p>Once the requester answers, the draft and its acceptance checks will appear here.</p></div>';
@@ -297,7 +303,17 @@ if(v.proposal&&ck.id==='hesitation-review'){
 }
 return '<div class="checkrow '+ck.status+'"><button class="checktoggle" data-go="evidence:'+i+'" aria-expanded="'+(activeSource===i)+'"><span class="checkico">'+I(ck.status==='pass'?'check':ck.status==='fail'?'hold':'customer',12)+'</span><div class="checkbody"><b>'+esc(q)+'</b>'+(metric?'<span class="measure"><strong>'+v.wordCount+'</strong> / '+v.limit+' words</span>':'<span>'+(ck.status==='manual'?'<em class="manual-badge">Manual review</em>': '')+esc(n)+'</span>')+'</div><span class="chev">'+I('down',13)+'</span></button>'+(metric&&ck.status==='fail'?'<div class="shortfall">'+(v.wordCount-v.limit)+' words over the limit</div>':'')+(activeSource===i?'<div class="evidence-source"><b>'+esc(ck.sourceLabel||'Source')+'</b><p>'+esc(ck.source)+'</p></div>':'')+'</div>';}).join('')+'</div>';
 }
-function activity(c){const rows=[...c.trail].reverse();return '<div class="ins-section"><div class="side-head"><h2>Activity log</h2><span class="sidecount">'+rows.length+'</span></div>'+(rows.length?'<ol class="activities">'+rows.map(x=>'<li>'+avatar(x.actor)+'<div><b>'+esc(x.actor)+'</b><p>'+esc(x.text)+'</p></div></li>').join('')+'</ol>':'<div class="pending-proof">'+I('history',20)+'<b>No activity yet</b><p>Submissions, handoffs, reviews and release decisions will appear here.</p></div>')+'</div>';}
+function activity(c){
+  const rows=[...c.trail].reverse();
+  const list=rows.length?'<ol class="activities">'+rows.map(event=>{
+    const date=new Date(event.at);
+    const time=Number.isFinite(date.getTime())
+      ? '<time datetime="'+esc(event.at)+'">'+esc(date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))+'</time>':'';
+    return '<li>'+avatar(event.actor)+'<div><b>'+esc(event.actor)+'</b>'+time+'<p>'+esc(event.text)+'</p></div></li>';
+  }).join('')+'</ol>'
+    : '<p class="context-note">Submissions, handoffs and review decisions will appear here.</p>';
+  return '<div class="ins-section"><div class="side-head"><h2>Activity</h2><span class="sidecount">'+rows.length+'</span></div>'+list+'</div>';
+}
 function checkSummary(checks){
   const automatic=checks.filter(check=>check.status!=='manual');
   const manual=checks.length-automatic.length;
@@ -306,14 +322,14 @@ function checkSummary(checks){
   return {autoText,manualText:manual?manual+' manual':'',hasFailed:automatic.some(check=>check.status==='fail')};
 }
 function mobileSummary(v){
-  const {autoText,manualText,hasFailed}=checkSummary(v.checks);
-  const label=v.question?'Awaiting clarification':([autoText,manualText].filter(Boolean).join(' · ')||'Acceptance checks');
-  let detail='Details';
-  if(v.limit!==null)detail=v.wordCount>v.limit?(v.wordCount-v.limit)+' words over':v.wordCount+' / '+v.limit+' words';
-  return '<div class="ms-left">'+I(hasFailed?'hold':'rulers',15)+'<span>'+label+'</span></div><span class="ms-num">'+detail+I('next',12)+'</span>';
+  const {hasFailed}=checkSummary(v.checks);
+  let detail='History & activity';
+  if(usesChecks(here())&&v.limit!==null)detail=hasFailed?(v.wordCount-v.limit)+' words over':v.wordCount+' / '+v.limit+' words';
+  return '<div class="ms-left">'+I('sidebar',15)+'<span>Feedback details</span></div><span class="ms-num">'+esc(detail)+I('next',12)+'</span>';
 }
 function inspectorContent(c,v){
   if(tab==='activity')return activity(c);
+  if(tab==='context')return contextPanel(c,v);
   const {autoText,manualText}=checkSummary(v.checks);
   const title=v.question?'Awaiting clarification':(autoText||'Acceptance criteria');
   return '<div class="ins-section evidence"><div class="side-head"><h2>'+esc(title)+'</h2>'+
@@ -322,10 +338,21 @@ function inspectorContent(c,v){
 function updateAside(c,v){const inner=$('sideinner');if(!inner)return;inner.innerHTML=inspectorContent(c,v);const b=$('mobaside');if(b){b.innerHTML=mobileSummary(v);b.classList.toggle('warn',v.checks.some(x=>x.status==='fail'));}}
 function caseMain(){
   const c=here(),v=E.derive(c),checks=usesChecks(c);
-  const inspector=checks?'<aside class="inspector '+(asideOpen?'aside-open':'')+'" id="inspector" aria-label="Feedback panel"><div class="tabs" role="group" aria-label="Feedback panel tabs">'+btn('tab:checks','Acceptance checks','rulers','tab '+(tab==='checks'?'active':''))+btn('tab:activity','Activity','history','tab '+(tab==='activity'?'active':''))+'<button class="mobile-close iconbtn" data-go="mobileaside" aria-label="Close panel">'+I('cross')+'</button></div><div id="sideinner"></div></aside>':'';
-  $('main').innerHTML=transport()+'<div class="workspace'+(checks?'':' is-focused')+'">'+doc(c,v)+inspector+'</div>';
+  if(panelStage!==c.stage){
+    tab=checks?'checks':'context';
+    panelStage=c.stage;
+  }
+  if(!checks&&tab==='checks')tab='context';
+  const tabs=(checks?btn('tab:checks','Checks','rulers','tab '+(tab==='checks'?'active':'')):'')+
+    btn('tab:context','Details','source','tab '+(tab==='context'?'active':''))+
+    btn('tab:activity','Activity','history','tab '+(tab==='activity'?'active':''));
+  const inspector='<aside class="inspector '+(asideOpen?'aside-open':'')+'" id="inspector" aria-label="Feedback details">'+
+    '<div class="tabs" role="group" aria-label="Feedback details views">'+tabs+
+    '<button class="mobile-close iconbtn" data-go="mobileaside" aria-label="Close details">'+I('cross')+'</button></div>'+
+    '<div id="sideinner"></div></aside>';
+  $('main').innerHTML=transport()+'<div class="workspace">'+doc(c,v)+inspector+'</div>';
   if($('quick'))$('quick').innerHTML=quick(v);
-  if(checks)updateAside(c,v);else asideOpen=false;
+  updateAside(c,v);
   if(priorOwner&&priorOwner!==c.owner)document.querySelector('.stage-eyebrow>.avatar')?.classList.add('handed');
   priorOwner=c.owner;
 }
@@ -419,10 +446,13 @@ function syncSource(text){
   if(c.stage!==n.stage||c.stage!=='draft'){
     const field=$('source'),wasFocused=document.activeElement===field;
     const selection=wasFocused?[field.selectionStart,field.selectionEnd,field.selectionDirection]:null;
-    const wasExpanded=document.querySelector('.record-history')?.open;
     renderNav();caseMain();
-    const history=document.querySelector('.record-history');
-    if(history&&(wasExpanded||wasFocused))history.open=true;
+    if(wasFocused&&n.stage!=='draft'&&tab!=='context'){
+      tab='context';caseMain();
+    }
+    if(wasFocused&&n.stage==='draft'){
+      asideOpen=false;$('inspector')?.classList.remove('aside-open');
+    }
     if(selection&&$('source')){
       $('source').focus({preventScroll:true});$('source').setSelectionRange(...selection);
     }
@@ -449,7 +479,7 @@ function exampleMenu(){dialog('<div class="dlgrows">'+examples.map(([t,s],i)=>'<
 function personaMenu(){dialog('<p class="dlgdesc">Choose a role to follow a sample from one handoff to the next.</p><div class="dlgrows">'+P.list.map((x,i)=>'<button data-go="persona:'+x.id+'">'+avatar(['Requester','Website team','Site owner'][i])+'<span><b>'+esc(x.label)+'</b><small>'+esc(x.description)+'</small></span>'+I('play',15)+'</button>').join('')+'</div>','Choose a walkthrough');}
 function doAction(g){
 const [k,arg]=g.split(':');if(!['nav','mobileaside'].includes(k)){navOpen=false;$('nav').classList.remove('show');$('shade').hidden=true;}
-if(tour?.playing&&['tab','evidence','mobileaside','location','ver'].includes(k)&&E.derive(here()).kind==='hesitation'){setPlay(false);render();}
+if(tour?.playing&&['tab','evidence','mobileaside','location','ver','refine'].includes(k)){setPlay(false);render();}
 switch(k){
 case 'close':close();return;
 case 'nav':navOpen=!navOpen;renderNav();return;
@@ -473,11 +503,11 @@ case 'tour-answer':{
   return;
 }
 case 'toggle':if(!tour)return;if(!tour.playing&&tour.index===tour.frames.length-1)tour.index=0;setPlay(!tour.playing&&tour.frames.length>1);render();return;
-case 'tab':tab=arg;activeSource=-1;caseMain();return;
-case 'refine':{
-  const history=document.querySelector('.record-history');if(history)history.open=true;
-  $('source')?.focus();return;
-}
+case 'tab':tab=arg;activeSource=-1;caseMain();document.querySelector('[data-go="tab:'+arg+'"]')?.focus({preventScroll:true});return;
+case 'refine':
+  tab='context';asideOpen=true;caseMain();
+  $('source')?.focus({preventScroll:true});
+  return;
 case 'examples':exampleMenu();return;
 case 'sample':close();if(!here().versions.length){syncSource(examples[+arg][1]);render();$('source')?.focus();}return;
 case 'budget':{
