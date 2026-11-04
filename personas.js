@@ -251,7 +251,65 @@
     return frames(context.personaId, context.scenarioAnswer,{personalAnswer:context.personalAnswer})[context.index + 1];
   }
 
-  const api = {list, frames, start, next, canReview, decide, from, suggestChange:engine.suggestChange};
+  function teamStart() {
+    const answer=engine.hesitationAnswers[1];
+    const submitted=simulate(engine.createCase(engine.hesitationFeedback),"submit");
+    const c=simulate(submitted,"answer",answer);
+    return {...frame(clone(c),"Prepare V1","Check the proposal against the requester’s concern."),
+      personaId:"team", items:clone(engine.derive(c).proposal.items)};
+  }
+  function teamDraft(frame,draftItems) {
+    const c=frame.case, items=draftItems||frame.items;
+    const text=items.map(item=>item.label+"\n"+item.detail).join("\n\n");
+    const changed=text!==engine.derive(c).candidate;
+    const edited=changed?{...engine.editCandidate(c,text),proposalItems:clone(items)}:c;
+    const view=engine.derive(edited);
+    const prior=c.versions.at(-1)?.candidate;
+    const normalized=copy=>copy.replace(/\s+/g," ").trim();
+    const incomplete=items.some(item=>!item.label.trim()||!item.detail.trim());
+    const unchanged=prior&&normalized(prior)===normalized(text);
+    const reason=incomplete?"Write a label and explanation for each entry point.":
+      unchanged?"Change the copy to address the requester’s feedback.":view.blocked?view.reason:"";
+    return {text,items,view,edited,reason,ready:!reason&&edited.stage==="processing"};
+  }
+  // The practice grows a frame only for a committed action. Inspecting or
+  // editing a field never advances a decision or replaces a delivered version.
+  function teamSteps(frame,action,value) {
+    const c=frame.case, team=frame.personaId==="team";
+    const step=(record,title,personaId="team",items=frame.items)=>({
+      case:record,title,description:"",personaId,items:clone(items),
+    });
+    if(action==="deliver"&&team&&["processing","blocked"].includes(c.stage)){
+      const draft=teamDraft(frame,value);
+      if(!draft.ready)return [];
+      const steps=[];
+      let edited=draft.edited;
+      if(edited!==c){
+        edited={...edited,trail:[...edited.trail,{action:"edit",actor:"Website team",rev:c.rev,
+          text:"Edited V"+c.rev+" to address the requester’s feedback.",simulated:false,at:new Date().toISOString()}]};
+        steps.push(step(edited,"Edited V"+c.rev,"team",draft.items));
+      }
+      const delivered=engine.transition(edited,"deliver");
+      if(delivered===edited)return [];
+      steps.push(step(delivered,"Sent V"+c.rev+" for review","team",draft.items));
+      return steps;
+    }
+    if(c.stage!=="review"||c.versions.at(-1)?.rev!==c.rev)return [];
+    if(action==="sample-change"&&team&&c.rev===1){
+      const note="Make the distinction between standard templates and custom work from scratch clearer.";
+      return [step(simulate(c,"adjust",note),"The requester asks for changes to V1")];
+    }
+    if(action==="view-requester"&&team&&c.rev>1)return [step(c,"Review V"+c.rev,"customer")];
+    if(!team&&["accept","adjust"].includes(action)){
+      const next=engine.transition(c,action,value);
+      if(next===c)return [];
+      return [step(next,action==="accept"?"V"+c.rev+" accepted":"Changes requested to V"+c.rev,
+        action==="accept"?"customer":"team")];
+    }
+    return [];
+  }
+  const api = {list, frames, start, next, canReview, decide, from, suggestChange:engine.suggestChange,
+    teamStart,teamDraft,teamSteps};
   root.CasePersonas = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(globalThis);

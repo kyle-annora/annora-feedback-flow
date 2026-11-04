@@ -12,6 +12,8 @@ Try a feedback workflow with the WinQuote homepage as its first example. Edit th
   - [Website team](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=team) drafts from the concern, responds to the revision and delivers V2 to the reviewer.
   - [Site owner](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=publisher) receives that accepted V2, authorizes its release and watches the team simulate it.
 
+[Try the Website team practice](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=team&mode=practice) with the WinQuote template and scratch example. Send V1 for review. The sample requester asks for a clearer distinction between the two entry points. Edit V2, send it, then select **View as Requester** to review the copy you just delivered. You can accept that version or ask the team for another change. Acceptance hands the version to the site owner for a separate release decision.
+
 [Try the requester’s decisions](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=customer&mode=practice). Submit the sample, explain your hesitation, and wait for the team’s proposal. At each review, choose **Accept V…** or **Request changes**. Team steps play automatically; review waits for you. Acceptance hands the exact version to the site owner for separate release authorization. A change the simulated team cannot handle stays with the team.
 
 The **Walkthrough** button in the workspace opens the requester practice. Select **Minimize walkthrough** to browse other feedback. The button shows who has the next step and which version is ready. Select it again to return to the current round. In the “Create” example, each review keeps the requester’s answer with the team’s proposal and its review question.

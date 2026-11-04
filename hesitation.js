@@ -109,10 +109,11 @@
     // this authored draft already meets is a team decision, not a new version.
     return copy.trim() !== previous.trim() ? copy : null;
   }
-  function reviewPrompt(branch, copy, intent) {
+  function reviewPrompt(branch, copy, intent, structuredItems) {
     const blocks = copy.trim().split(/\n\s*\n/);
     if (branch === "paths") {
-      const labels = blocks.map(block => block.split("\n")[0]).filter(Boolean);
+      const labels = structuredItems ? structuredItems.map(item=>item.label) :
+        blocks.map(block => block.split("\n")[0]).filter(Boolean);
       return (intent === "shorter" ? "Do the shorter explanations for “" : "Do “") + (labels[0] || "the first option") + "” and “" + (labels[1] || "the second option") +
         "” explain which fits a standard walk-in and which fits a custom layout?";
     }
@@ -142,9 +143,15 @@
     const copy = edited ? c.candidateOverride : (c.adjustment && priorCopy) || candidate;
     const showItems = copy === candidate;
     const intent = revisionIntent(c.adjustment, branch);
-    const reviewQuestion = c.adjustment || edited ? reviewPrompt(branch, copy, intent) : proposals[branch].reviewQuestion;
+    // A description can contain blank lines. Keep the fields supplied by the
+    // team editor only when they still describe this exact candidate.
+    const fields=c.proposalItems;
+    const structured=Array.isArray(fields)&&fields.length===items.length&&
+      fields.every(item=>typeof item.label==="string"&&typeof item.detail==="string")&&
+      fields.map(item=>item.label+"\n"+item.detail).join("\n\n")===copy?fields:null;
+    const reviewQuestion = c.adjustment || edited ? reviewPrompt(branch, copy, intent, structured) : proposals[branch].reviewQuestion;
     const check = {id:"hesitation-review", label:"Customer understanding", value:proposals[branch].reviewQuestion, status:"manual", source:c.answer, sourceLabel:"Requester’s answer", candidate:copy};
-    Object.assign(view, {proposal:{branch, items:showItems ? items.map(item=>({...item})) : [], reviewQuestion, edited:!showItems},
+    Object.assign(view, {proposal:{branch, items:(structured || (showItems ? items : [])).map(item=>({...item})), reviewQuestion, edited:!showItems},
       candidate:copy, wordCount:words(copy), checks:[check]});
     if (c.adjustment) {
       const sourceLabel = 'V' + (c.rev - 1) + ' revision request';

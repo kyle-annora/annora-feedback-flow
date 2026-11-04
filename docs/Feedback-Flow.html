@@ -396,6 +396,41 @@
   .transport+.workspace .inspector{top:auto}
   .walk-current{margin-inline:2px}
 }
+
+/* Team revisions keep each entry's label paired with its own explanation. */
+.team-edit{
+  border:1px solid #dfdde7;background:var(--paper);border-radius:8px;
+  overflow:hidden;container-type:inline-size;
+}
+.team-edit .proposal-source{padding:12px 16px;border-bottom:1px solid var(--line);background:#f8f8fb}
+.team-copy-fields{display:grid;padding-inline:16px}
+.team-entry{
+  width:100%;min-width:0;margin:0;padding:12px 0 16px;border:0;display:grid;
+  grid-template-columns:minmax(8rem,.85fr) minmax(0,1.65fr);gap:8px 14px;
+}
+.team-entry legend{width:100%;padding:14px 0 0;font-size:13px;font-weight:590;color:#37343f}
+.team-entry+.team-entry legend{border-top:1px solid var(--line)}
+.team-entry label{display:block;margin-bottom:4px;font-size:11.5px;color:#686471}
+.team-entry input,.team-entry textarea{
+  width:100%;padding:7px 9px;border:1px solid #d8d6e1;border-radius:5px;
+  background:white;font-size:13px;line-height:1.5;color:var(--type);scroll-margin-block:90px;
+}
+.team-entry textarea{display:block;resize:vertical;min-height:38px}
+.team-entry input:focus-visible,.team-entry textarea:focus-visible{outline:2px solid #9387c2;outline-offset:1px}
+.team-edit-status{min-height:18px;margin-top:7px;font-size:12px;color:var(--ink2);line-height:1.5}
+.stage-task:has([data-go="team-deliver"],[data-go="team-view-requester"]) .action-strip{
+  position:sticky;bottom:0;z-index:2;background:white;padding:10px 0;margin-top:10px;
+}
+@container(max-width:470px){
+  .team-entry{grid-template-columns:minmax(0,1fr);gap:7px}
+  .team-entry legend{padding-top:12px}
+}
+@media(max-width:660px){
+  .team-edit .proposal-source{padding:10px 12px}
+  .team-copy-fields{padding-inline:12px}
+  .team-entry{padding:8px 0 12px}
+  .team-entry input,.team-entry textarea{font-size:16px}
+}
 </style></head>
 <body>
 <a href="#main" class="skip">Skip to feedback</a>
@@ -1692,10 +1727,11 @@
     // this authored draft already meets is a team decision, not a new version.
     return copy.trim() !== previous.trim() ? copy : null;
   }
-  function reviewPrompt(branch, copy, intent) {
+  function reviewPrompt(branch, copy, intent, structuredItems) {
     const blocks = copy.trim().split(/\n\s*\n/);
     if (branch === "paths") {
-      const labels = blocks.map(block => block.split("\n")[0]).filter(Boolean);
+      const labels = structuredItems ? structuredItems.map(item=>item.label) :
+        blocks.map(block => block.split("\n")[0]).filter(Boolean);
       return (intent === "shorter" ? "Do the shorter explanations for “" : "Do “") + (labels[0] || "the first option") + "” and “" + (labels[1] || "the second option") +
         "” explain which fits a standard walk-in and which fits a custom layout?";
     }
@@ -1725,9 +1761,15 @@
     const copy = edited ? c.candidateOverride : (c.adjustment && priorCopy) || candidate;
     const showItems = copy === candidate;
     const intent = revisionIntent(c.adjustment, branch);
-    const reviewQuestion = c.adjustment || edited ? reviewPrompt(branch, copy, intent) : proposals[branch].reviewQuestion;
+    // A description can contain blank lines. Keep the fields supplied by the
+    // team editor only when they still describe this exact candidate.
+    const fields=c.proposalItems;
+    const structured=Array.isArray(fields)&&fields.length===items.length&&
+      fields.every(item=>typeof item.label==="string"&&typeof item.detail==="string")&&
+      fields.map(item=>item.label+"\n"+item.detail).join("\n\n")===copy?fields:null;
+    const reviewQuestion = c.adjustment || edited ? reviewPrompt(branch, copy, intent, structured) : proposals[branch].reviewQuestion;
     const check = {id:"hesitation-review", label:"Customer understanding", value:proposals[branch].reviewQuestion, status:"manual", source:c.answer, sourceLabel:"Requester’s answer", candidate:copy};
-    Object.assign(view, {proposal:{branch, items:showItems ? items.map(item=>({...item})) : [], reviewQuestion, edited:!showItems},
+    Object.assign(view, {proposal:{branch, items:(structured || (showItems ? items : [])).map(item=>({...item})), reviewQuestion, edited:!showItems},
       candidate:copy, wordCount:words(copy), checks:[check]});
     if (c.adjustment) {
       const sourceLabel = 'V' + (c.rev - 1) + ' revision request';
@@ -2331,7 +2373,65 @@
     return frames(context.personaId, context.scenarioAnswer,{personalAnswer:context.personalAnswer})[context.index + 1];
   }
 
-  const api = {list, frames, start, next, canReview, decide, from, suggestChange:engine.suggestChange};
+  function teamStart() {
+    const answer=engine.hesitationAnswers[1];
+    const submitted=simulate(engine.createCase(engine.hesitationFeedback),"submit");
+    const c=simulate(submitted,"answer",answer);
+    return {...frame(clone(c),"Prepare V1","Check the proposal against the requester’s concern."),
+      personaId:"team", items:clone(engine.derive(c).proposal.items)};
+  }
+  function teamDraft(frame,draftItems) {
+    const c=frame.case, items=draftItems||frame.items;
+    const text=items.map(item=>item.label+"\n"+item.detail).join("\n\n");
+    const changed=text!==engine.derive(c).candidate;
+    const edited=changed?{...engine.editCandidate(c,text),proposalItems:clone(items)}:c;
+    const view=engine.derive(edited);
+    const prior=c.versions.at(-1)?.candidate;
+    const normalized=copy=>copy.replace(/\s+/g," ").trim();
+    const incomplete=items.some(item=>!item.label.trim()||!item.detail.trim());
+    const unchanged=prior&&normalized(prior)===normalized(text);
+    const reason=incomplete?"Write a label and explanation for each entry point.":
+      unchanged?"Change the copy to address the requester’s feedback.":view.blocked?view.reason:"";
+    return {text,items,view,edited,reason,ready:!reason&&edited.stage==="processing"};
+  }
+  // The practice grows a frame only for a committed action. Inspecting or
+  // editing a field never advances a decision or replaces a delivered version.
+  function teamSteps(frame,action,value) {
+    const c=frame.case, team=frame.personaId==="team";
+    const step=(record,title,personaId="team",items=frame.items)=>({
+      case:record,title,description:"",personaId,items:clone(items),
+    });
+    if(action==="deliver"&&team&&["processing","blocked"].includes(c.stage)){
+      const draft=teamDraft(frame,value);
+      if(!draft.ready)return [];
+      const steps=[];
+      let edited=draft.edited;
+      if(edited!==c){
+        edited={...edited,trail:[...edited.trail,{action:"edit",actor:"Website team",rev:c.rev,
+          text:"Edited V"+c.rev+" to address the requester’s feedback.",simulated:false,at:new Date().toISOString()}]};
+        steps.push(step(edited,"Edited V"+c.rev,"team",draft.items));
+      }
+      const delivered=engine.transition(edited,"deliver");
+      if(delivered===edited)return [];
+      steps.push(step(delivered,"Sent V"+c.rev+" for review","team",draft.items));
+      return steps;
+    }
+    if(c.stage!=="review"||c.versions.at(-1)?.rev!==c.rev)return [];
+    if(action==="sample-change"&&team&&c.rev===1){
+      const note="Make the distinction between standard templates and custom work from scratch clearer.";
+      return [step(simulate(c,"adjust",note),"The requester asks for changes to V1")];
+    }
+    if(action==="view-requester"&&team&&c.rev>1)return [step(c,"Review V"+c.rev,"customer")];
+    if(!team&&["accept","adjust"].includes(action)){
+      const next=engine.transition(c,action,value);
+      if(next===c)return [];
+      return [step(next,action==="accept"?"V"+c.rev+" accepted":"Changes requested to V"+c.rev,
+        action==="accept"?"customer":"team")];
+    }
+    return [];
+  }
+  const api = {list, frames, start, next, canReview, decide, from, suggestChange:engine.suggestChange,
+    teamStart,teamDraft,teamSteps};
   root.CasePersonas = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(globalThis);
@@ -2524,6 +2624,7 @@ const navRows=[['clarify','ask','Needs your input'],['processing','clock','In pr
 const key='feedbackflow:casework:v2.1', viewKey='feedbackflow:walk:v2.1';
 const createViewKey='feedbackflow:walk:create:v1';
 const dockKey='feedbackflow:walkthrough-resume:v1';
+const teamPracticeKey='feedbackflow:website-team-practice:v1';
 const roleAnswerKey='feedbackflow:role-answer:v2';
 const roleStoryVersion=3;
 const practiceKey='feedbackflow:requester-practice:v3';
@@ -2536,8 +2637,11 @@ function writePractice(){
   try{if(practice)sessionStorage.setItem(practiceKey,JSON.stringify(practice));else sessionStorage.removeItem(practiceKey);}catch{}
 }
 function isPractice(){return tour?.type==='customer'&&tour.inputMode==='practice';}
-function inPracticeHistory(){return isPractice()&&tour.index<practice?.frontier;}
-function decisionPoint(){return isPractice()&&['draft','clarify','review'].includes(here().stage);}
+function isTeamPractice(current=tour){return current?.type==='team'&&current.inputMode==='practice';}
+function teamPerspective(current=tour){return current.frames[current.index].personaId;}
+function practiceFrontier(){return isTeamPractice()?tour.frames.length-1:practice?.frontier;}
+function inPracticeHistory(){return (isTeamPractice()||isPractice())&&tour.index<practiceFrontier();}
+function decisionPoint(){return isTeamPractice()||(isPractice()&&['draft','clarify','review'].includes(here().stage));}
 function rememberPractice(reset=false,current=tour){
   if(current?.type!=='customer'||current.inputMode!=='practice')return;
   const frontier=reset?current.index:Math.max(current.index,Math.min(practice?.frontier??0,current.frames.length-1));
@@ -2563,11 +2667,17 @@ try {
 function savedTour(storageKey){
   try {
     const durable=storageKey===dockKey;
-    const cached=JSON.parse((durable?localStorage:sessionStorage).getItem(storageKey));
+    const stored=(durable?localStorage:sessionStorage).getItem(storageKey)||
+      (storageKey===teamPracticeKey?localStorage.getItem(teamPracticeKey):null);
+    const cached=JSON.parse(stored);
     if(cached?.frames?.[cached.index]?.case&&data.items.some(item=>item.id===cached.record)){
       const validated=cached.type==='create'?cached:window.CaseUpgrade.walkthrough(cached);
       // A new tab starts in the workspace. Its saved walkthrough stays one click away.
       if(durable)validated.minimized=true;
+      if(isTeamPractice(validated)){
+        if(!validated.frames.every(f=>f.case&&f.items?.length===2))return null;
+        return {...validated,index:validated.frames.length-1,playing:false};
+      }
       if(P.list.some(role=>role.id===validated.type)&&validated.roleStoryVersion!==roleStoryVersion){
         const frames=P.frames(validated.type,validated.scenarioAnswer||roleAnswer);
         return {...validated,frames,index:0,roleStoryVersion,playing:false};
@@ -2601,13 +2711,21 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 function save(){try{localStorage.setItem(key,JSON.stringify(data));}catch{}}
 function saveTour(){
   const current=tour||parkedTour;
-  const resumeIndex=inPracticeHistory()?practice.frontier:current?.index;
+  const resumeIndex=inPracticeHistory()?practiceFrontier():current?.index;
   const snapshot=current?JSON.stringify({...current,index:resumeIndex,minimized:!tour,playing:false}):null;
   try{
-    if(snapshot)sessionStorage.setItem(current.type==='create'?createViewKey:viewKey,snapshot);
+    if(snapshot){
+      sessionStorage.setItem(current.type==='create'?createViewKey:viewKey,snapshot);
+      if(isTeamPractice(current))sessionStorage.setItem(teamPracticeKey,snapshot);
+    }
     else{sessionStorage.removeItem(createViewKey);sessionStorage.removeItem(viewKey);}
   }catch{}
-  try{if(snapshot)localStorage.setItem(dockKey,snapshot);else localStorage.removeItem(dockKey);}catch{}
+  try{
+    if(snapshot){
+      localStorage.setItem(dockKey,snapshot);
+      if(isTeamPractice(current))localStorage.setItem(teamPracticeKey,snapshot);
+    }else localStorage.removeItem(dockKey);
+  }catch{}
 }
 const role=(who)=>actorModes[who]||['customer','lilac',who];
 const avatar=(who,s=17)=>{const r=role(who);return '<span class="avatar '+r[1]+'" aria-hidden="true">'+I(r[0],s-5)+'</span>'};
@@ -2697,12 +2815,14 @@ function answerFields(q,draft=''){
   return '<form id="touranswerform"><div class="opts concern-options">'+q.options.map(o=>'<button type="button" data-tour-opt="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><label for="tourans">Or describe what made you hesitate</label><div class="input-actions"><input id="tourans" required maxlength="500" placeholder="In your own words…" value="'+esc(draft)+'"><button class="control outline">Use answer</button></div></form>';
 }
 function reviewSource(c,v){
-  if(c.stage!=='review'||!c.answer)return '';
+  const teamFirstDraft=isTeamPractice()&&c.stage==='processing'&&c.rev===1;
+  if((c.stage!=='review'&&!teamFirstDraft)||!c.answer)return '';
   const snapshot=c.versions.find(version=>version.rev===c.rev);
   const answer=snapshot?.answer??c.answer;
   const sample=snapshot?.answerSimulated??c.answerSimulated;
   const change=snapshot?.adjustment??c.adjustment;
-  const sourceLabel=sample?'Sample requester answer':tour?.type==='customer'?'Your answer':'Requester’s answer';
+  const requesterView=tour?.type==='customer'||(isTeamPractice()&&teamPerspective()==='customer');
+  const sourceLabel=sample?'Sample requester answer':requesterView?'Your answer':'Requester’s answer';
   return '<div class="proposal-source"><div class="proposal-source-head"><span>'+I('quote',13)+
     esc(sourceLabel)+'</span>'+alternateAnswer(c,v)+'</div><blockquote>'+esc(answer)+'</blockquote>'+
     (change?'<p class="proposal-change"><b>Requested change to V'+(c.rev-1)+'</b> '+esc(change)+'</p>':'')+'</div>';
@@ -2710,7 +2830,7 @@ function reviewSource(c,v){
 function proposalHTML(c,v){
   const p=v.proposal;
   let items=p.items;
-  if(p.edited){
+  if(p.edited&&!items.length){
     const blocks=v.candidate.trim().split(/\n\s*\n/).map(block=>block.split(/\r?\n/).map(line=>line.trim()).filter(Boolean));
     const expectedCount=p.branch==='paths'?2:1;
     if(blocks.length===expectedCount&&blocks.every(lines=>lines.length>1&&lines[0].length<=80)){
@@ -2725,14 +2845,33 @@ function proposalHTML(c,v){
     (items.length?items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''):'<p class="edited-proposal">'+esc(v.candidate)+'</p>')+'</div></div>'+
     '<div class="review-prompt"><div>'+I('verify',14)+'Review question</div><p id="review-question">'+esc(reviewQuestion)+'</p></div></div>';
 }
+function isEditingTeamDraft(c){
+  return isTeamPractice()&&!inPracticeHistory()&&c.rev>1&&['processing','blocked'].includes(c.stage);
+}
+function teamEditor(c){
+  const draft=teamDraftState();
+  const items=draft.items.map((item,i)=>{
+    const number=i+1;
+    const label='team-label-'+number,detail='team-detail-'+number;
+    return '<fieldset class="team-entry"><legend>'+['Standard walk-in','Custom walk-in'][i]+'</legend>'+
+      '<div><label for="'+label+'">Button label</label><input data-team-field id="'+label+'" type="text" maxlength="80" required value="'+esc(item.label)+'"></div>'+
+      '<div><label for="'+detail+'">Description</label><textarea data-team-field id="'+detail+'" rows="2" required>'+esc(item.detail)+'</textarea></div></fieldset>';
+  }).join('');
+  const changeLabel=(c.rev===2?'Simulated requester':'Requester')+' · Changes to V'+(c.rev-1);
+  return '<div class="team-edit"><div class="proposal-source"><div class="proposal-source-head"><span>'+I('quote',13)+
+    esc(changeLabel)+'</span></div><blockquote>'+esc(c.adjustment)+'</blockquote></div>'+
+    '<div class="team-copy-fields">'+items+'</div></div>'+
+    '<p class="team-edit-status" id="team-edit-status" aria-live="polite">'+esc(draft.reason||'Ready to send V'+c.rev+' for review.')+'</p>';
+}
 function candidateHTML(c,v){
+if(isEditingTeamDraft(c))return teamEditor(c);
 let delivered=Boolean(c.versions.find(a=>a.rev===c.rev))&&!['processing','blocked','clarify'].includes(c.stage);
 const awaitingRevision=c.stage==='blocked'&&c.adjustment&&c.candidateOverride===null&&c.versions.length;
 const teamEdited=typeof c.candidateOverride==='string';
 const shownRevision=awaitingRevision?c.rev-1:c.rev;
 const revision='<span class="version">V'+shownRevision+'</span>';
 const heading=v.question?'Clarifying question':v.proposal?(awaitingRevision?'Previous proposal':delivered?'Team proposal':teamEdited?'Team revision':'AI draft'):'Proposed copy';
-const provenance=v.question?'Needs an answer':delivered?'Submitted version':awaitingRevision?'Awaiting team revision':teamEdited?(tour?'Sample team revision':'Team revision'):'Simulated AI draft';
+const provenance=v.question?'Needs an answer':delivered?'Submitted version':awaitingRevision?'Awaiting team revision':teamEdited?(tour&&!isTeamPractice()?'Sample team revision':'Team revision'):'Simulated AI draft';
 let head='<div class="section-head"><h2>'+I(v.question?'ask':'file',16)+heading+(!v.question&&v.candidate?revision:'')+'</h2><span class="subtext">'+provenance+'</span></div>';
 if(c.stage==='clarify'&&v.question){
   if(inPracticeHistory()){
@@ -2773,6 +2912,7 @@ function alternateAnswer(c,v){
   return explore?btn('tour-answer','Try another answer','branch','swap-answer'):'';
 }
 function related(c,v){
+  if(isEditingTeamDraft(c)||(isTeamPractice()&&c.stage==='processing'&&c.rev===1))return '';
   if(c.stage==='review'&&v.proposal&&c.answer)return '';
   const concern=v.kind==='hesitation'&&c.answer;
   if(!concern&&!c.adjustment)return '';
@@ -2781,6 +2921,21 @@ function related(c,v){
 }
 function actions(c,v){
 if(inPracticeHistory())return '';
+if(isTeamPractice()){
+  if(['processing','blocked'].includes(c.stage)){
+    const ready=teamDraftState().ready;
+    return btn('team-deliver','Send V'+c.rev+' for review','send','primary',ready?'':'disabled aria-describedby="team-edit-status"');
+  }
+  if(c.stage==='review'){
+    if(teamPerspective()==='customer'){
+      return btn('practice-adjust','Request changes','branch','outline')+btn('practice-accept','Accept V'+c.rev,'check','primary');
+    }
+    return c.rev===1?'':btn('team-view-requester','View as Requester','customer','primary');
+  }
+  return c.stage==='release'&&c.accepted?
+    btn('filter:all','Back to inbox','back','record-back')+
+    btn('team-restart','Start a new team practice','replay','subtle'):'';
+}
 if(tour?.type==='customer'&&c.stage==='review'){
   return btn('practice-adjust','Request changes','branch','outline')+btn('practice-accept','Accept V'+c.rev,'check','primary');
 }
@@ -2807,6 +2962,14 @@ function footer(c,v){
 }
 function transport(){
   if(!tour)return '';
+  if(isTeamPractice()){
+    const history=inPracticeHistory();
+    const status=history?'Earlier step · Read only':teamPerspective()==='customer'?'Requester view':'Website team view';
+    const historyTools=history?btn('walkcurrent','Return to current step',null,'walk-current')+iconbtn('walknext','next','Next step'):'';
+    return '<div class="transport'+(history?' is-history':'')+'" role="group" aria-label="Walkthrough player">'+
+      '<span class="trackmark">'+I(history?'history':'people',14)+'</span><div class="tracktitle"><b>Team practice</b><span>'+esc(status)+'</span></div>'+
+      '<div class="playtools">'+historyTools+'</div></div>';
+  }
   const last=tour.index===tour.frames.length-1;
   const waiting=last&&E.derive(here()).question?.type==='wording-retry';
   const playback=waiting?'Waiting for your answer':tour.playing?'Playing':last?(tour.frames[tour.index].handoff&&here().stage!=='published'?'Handoff complete':'Finished'):'Paused';
@@ -2817,7 +2980,8 @@ function transport(){
   const toggle=history||gate||(isPractice()&&last)?'':iconbtn('toggle',tour.playing?'pause':last?'replay':'play',tour.playing?'Pause':last?'Replay':'Resume');
   const next=history||(!last&&!gate)?iconbtn('walknext','next','Next step'):'';
   const modeSwitch=history?btn('walkcurrent','Return to current step',null,'walk-current'):
-    tour.type==='customer'?btn(isPractice()?'reset-example':'take-control',isPractice()?'Restart example':'Try it yourself',null,'walk-mode'):'';
+    tour.type==='customer'?btn(isPractice()?'reset-example':'take-control',isPractice()?'Restart example':'Try it yourself',null,'walk-mode'):
+    tour.type==='team'?btn('team-practice','Try it yourself',null,'walk-mode'):'';
   const sample=P.list.some(role=>role.id===tour.type);
   const status=history?'Earlier step · Read only':isPractice()?(gate?'Your turn':last?playback:tour.playing?'Team working':'Paused'):
     sample?(tour.fromPractice?'Your practice':'Watching example')+' · '+playback:playback;
@@ -2865,15 +3029,28 @@ function contextPanel(c,v){
 }
 function stageCopy(c,v){
   const handoff=tour?.frames[tour.index]?.handoff;
-  if(handoff&&tour.index===tour.frames.length-1)return ['Handoff',handoff.title,handoff.description];
   const rev='V'+c.rev;
   if(inPracticeHistory()){
     const titles={draft:'Original request',clarify:v.question?.text||'Clarification',review:rev+' review',
       processing:c.rev>1?'The team revised '+rev:'The team prepared '+rev,
       blocked:c.adjustment?'Changes requested to V'+(c.rev-1):'Team investigation'};
-    const status=dockStatus({...tour,index:practice.frontier});
+    const status=dockStatus({...tour,index:practiceFrontier()});
     return ['Earlier step',titles[c.stage]||stages[c.stage],'Current step · '+status.join(' · ')];
   }
+  if(isTeamPractice()){
+    switch(c.stage){
+      case 'processing':case 'blocked':
+        return c.rev===1?['Your turn','Check the first proposal','Check that the two entry points address the requester’s concern, then send V1 for review.']:
+          ['Your turn','Edit the '+rev+' draft','Update the entry copy to address the requested change. Both options start with the wording from V'+(c.rev-1)+'.'];
+      case 'review':
+        if(teamPerspective()==='customer')return ['Your turn','Review '+rev,'Read the two options and the review question. Accept this version or ask the team for another change.'];
+        return c.rev===1?['Simulated review','V1 is with the requester','A simulated requester will respond to these two entry options. There’s nothing for you to send while you wait.']:
+          ['Waiting for review',rev+' is with the requester','The requester has the version you sent. Open their view to review its exact copy.'];
+      case 'release':
+        return ['Release approval',rev+' accepted','The site owner now decides whether to authorize release.'];
+    }
+  }
+  if(handoff&&tour.index===tour.frames.length-1)return ['Handoff',handoff.title,handoff.description];
   const practicing=tour?.inputMode==='practice';
   if(tour?.type==='customer'){
     switch(c.stage){
@@ -2923,7 +3100,7 @@ function stageCopy(c,v){
 function receiptFacts(c){
   const target=c.receipt?.target||c.authorization?.target||'WinQuote homepage';
   const acceptedBy=c.accepted&&P.list.some(role=>role.id===tour?.type)&&c.accepted.actor==='Reviewer'?
-    (tour.type==='customer'&&isPractice()&&!c.accepted.simulated?'You (requester)':'Requester'):c.accepted?.actor;
+    (((tour.type==='customer'&&isPractice())||(isTeamPractice()&&teamPerspective()==='customer'))&&!c.accepted.simulated?'You (requester)':'Requester'):c.accepted?.actor;
   const entries=[['Target',target],['Accepted by',c.accepted?acceptedBy+' · V'+c.accepted.rev:'Not recorded']];
   if(c.authorization)entries.push(['Authorized by',c.authorization.actor+' · V'+c.authorization.rev]);
   const saved=c.versions.find(x=>x.rev===(c.receipt?.rev??c.accepted?.rev??c.rev));
@@ -2941,10 +3118,12 @@ function candidateSection(c,v){
 }
 function stageTask(c,v){
   const [label,title,lead]=stageCopy(c,v);
-  const actingAsRequester=tour?.type==='customer'&&['Requester','Reviewer'].includes(c.owner);
+  const isRequesterView=tour?.type==='customer'||(isTeamPractice()&&teamPerspective()==='customer');
+  const actingAsRequester=isRequesterView&&['Requester','Reviewer'].includes(c.owner);
   const actingAsTeam=tour?.type==='team'&&c.owner==='Website team';
   const actingAsOwner=tour?.type==='publisher'&&c.owner==='Site owner';
-  const ownerLabel=actingAsRequester?'You · Requester':actingAsTeam?'You · Website team':actingAsOwner?'You · Site owner':role(c.owner)[2];
+  const ownerLabel=actingAsRequester?'You · Requester':actingAsTeam?'You · Website team':actingAsOwner?'You · Site owner':
+    isTeamPractice()&&c.owner==='Reviewer'?'Requester':role(c.owner)[2];
   const prefix=avatar(c.owner,18)+'<span class="person-prop">'+esc(ownerLabel)+'</span><span aria-hidden="true">·</span>';
   let body='';
   if(c.stage==='draft')body=sourceArea(c)+footer(c,v)+(tour?.type==='customer'?'':candidateSection(c,v));
@@ -3020,8 +3199,9 @@ function inspectorContent(c,v){
     '<span class="ai-label">'+(manualText||I('rulers',13)+'Live checks')+'</span></div>'+evidenceList(v)+'</div>';
 }
 function updateAside(c,v){const inner=$('sideinner');if(!inner)return;inner.innerHTML=inspectorContent(c,v);const b=$('mobaside');if(b){b.innerHTML=mobileSummary(v);b.classList.toggle('warn',v.checks.some(x=>x.status==='fail'));}}
+function displayedView(c){return isEditingTeamDraft(c)?teamDraftState().view:E.derive(c);}
 function caseMain(){
-  const c=here(),v=E.derive(c),checks=usesChecks(c);
+  const c=here(),v=displayedView(c),checks=usesChecks(c);
   if(panelStage!==c.stage){
     tab=checks?'checks':'context';
     panelStage=c.stage;
@@ -3049,6 +3229,15 @@ function dockStatus(current){
   if(!current)return ['Requester','Try the requester role'];
   const c=current.frames[current.index].case;
   const rev='V'+c.rev;
+  if(isTeamPractice(current)){
+    switch(c.stage){
+      case 'processing':case 'blocked':return ['You · Website team',c.rev===1?'Check and send V1':'Edit and send '+rev];
+      case 'review':
+        if(teamPerspective(current)==='customer')return ['You · Requester','Review '+rev];
+        return ['Requester',c.rev===1?'Await the sample reply':'View '+rev+' as requester'];
+      case 'release':return ['Site owner','Await '+rev+' release approval'];
+    }
+  }
   if(current.type!=='customer'||current.inputMode!=='practice'){
     // These routes show example actions. Opening a paused example never takes that action.
     const next={draft:'Watch feedback submission',clarify:'Watch the clarification',processing:'Watch '+rev+' preparation',
@@ -3092,8 +3281,46 @@ q.classList.toggle('warn',v.blocked);}
 function dialog(body,title){$('dialog-body').innerHTML='<div class="dlghead"><h2>'+esc(title)+'</h2>'+iconbtn('close','cross','Close')+'</div>'+body;$('dialog').setAttribute('aria-label',title);if(!$('dialog').open)$('dialog').showModal();}
 function close(){if($('dialog').open)$('dialog').close();}
 function stop(){clearTimeout(timer);timer=null;}
+function teamDraftState(){
+  const frame=tour.frames[tour.index];
+  return P.teamDraft(frame,inPracticeHistory()?null:tour.teamInputs);
+}
+function appendTeamSteps(current,steps){
+  if(!steps.length||current.index!==current.frames.length-1)return false;
+  current.frames=current.frames.concat(steps);current.index=current.frames.length-1;
+  delete current.teamInputs;
+  saveTour();return true;
+}
+function scheduleTeamReply(current){
+  const frame=current.frames[current.index];
+  if(current.index!==current.frames.length-1||frame.personaId!=='team'||
+    frame.case.stage!=='review'||frame.case.rev!==1)return;
+  timer=setTimeout(()=>{
+    if(current!==(tour||parkedTour)||!appendTeamSteps(current,P.teamSteps(frame,'sample-change')))return;
+    if(tour){render();focusTask();}else renderDock();
+    announce('The example requester asked for changes. The website team owns V2.');
+  },4000);
+}
+function teamAction(action,value){
+  if(!isTeamPractice()||inPracticeHistory())return;
+  const steps=P.teamSteps(tour.frames[tour.index],action,value);
+  if(!appendTeamSteps(tour,steps))return;
+  close();setPlay(false);render();focusTask();announce(steps.at(-1).title);
+}
+function updateTeamDraft(){
+  if(!isTeamPractice()||inPracticeHistory()||teamPerspective()!=='team')return;
+  tour.teamInputs=[1,2].map(index=>({label:$('team-label-'+index).value,detail:$('team-detail-'+index).value}));
+  const draft=teamDraftState();
+  const send=document.querySelector('[data-go="team-deliver"]');
+  if(send)send.disabled=!draft.ready;
+  const status=$('team-edit-status');
+  if(status){status.textContent=draft.reason||'Ready to send V'+here().rev+' for review.';status.classList.toggle('warn',!draft.ready);}
+  updateAside(here(),draft.view);
+  saveTour();
+}
 function setPlay(on){
   if(!tour)return;
+  if(isTeamPractice()){stop();tour.playing=false;saveTour();scheduleTeamReply(tour);return;}
   tour.playing=Boolean(on&&!inPracticeHistory()&&!decisionPoint()&&tour.index<tour.frames.length-1);stop();
   if(tour.playing){
     const choosing=here().stage==='clarify'&&E.derive(here()).question?.type==='hesitation';
@@ -3124,6 +3351,7 @@ function endTour(restore=false){
 }
 function scheduleParkedStep(){
   const current=parkedTour;
+  if(isTeamPractice(current)){scheduleTeamReply(current);return;}
   if(current?.type!=='customer'||current.inputMode!=='practice')return;
   const c=current.frames[current.index].case;
   if(!['processing','blocked'].includes(c.stage)||current.index>=current.frames.length-1)return;
@@ -3139,7 +3367,7 @@ function scheduleParkedStep(){
 function parkActive(){
   if(!tour)return;
   stop();tour.playing=false;
-  if(isPractice()&&practice)tour.index=practice.frontier;
+  if(isPractice()||isTeamPractice())tour.index=practiceFrontier();
   parkedTour=tour;tour=null;
   asideOpen=false;tab='checks';activeSource=-1;panelStage=null;priorOwner=null;
   saveTour();scheduleParkedStep();
@@ -3163,7 +3391,15 @@ function appendSteps(frames,c){
   }
   return frames;
 }
-function begin(type,reset=false,startPractice=false){
+function begin(type,reset=false,startPractice=false,watchTeamExample=false){
+  if(type==='team'&&startPractice){
+    const saved=reset?null:savedTour(teamPracticeKey);
+    endTour();close();page='case';filter='all';
+    tour=saved||{record:data.current,type:'team',inputMode:'practice',roleStoryVersion,
+      frames:[P.teamStart()],index:0,playing:false};
+    setPlay(false);render();focusTask();announce('Website team practice. '+tour.frames[tour.index].title);
+    return;
+  }
   if(reset){practice=null;writePractice();}
   if(type==='mine'&&!selected().c.text.trim())return;
   // The sample has its own transport and session. Exiting returns to the same work.
@@ -3178,13 +3414,13 @@ function begin(type,reset=false,startPractice=false){
     const c=clone(selected().c);
     frames=appendSteps([{case:c,title:'Read the feedback'}],c);
   }else{
-    frames=practice&&type==='customer'?practice.frames:
+    frames=watchTeamExample?P.frames('team',E.hesitationAnswers[0]):practice&&type==='customer'?practice.frames:
       practice?P.from(type,practice.frames[practice.frontier]):P.frames(type,roleAnswer);
   }
   tour={record:data.current,type,frames,index:0,playing:false,
     ...(P.list.some(role=>role.id===type)?{roleStoryVersion,scenarioAnswer:roleAnswer}:{})};
   if(type==='customer'&&practice){tour.inputMode='practice';tour.index=practice.frontier;tour.scenarioAnswer=practice.answer;}
-  else if(P.list.some(role=>role.id===type)){tour.inputMode='watch';tour.fromPractice=Boolean(practice);}
+  else if(P.list.some(role=>role.id===type)){tour.inputMode='watch';tour.fromPractice=!watchTeamExample&&Boolean(practice);}
   if(type==='customer'&&startPractice){tour.inputMode='practice';rememberPractice();}
   setPlay(frames.length>1&&(!isPractice()||!decisionPoint()));render();announce('Walkthrough started.');
 }
@@ -3232,6 +3468,7 @@ function takeControl(){
   rememberPractice(true);setPlay(!decisionPoint());render();announce('You are trying the requester role.');
 }
 function chooseReview(choice,note){
+  if(isTeamPractice()){teamAction(choice,note);return;}
   if(tour?.type!=='customer'||inPracticeHistory()||here().stage!=='review')return;
   const index=tour.index,frames=P.decide(tour.frames,index,choice,note);
   if(frames===tour.frames||!frames[index+1])return;
@@ -3288,9 +3525,11 @@ function personaMenu(){
     publisher:reached?(reached.accepted?'Check the accepted V'+reached.accepted.rev+' before authorizing its simulated release.':'See what still needs acceptance before release.'):'Check the accepted version and authorize its simulated release.'
   };
   const options=P.list.map((role,index)=>
-    '<button data-go="persona:'+role.id+'">'+avatar(roles[index])+'<span><b>'+esc(role.label)+'</b><small>'+
+    (role.id==='team'?'<button data-go="team-practice">'+avatar('Website team')+
+      '<span><b>Practice as the website team</b><small>Send V1, revise the two entry points, and hand V2 to the requester.</small></span>'+I('next',15)+'</button>':'')+
+    '<button data-go="persona:'+role.id+'">'+avatar(roles[index])+'<span><b>'+esc(role.id==='team'?'Watch the website team example':role.label)+'</b><small>'+
     esc(descriptions[role.id])+'</small></span>'+I('play',15)+'</button>').join('');
-  dialog('<p class="dlgdesc">Follow the same feedback from your role. Watch the example, or try the requester’s decisions yourself. Each route stops at its handoff.</p>'+
+  dialog('<p class="dlgdesc">Practice the team’s edits and handoffs, try the requester’s decisions, or watch a role example.</p>'+
     '<div class="dlgrows">'+options+'</div>','Choose your role');
 }
 
@@ -3298,7 +3537,7 @@ function viewWalkStep(index,control){
   if(!tour)return;
   if(index<0){minimizeWalkthrough();return;}
   if(index>=tour.frames.length)return;
-  const returning=inPracticeHistory()&&index===practice.frontier;
+  const returning=inPracticeHistory()&&index===practiceFrontier();
   if(isPractice()&&index>practice.frontier&&decisionPoint())return;
   tour.index=index;
   if(isPractice()&&index>practice.frontier)rememberPractice();
@@ -3308,7 +3547,7 @@ function viewWalkStep(index,control){
 }
 function doAction(g){
 const [k,arg]=g.split(':');if(!['nav','mobileaside'].includes(k)){navOpen=false;$('nav').classList.remove('show');$('shade').hidden=true;}
-if(inPracticeHistory()&&['practice-submit','practice-accept','practice-adjust','tour-answer','toggle','reset-example','take-control'].includes(k))return;
+if(inPracticeHistory()&&['practice-submit','practice-accept','practice-adjust','team-deliver','team-view-requester','tour-answer','toggle','reset-example','take-control'].includes(k))return;
 if(tour?.playing&&['tab','evidence','mobileaside','location','ver','refine'].includes(k)){setPlay(false);render();}
 switch(k){
 case 'close':close();return;
@@ -3317,6 +3556,10 @@ case 'mobileaside':asideOpen=!asideOpen;$('inspector')?.classList.toggle('aside-
 case 'project':case 'filter':parkActive();filter=k==='project'?'all':arg;page='list';search='';render();return;
 case 'find':parkActive();filter='all';search='';page='list';render();$('searchbox').focus();return;
 case 'new':newItem();return;case 'case':selectCase(arg);return;case 'walk':begin('mine');return;case 'personas':personaMenu();return;case 'persona':begin(arg);return;
+case 'team-practice':begin('team',false,true);return;
+case 'team-restart':if(isTeamPractice()&&!inPracticeHistory()&&here().stage==='release'&&here().accepted)begin('team',true,true);return;
+case 'team-deliver':teamAction('deliver',tour?.teamInputs);return;
+case 'team-view-requester':teamAction('view-requester');return;
 case 'create-tour':begin('create');return;
 case 'minimize-tour':minimizeWalkthrough();return;
 case 'open-walkthrough':openWalkthrough();return;
@@ -3326,14 +3569,14 @@ case 'reset-example':begin('customer',true);return;
 case 'practice-submit':if(isPractice()&&here().stage==='draft'){tour.index++;rememberPractice();setPlay(false);render();focusTask();}return;
 case 'practice-accept':chooseReview('accept');return;
 case 'practice-adjust':{
-  if(tour?.type!=='customer'||here().stage!=='review')return;
+  if((tour?.type!=='customer'&&!(isTeamPractice()&&teamPerspective()==='customer'))||here().stage!=='review')return;
   setPlay(false);render();
   dialog('<form id="practicechange"><label for="adj">What still needs to be clearer?</label><textarea id="adj" maxlength="1000" required>'+esc(P.suggestChange(here()))+'</textarea><p class="dlgdesc">Edit this suggestion or describe your own change. The team will review your note.</p><div class="dlgfoot">'+btn('close','Cancel',null,'outline')+'<button class="control primary">Send change request</button></div></form>','Request changes to V'+here().rev);
   $('adj').focus();return;
 }
 case 'walkback':if(tour)viewWalkStep(tour.index-1,k);return;
 case 'walknext':if(tour)viewWalkStep(tour.index+1,k);return;
-case 'walkcurrent':if(inPracticeHistory())viewWalkStep(practice.frontier);return;
+case 'walkcurrent':if(inPracticeHistory())viewWalkStep(practiceFrontier());return;
 case 'tour-answer':{
   const head=clarificationPrefix();if(!head)return;
   const q=E.derive(head.at(-1).case).question;
@@ -3361,7 +3604,7 @@ case 'budget':{
   source.value=source.value.slice(0,at)+next+source.value.slice(at+String(previous).length);
   syncSource(source.value);announce('Word limit changed to '+next+'. The draft and checks have been updated.');return;
 }
-case 'evidence':activeSource=activeSource===+arg?-1:+arg;updateAside(here(),E.derive(here()));document.querySelector('[data-go="evidence:'+arg+'"]')?.focus({preventScroll:true});return;
+case 'evidence':activeSource=activeSource===+arg?-1:+arg;updateAside(here(),displayedView(here()));document.querySelector('[data-go="evidence:'+arg+'"]')?.focus({preventScroll:true});return;
 case 'location':dialog('<div class="loc-detail">'+fileTag()+'<div><b>WinQuote homepage</b><p>Quote entry · Standard and custom quotes</p></div></div><p class="dlgdesc">This feedback applies to the quote instructions on the homepage. Drafting and publishing are simulated locally.</p>','Linked page');return;
 case 'ver':{const ver=here().versions.find(x=>x.rev===+arg);if(!ver)return;dialog('<p class="dlgdesc">The version sent to the reviewer.</p><p class="ver-copy" lang="en">'+esc(ver.candidate)+'</p>'+ver.checks.map(x=>'<div class="ver-check">'+I(x.status==='pass'?'checks':'customer',14)+esc(x.label)+'</div>').join(''),'Version history · V'+ver.rev);return;}
 case 'adjust':dialog('<form id="adjustform"><label for="adj">What should change in the next version?</label><textarea id="adj" maxlength="1000" required placeholder="For example, keep the copy to 10 words."></textarea><div class="dlgfoot"><button type="button" class="control outline" data-go="close">Cancel</button><button class="control primary">Send request</button></div></form>','Request changes · V'+here().rev);$('adj').focus();return;
@@ -3380,23 +3623,30 @@ document.addEventListener('focusin',ev=>{
   const note=document.querySelector('.question-pane .question-note');
   if(note)note.textContent='Paused while you answer. Resume to keep watching.';
 });
-document.addEventListener('input',ev=>{if(ev.target.id==='tourans'&&tour&&!$('dialog').open&&!inPracticeHistory()){tour.answerDraft=ev.target.value;saveTour();}if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
+document.addEventListener('input',ev=>{if(ev.target.matches('[data-team-field]'))updateTeamDraft();if(ev.target.id==='tourans'&&tour&&!$('dialog').open&&!inPracticeHistory()){tour.answerDraft=ev.target.value;saveTour();}if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
 document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
 if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthrough)){
-  const startPractice=requestedWalkthrough==='customer'&&launchURL.searchParams.get('mode')==='practice';
+  const startPractice=['team','customer'].includes(requestedWalkthrough)&&launchURL.searchParams.get('mode')==='practice';
   if(startPractice)launchURL.searchParams.delete('mode');
   launchURL.searchParams.delete('walkthrough');
   history.replaceState(history.state,'',launchURL.href);
-  if(parkedTour?.type===requestedWalkthrough)openWalkthrough();
-  else if(tour?.type===requestedWalkthrough){setPlay(isPractice()&&!decisionPoint());render();}
-  else begin(requestedWalkthrough,false,startPractice);
-  if(startPractice&&!isPractice())takeControl();
+  const watchTeam=requestedWalkthrough==='team'&&!startPractice;
+  const sameRoute=current=>current?.type===requestedWalkthrough&&
+    (requestedWalkthrough!=='team'||isTeamPractice(current)===startPractice)&&(!watchTeam||!current.fromPractice);
+  if(sameRoute(parkedTour))openWalkthrough();
+  else if(sameRoute(tour)){setPlay(isPractice()&&!decisionPoint());render();}
+  else begin(requestedWalkthrough,false,startPractice,watchTeam);
+  if(watchTeam&&tour&&!tour.playing){
+    if(tour.index===tour.frames.length-1)tour.index=0;
+    setPlay(true);render();
+  }
+  if(startPractice&&requestedWalkthrough==='customer'&&!isPractice())takeControl();
 }else{
-  if(tour&&isPractice())setPlay(!decisionPoint());
+  if(tour&&(isPractice()||isTeamPractice()))setPlay(!decisionPoint());
   if(parkedTour)scheduleParkedStep();
   render();
 }

@@ -240,3 +240,48 @@ test("a user-supplied concern remains personal in every snapshot and derived rol
   assert.equal(reset[2].case.answerSimulated,true);
   assert.equal(reset.at(-1).case.versions.length,2);
 });
+
+test("team practice preserves two edited fields in the exact release handoff and accepts only from requester review", () => {
+  const start = personas.teamStart();
+  assert.equal(start.case.answer, engine.hesitationAnswers[1]);
+  assert.equal(start.case.stage, "processing");
+  const [review1] = personas.teamSteps(start, "deliver");
+  const v1 = structuredClone(review1.case.versions[0]);
+  assert.equal(review1.case.trail.at(-1).simulated, false);
+  const [revise] = personas.teamSteps(review1, "sample-change");
+  assert.equal(revise.case.trail.at(-1).simulated, true);
+  assert.deepEqual(personas.teamSteps(revise, "deliver", revise.items), []);
+  const items = [{label:"Use a standard template", detail:"For a standard walk-in, use a preset.\n\nConfirm its size first."},
+    {label:"Custom from scratch", detail:"Choose the custom layout for your own dimensions."}];
+  const [edit, review2] = personas.teamSteps(revise, "deliver", items);
+  assert.equal(edit.case.trail.at(-1).simulated, false);
+  const v2 = review2.case.versions[1];
+  assert.deepEqual(v2.view.proposal.items, items);
+  assert.equal(v2.candidate, items.map(row=>row.label+"\n"+row.detail).join("\n\n"));
+  for (const question of [v2.view.proposal.reviewQuestion,v2.checks.find(row=>row.id==="revision").value]) {
+    assert.match(question,/Custom from scratch/);
+    assert.doesNotMatch(question,/Confirm its size first/);
+  }
+  assert.deepEqual(review2.case.versions[0],v1);
+  assert.deepEqual(personas.teamSteps(review2, "sample-change"), []);
+  assert.deepEqual(personas.teamSteps(review2, "accept"), []);
+  const [asRequester] = personas.teamSteps(review2, "view-requester");
+  assert.deepEqual(asRequester.case,review2.case);
+  const [accepted] = personas.teamSteps(asRequester, "accept");
+  assert.equal(accepted.case.stage,"release");
+  assert.equal(accepted.case.owner,"Site owner");
+  assert.equal(accepted.case.accepted.rev,2);
+  assert.equal(accepted.case.accepted.simulated,false);
+  assert.equal(accepted.case.authorization,null);
+  assert.equal(accepted.case.receipt,null);
+
+  const [revise3] = personas.teamSteps(asRequester, "adjust", "Make it shorter.");
+  assert.equal(revise3.personaId,"team");
+  assert.equal(revise3.case.rev,3);
+  assert.deepEqual(personas.teamSteps(revise3, "deliver",items),[]);
+  const short = [{label:"Use a template",detail:"Standard walk-in."},{label:"Start from scratch",detail:"Custom walk-in."}];
+  const v3 = personas.teamSteps(revise3, "deliver", short).at(-1);
+  assert.equal(v3.case.stage,"review");
+  assert.deepEqual(v3.case.versions[1],v2);
+  assert.equal(v3.case.versions[2].rev,3);
+});
