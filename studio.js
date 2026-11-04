@@ -8,6 +8,13 @@ const examples=[['Homepage quote instructions',E.initialFeedback],['Specify a bu
 const navRows=[['clarify','ask','Needs your input'],['processing','clock','In progress'],['review','verify','Ready for review'],['release','release','Release approvals']];
 const key='feedbackflow:casework:v2.1', viewKey='feedbackflow:walk:v2.1';
 const createViewKey='feedbackflow:walk:create:v1';
+const roleAnswerKey='feedbackflow:role-answer:v2';
+const roleStoryVersion=2;
+function savedRoleAnswer(){
+  try{return sessionStorage.getItem(roleAnswerKey)||E.hesitationAnswers[0];}
+  catch{return E.hesitationAnswers[0];}
+}
+let roleAnswer=savedRoleAnswer();
 const transition=(c,acts)=>acts.reduce((a,x)=>E.transition(a,...x),c);
 function init(){return {current:'WQ-017',serial:17,items:[{id:'WQ-017',c:E.createCase()},{id:'WQ-016',c:transition(E.createCase(examples[2][1]),[['submit']])},{id:'WQ-015',c:transition(E.createCase(examples[1][1]),[['submit'],['deliver']])}]}}
 let data;
@@ -24,6 +31,10 @@ function savedTour(storageKey){
     const cached=JSON.parse(sessionStorage.getItem(storageKey));
     if(cached?.frames?.[cached.index]?.case&&cached.record===data.current){
       const validated=storageKey===createViewKey?cached:window.CaseUpgrade.walkthrough(cached);
+      if(P.list.some(role=>role.id===validated.type)&&validated.roleStoryVersion!==roleStoryVersion){
+        const frames=P.frames(validated.type,validated.scenarioAnswer||roleAnswer);
+        return {...validated,frames,index:0,roleStoryVersion,playing:false};
+      }
       if(validated.type==='mine'){
         for(const [index,frame] of validated.frames.entries()){
           const repaired=E.resumeWorkingCase(frame.case);
@@ -165,7 +176,7 @@ if(v.proposal){
 return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
 function alternateAnswer(c,v){
-  const explore=tour&&['create','mine'].includes(tour.type)&&c.answer&&v.kind==='hesitation';
+  const explore=tour&&['create','mine','customer'].includes(tour.type)&&c.answer&&v.kind==='hesitation';
   return explore?btn('tour-answer','Try another answer','branch','swap-answer'):'';
 }
 function related(c,v){
@@ -174,7 +185,9 @@ function related(c,v){
   return '<div class="thread-notes">'+(concern?'<div>'+I('ask',14)+'<span>Requester’s concern</span><strong>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</strong></div>'+alternateAnswer(c,v):'')+
     (c.adjustment?'<div>'+I('branch',14)+'<span>Requested changes to V'+(c.rev-1)+'</span><strong>'+esc(c.adjustment)+'</strong></div>':'')+'</div>';
 }
-function actions(c,v){if(tour)return v.kind==='hesitation'&&c.answer&&!tour.playing&&tour.index<tour.frames.length-1?btn('toggle','Continue walkthrough','play','outline'):'';let id,label,ico,extra='';
+function actions(c,v){
+if(tour?.frames[tour.index]?.handoff&&tour.index===tour.frames.length-1)return btn('exit','Finish walkthrough','check','outline');
+if(tour)return v.kind==='hesitation'&&c.answer&&!tour.playing&&tour.index<tour.frames.length-1?btn('toggle','Continue walkthrough','play','outline'):'';let id,label,ico,extra='';
 switch(c.stage){
 case 'draft':id='submit';label='Submit feedback';ico='send';extra=c.text.trim()?'':'disabled';break;
 case 'processing':id='deliver';label='Send V'+c.rev+' for review';ico='send';extra=v.blocked?'disabled':'';break;
@@ -196,7 +209,7 @@ function transport(){
   if(!tour)return '';
   const last=tour.index===tour.frames.length-1;
   const waiting=last&&E.derive(here()).question?.type==='wording-retry';
-  const playback=waiting?'Waiting for your answer':tour.playing?'Playing':last?'Finished':'Paused';
+  const playback=waiting?'Waiting for your answer':tour.playing?'Playing':last?(tour.frames[tour.index].handoff&&here().stage!=='published'?'Handoff complete':'Finished'):'Paused';
   const name=tour.type==='create'?'The “Create” walkthrough':tour.type==='mine'?'Your feedback walkthrough':
     P.list.find(item=>item.id===tour.type).label+' walkthrough';
   const previous=tour.index?iconbtn('walkback','back','Previous step'):'<span class="disabled-icon">'+I('back')+'</span>';
@@ -245,6 +258,8 @@ function contextPanel(c,v){
     answer+request+'<section class="history-copy"><h3>Version history</h3>'+versions+'</section></div>';
 }
 function stageCopy(c,v){
+  const handoff=tour?.frames[tour.index]?.handoff;
+  if(handoff&&tour.index===tour.frames.length-1)return ['Handoff',handoff.title,handoff.description];
   const rev='V'+c.rev;
   switch(c.stage){
     case 'draft':return ['Draft','Describe the change','Tell the team what was confusing or what you want to improve.'];
@@ -419,12 +434,15 @@ function begin(type){
   }else if(type==='mine'){
     const c=clone(selected().c);
     frames=appendSteps([{case:c,title:'Read the feedback'}],c);
-  }else{let f=P.start(type);frames.push(f);while(!f.done){f=P.next(f);frames.push(f);}}
-  tour={record:data.current,type,frames,index:0,playing:false};
+  }else{
+    frames=P.frames(type,roleAnswer);
+  }
+  tour={record:data.current,type,frames,index:0,playing:false,
+    ...(P.list.some(role=>role.id===type)?{roleStoryVersion,scenarioAnswer:roleAnswer}:{})};
   setPlay(frames.length>1);render();announce('Walkthrough started.');
 }
 function clarificationPrefix(){
-  if(!tour||!['mine','create'].includes(tour.type))return null;
+  if(!tour||!['mine','create','customer'].includes(tour.type))return null;
   const index=tour.frames.slice(0,tour.index+1).findLastIndex(f=>f.case.stage==='clarify');
   if(index!==-1)return tour.frames.slice(0,index+1);
   // A personal walkthrough may start from an already answered, versioned record.
@@ -436,9 +454,18 @@ function answerTour(value){
   const before=head.at(-1).case,c=E.transition(before,'answer',raw);
   if(c===before)return;
   const choseConcern=E.derive(before).question.type==='hesitation';
-  const index=head.length;
-  head.push({case:c,title:choseConcern?(c.stage==='blocked'?'Website team investigates the concern':'Website team proposes new copy'):'Your walkthrough answer: '+raw});
-  tour.frames=appendSteps(head,c);tour.index=index;
+  if(tour.type==='customer'){
+    roleAnswer=raw;
+    try{sessionStorage.setItem(roleAnswerKey,raw);}catch{}
+    tour.frames=P.frames('customer',raw);
+    tour.index=Math.max(0,tour.frames.findIndex(frame=>frame.case.answer===raw));
+    tour.scenarioAnswer=raw;
+    tour.roleStoryVersion=roleStoryVersion;
+  }else{
+    const index=head.length;
+    head.push({case:c,title:choseConcern?(c.stage==='blocked'?'Website team investigates the concern':'Website team proposes new copy'):'Your walkthrough answer: '+raw});
+    tour.frames=appendSteps(head,c);tour.index=index;
+  }
   close();activeSource=-1;tab='checks';asideOpen=false;
   setPlay(!choseConcern&&tour.index<tour.frames.length-1);render();
   if(choseConcern){
@@ -489,7 +516,15 @@ function syncSource(text){
   }
 }
 function exampleMenu(){dialog('<div class="dlgrows">'+examples.map(([t,s],i)=>'<button data-go="sample:'+i+'">'+I(i===0?'file':i===1?'edit':i===2?'ask':'hold')+'<span><b>'+esc(t)+'</b><small>'+esc(s)+'</small></span>'+I('next',14)+'</button>').join('')+'</div>','Choose a feedback example');}
-function personaMenu(){dialog('<p class="dlgdesc">Choose a role to follow a sample from one handoff to the next.</p><div class="dlgrows">'+P.list.map((x,i)=>'<button data-go="persona:'+x.id+'">'+avatar(['Requester','Website team','Site owner'][i])+'<span><b>'+esc(x.label)+'</b><small>'+esc(x.description)+'</small></span>'+I('play',15)+'</button>').join('')+'</div>','Choose a walkthrough');}
+function personaMenu(){
+  const roles=['Requester','Website team','Site owner'];
+  const options=P.list.map((role,index)=>
+    '<button data-go="persona:'+role.id+'">'+avatar(roles[index])+'<span><b>'+esc(role.label)+'</b><small>'+
+    esc(role.description)+'</small></span>'+I('play',15)+'</button>').join('');
+  dialog('<p class="dlgdesc">Follow the same feedback from your role. Sample actions play automatically, and each route stops at its handoff.</p>'+
+    '<div class="dlgrows">'+options+'</div>','Choose your role');
+}
+
 function doAction(g){
 const [k,arg]=g.split(':');if(!['nav','mobileaside'].includes(k)){navOpen=false;$('nav').classList.remove('show');$('shade').hidden=true;}
 if(tour?.playing&&['tab','evidence','mobileaside','location','ver','refine'].includes(k)){setPlay(false);render();}
@@ -554,9 +589,10 @@ document.addEventListener('submit',ev=>{if(ev.target.id==='touranswerform'){ev.p
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){endTour(true);render();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
-if(launchURL.searchParams.get('walkthrough')==='create'){
+const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
+if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthrough)){
   launchURL.searchParams.delete('walkthrough');
   history.replaceState(history.state,'',launchURL.href);
-  if(tour?.type==='create')render();else begin('create');
+  if(tour?.type===requestedWalkthrough)render();else begin(requestedWalkthrough);
 }else render();
 })();
