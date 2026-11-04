@@ -12,7 +12,9 @@ Try a feedback workflow with the WinQuote homepage as its first example. Edit th
   - [Website team](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=team) drafts from the concern, responds to the revision and delivers V2 to the reviewer.
   - [Site owner](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=publisher) receives that accepted V2, authorizes its release and watches the team simulate it.
 
-Choosing another concern in the Requester walkthrough updates the shared sample for all three roles. Existing personal feedback and label/word-limit examples remain available.
+[Try the requester’s decisions](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=customer&mode=practice). Submit the sample, explain your hesitation, and wait for the team’s proposal. At each review, choose **Accept V…** or **Request changes**. Team steps play automatically; review waits for you. Acceptance hands the exact version to the site owner for separate release authorization. A change the simulated team cannot handle stays with the team.
+
+The role player labels its automatic route **Watching example**. Select **Try it yourself** or answer the clarification to take part. The other roles follow the reached practice record in the same tab. **Restart example** returns to the scripted route. Practice is separate from saved feedback.
 
 AI, backend actions and publication are simulated. Records stay in the visitor's browser.
 

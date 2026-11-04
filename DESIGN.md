@@ -108,7 +108,7 @@ Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b
 | Accent + components | Small 16px strokes, compact toolbar, slate tones and an indigo primary action. Semantic colors limited to people, requirement status, and handoffs. No large purple panels. |
 | Editing | Selected source phrase, updated candidate and measured value share one short pulse. Edited record remains anchored; reduced motion omits the pulse. |
 | Accountability | Woven review packet and agreed user journey: separate the requirement from its result, exact sources, visible owner, recorded snapshots, accepted version separate from publication. |
-| Walkthrough | Use the actual record with a small transport bar. Show simulated human decisions, pause/back/next/replay. Do not add a second copy of the form or auto-write real reviews. |
+| Walkthrough | Use the actual record and a compact player. Watching example labels scripted decisions. Requester practice waits for the person at clarification and review. Show team-owned steps as waiting, label edited drafts as team revisions, and put the version-specific review question next to the candidate. Practice never changes a saved feedback record. |
 
 ## Overview
 

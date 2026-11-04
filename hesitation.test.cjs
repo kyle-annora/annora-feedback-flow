@@ -145,3 +145,51 @@ test("explicit replacement copy skips clarification; the original unspecified-la
   assert.deepEqual(E.derive(generic).question.options, []);
   assert.equal(E.derive(answer(generic, "Request a quote")).candidate, "Request a quote");
 });
+
+test("revision checks bind the latest request to the delivered candidate while retaining the original understanding question", () => {
+  for (const concern of E.hesitationAnswers) {
+    let c = E.transition(answer(ask(),concern),"deliver");
+    const originalCheck = E.derive(c).checks.find(row=>row.id === "hesitation-review");
+    for (const rev of [2,3]) {
+      const note = E.suggestChange(c), previous = c.versions.at(-1);
+      c = E.transition(c,"adjust",note);
+      const draft = E.revisionDraft(c);
+      assert.ok(draft);
+      c = E.editCandidate(c,draft);
+      const view = E.derive(c), check = view.checks.find(row=>row.id === "revision");
+      assert.equal(view.blocked,false);
+      assert.equal(check.source,note);
+      assert.equal(check.sourceLabel,"V" + (rev - 1) + " revision request");
+      assert.equal(check.candidate,view.candidate);
+      assert.equal(check.status,"manual","Text coverage is not proof of customer understanding.");
+      assert.doesNotMatch(check.value,/Does the revised copy address this request/);
+      assert.equal(view.checks.find(row=>row.id === "hesitation-review").value,originalCheck.value);
+      assert.equal(view.checks.find(row=>row.id === "hesitation-review").source,concern);
+      if (rev === 3) {
+        assert.ok(view.wordCount < previous.view.wordCount);
+        assert.match(check.value,new RegExp(previous.view.wordCount + " → " + view.wordCount + " words"));
+        assert.match(view.proposal.reviewQuestion,/shorter/);
+      }
+      c = E.transition(c,"deliver");
+      assert.equal(c.stage,"review");
+      assert.equal(c.versions.at(-1).rev,rev);
+      assert.equal(c.versions.at(-1).checks.find(row=>row.id === "revision").candidate,draft);
+    }
+  }
+});
+
+test("a changed draft cannot pass a shorter-copy request by increasing its length or losing the original concern", () => {
+  for (const concern of E.hesitationAnswers) {
+    const v1 = E.transition(answer(ask(),concern),"deliver");
+    const requested = E.transition(v1,"adjust","Make it shorter.");
+    const long = E.editCandidate(requested,v1.versions[0].candidate + "\nMore explanation that makes this candidate longer.");
+    assert.equal(long.stage,"blocked");
+    assert.equal(E.derive(long).checks.find(row=>row.id === "revision").status,"fail");
+    assert.equal(E.transition(long,"deliver"),long);
+    const unrelated = E.editCandidate(requested,"Go now");
+    assert.equal(unrelated.stage,"blocked");
+    assert.equal(E.derive(unrelated).checks.find(row=>row.id === "concern-coverage").status,"fail");
+    assert.equal(E.transition(unrelated,"deliver"),unrelated);
+    assert.equal(E.revisionDraft(E.transition(v1,"adjust","Send the customer quote immediately.")),null);
+  }
+});

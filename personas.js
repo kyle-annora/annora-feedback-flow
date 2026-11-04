@@ -66,11 +66,12 @@
     };
   }
 
-  function scenario(answer) {
-    if (scenarios.has(answer)) return scenarios.get(answer);
+  function scenario(answer, personalAnswer) {
+    const key = JSON.stringify([answer,personalAnswer]);
+    if (scenarios.has(key)) return scenarios.get(key);
     const draft = engine.createCase(engine.hesitationFeedback);
     const asked = simulate(draft, "submit");
-    const answered = simulate(asked, "answer", answer);
+    const answered = (personalAnswer ? engine.transition : simulate)(asked, "answer", answer);
     const proposal = engine.derive(answered).proposal;
     const result = {draft, asked, answered};
     if (answered.stage === "processing" && proposal) {
@@ -83,7 +84,7 @@
       result.authorized = simulate(result.accepted, "authorize");
       result.published = simulate(result.authorized, "publish");
     }
-    scenarios.set(answer, result);
+    scenarios.set(key, result);
     return result;
   }
 
@@ -91,8 +92,8 @@
     case:record, title, description, ...(handoff ? {handoff} : {}),
   });
 
-  function route(personaId, answer) {
-    const story = scenario(answer);
+  function route(personaId, answer, personalAnswer) {
+    const story = scenario(answer, personalAnswer);
     if (!story.v1) {
       const waitingOnAnswer = story.answered.stage === "clarify";
       const handoff = waitingOnAnswer ? {
@@ -147,27 +148,110 @@
     ];
   }
 
-  function frames(personaId = "customer", suppliedAnswer = engine.hesitationAnswers[0]) {
+  function decorate(personaId, answer, personalAnswer, steps, interactive = false) {
     const persona = list.find(item => item.id === personaId);
     if (!persona) throw new Error("This role walkthrough is unavailable.");
-    const answer = typeof suppliedAnswer === "string" ? suppliedAnswer.trim() : "";
-    const steps = route(personaId, answer);
+    const acceptedRev = steps.at(-1)?.case.accepted?.rev;
+    const outcome = personaId === "customer" && acceptedRev
+      ? "Hand the accepted V" + acceptedRev + " to the site owner." : persona.outcome;
     return clone(steps.map((step, index) => ({
-      personaId, scenarioAnswer:answer, index, total:steps.length,
+      personaId, scenarioAnswer:answer, personalAnswer, interactive, index, total:steps.length,
       done:index === steps.length - 1,
-      audience:persona.audience, outcome:persona.outcome, ...step,
+      audience:persona.audience, outcome, ...step,
     })));
   }
-
-  function start(personaId = "customer", answer) {
-    return frames(personaId, answer)[0];
+  function frames(personaId = "customer", suppliedAnswer = engine.hesitationAnswers[0], options = {}) {
+    const answer = typeof suppliedAnswer === "string" ? suppliedAnswer.trim() : "";
+    const personalAnswer = options.personalAnswer === true;
+    return decorate(personaId,answer,personalAnswer,route(personaId,answer,personalAnswer));
   }
-  function next(context) {
+
+  function canReview(context) {
+    const c = context?.case;
+    return context?.personaId === "customer" && c?.stage === "review" &&
+      c.versions.at(-1)?.rev === c.rev && !c.accepted;
+  }
+  function acceptedFrame(c) {
+    return frame(c, "Hand the accepted V" + c.rev + " to the site owner",
+      "Your review is complete. Release authorization now belongs to the site owner.", {
+        role:"Site owner", title:"V" + c.rev + " accepted",
+        description:"Your review is complete. The site owner decides whether to authorize this version’s release.",
+      });
+  }
+  function waitingFrame(c, role, title, description) {
+    return frame(c,title,description,{role,title,description});
+  }
+  function stepsOnly(routeFrames) {
+    return routeFrames.map(({case:record,title,description,handoff,awaitingDecision})=>({
+      case:record,title,description,...(handoff?{handoff}:{}),...(awaitingDecision?{awaitingDecision:true}:{}),
+    }));
+  }
+  // Replace only the future of this isolated rehearsal. Real feedback records,
+  // frozen versions and earlier frames are never written through this API.
+  function decide(routeFrames, reviewIndex, action, note) {
+    const source = routeFrames?.[reviewIndex];
+    if (!canReview(source) || !["accept","adjust"].includes(action)) return routeFrames;
+    const changed = engine.transition(clone(source.case),action,note);
+    if (changed.stage === "review") return routeFrames;
+    const steps = stepsOnly(routeFrames.slice(0,reviewIndex + 1));
+    if (action === "accept") steps.push(acceptedFrame(changed));
+    else {
+      const copy = engine.revisionDraft(changed);
+      const edited = copy === null ? changed : editRevision(changed,copy);
+      const delivered = simulate(edited,"deliver");
+      steps.push(frame(changed,"Changes requested for V" + (changed.rev - 1),
+        "The website team owns the next revision. The delivered version stays in history."));
+      if (delivered.stage === "review") {
+        steps.push(frame(edited,"The team revises V" + changed.rev,
+          "The simulated team updates the actual draft and checks it against your revision request."));
+        steps.push({...frame(delivered,"Review V" + delivered.rev,
+          "Check the delivered copy against your concern and the latest revision request. Accept it or request another change."),awaitingDecision:true});
+      } else {
+        steps[steps.length - 1] = waitingFrame(edited,"Website team","The website team needs to review this request",
+          "This simulated draft does not resolve the requested change. The team must investigate before another review.");
+      }
+    }
+    return decorate("customer",source.scenarioAnswer,source.personalAnswer === true,steps,true);
+  }
+
+  // Follow the exact rehearsal record, including early V1 acceptance or a
+  // pending V3. Never substitute the default scenario's accepted V2.
+  function from(personaId, source) {
+    if (!source?.case) throw new Error("A rehearsal frame is required.");
+    const c = clone(source.case), rev = c.rev;
+    let steps;
+    if (personaId === "publisher" && c.stage === "release" && c.accepted?.rev === rev) {
+      const authorized = simulate(c,"authorize"), published = simulate(authorized,"publish");
+      steps = [frame(c,"Verify the accepted V" + rev,"Check this exact accepted copy and its WinQuote homepage target."),
+        frame(authorized,"Authorize V" + rev,"The website team can now execute this authorized version’s simulated release."),
+        waitingFrame(published,"Complete","Release simulated","V" + rev + " has been released in the simulation. The receipt remains in Details.")];
+    } else if (c.stage === "published") {
+      steps = [waitingFrame(c,"Complete","Release simulated","This exact version already has a simulated release receipt.")];
+    } else if (["release","authorized"].includes(c.stage)) {
+      steps = [waitingFrame(c,c.owner,"V" + rev + (c.stage === "release" ? " accepted" : " authorized"),
+        c.stage === "release" ? "The reviewer accepted this version. The site owner owns release authorization." : "The website team owns the authorized release.")];
+    } else if (c.stage === "review") {
+      steps = [waitingFrame(c,"Reviewer","V" + rev + " is awaiting review","This version has been delivered. The reviewer must accept it or request changes before release authorization.")];
+      if (personaId === "customer") steps[0] = {...frame(c,"Review V" + rev,"Accept this delivered version or request another change."),awaitingDecision:true};
+    } else {
+      const requester = ["draft","clarify"].includes(c.stage);
+      steps = [waitingFrame(c,requester ? "Requester" : "Website team",requester ? "The requester has the next step" : "The website team has the next step",
+        requester ? "Submit the concern or explain what made you hesitate." : "This pending request needs team work before the reviewer or site owner can decide.")];
+    }
+    return decorate(personaId,source.scenarioAnswer || c.answer,source.personalAnswer === true,steps,true);
+  }
+
+  function start(personaId = "customer", answer, options) {
+    return frames(personaId, answer, options)[0];
+  }
+  function next(context, routeFrames) {
     if (context.done) return context;
-    return frames(context.personaId, context.scenarioAnswer)[context.index + 1];
+    if (routeFrames) return clone(routeFrames[context.index + 1] || context);
+    if (context.interactive) return context;
+    return frames(context.personaId, context.scenarioAnswer,{personalAnswer:context.personalAnswer})[context.index + 1];
   }
 
-  const api = {list, frames, start, next};
+  const api = {list, frames, start, next, canReview, decide, from, suggestChange:engine.suggestChange};
   root.CasePersonas = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(globalThis);

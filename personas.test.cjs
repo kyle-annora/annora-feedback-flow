@@ -122,3 +122,121 @@ test("cached role scenarios expose independent English frames and mark every scr
   }
   assert.throws(() => personas.start("unknown"), /unavailable/);
 });
+
+test("a requester may personally accept V1 without running the scripted V2 and every role follows that exact acceptance", () => {
+  const original = personas.frames("customer"), before = JSON.stringify(original);
+  const i = original.findIndex(frame=>frame.case.stage === "review");
+  assert.equal(personas.canReview(original[i]),true);
+  const decided = personas.decide(original,i,"accept"), accepted = decided.at(-1);
+  assert.equal(JSON.stringify(original),before);
+  assert.equal(accepted.case.stage,"release");
+  assert.deepEqual(accepted.case.accepted,{rev:1,actor:"Reviewer",simulated:false});
+  assert.equal(accepted.case.versions.length,1);
+  assert.equal(accepted.case.authorization,null);
+  assert.equal(accepted.case.receipt,null);
+  assert.equal(accepted.handoff.title,"V1 accepted");
+  assert.match(accepted.outcome,/V1/);
+  assert.equal(accepted.case.trail.at(-1).simulated,false);
+  const publisher = personas.from("publisher",accepted);
+  assert.deepEqual(publisher.map(frame=>frame.case.stage),["release","authorized","published"]);
+  assert.equal(publisher.at(-1).case.receipt.rev,1);
+  assert.deepEqual(publisher.at(-1).case.versions,accepted.case.versions);
+  const team = personas.from("team",accepted);
+  assert.equal(team.length,1);
+  assert.equal(team[0].handoff.role,"Site owner");
+  assert.deepEqual(team[0].case.versions,accepted.case.versions);
+  assert.equal(personas.frames("publisher").at(-1).case.receipt.rev,2,"Trying V1 must not rewrite the default sample.");
+});
+
+test("both concern branches allow a real V1 to V2 to V3 revision and leave each delivered version open for a personal decision", () => {
+  for (const answer of engine.hesitationAnswers) {
+    let frames = personas.frames("customer",answer), index = frames.findIndex(frame=>frame.case.stage === "review");
+    let frozen = JSON.stringify(frames[index].case.versions);
+    for (const rev of [2,3]) {
+      const source = frames[index], before = JSON.stringify(frames), note = personas.suggestChange(source.case);
+      assert.ok(note);
+      frames = personas.decide(frames,index,"adjust",note);
+      assert.equal(JSON.stringify(source.case.versions),frozen);
+      assert.equal(JSON.stringify(source),JSON.stringify(JSON.parse(before)[index]));
+      const end = frames.at(-1), c = end.case;
+      assert.equal(c.stage,"review");
+      assert.equal(c.rev,rev);
+      assert.equal(c.versions.length,rev);
+      assert.equal(c.adjustment,note);
+      assert.equal(end.awaitingDecision,true);
+      assert.equal(end.done,true);
+      assert.equal(personas.canReview(end),true);
+      assert.equal(c.accepted,null);
+      assert.equal(c.authorization,null);
+      assert.notEqual(c.versions.at(-1).candidate,c.versions.at(-2).candidate);
+      assert.equal(c.trail.filter(event=>event.action === "adjust").at(-1).simulated,false);
+      assert.equal(c.trail.at(-1).simulated,true,"The team delivery is still simulated.");
+      const owner = personas.from("publisher",end);
+      assert.equal(owner.length,1);
+      assert.equal(owner[0].case.stage,"review");
+      assert.equal(owner[0].handoff.role,"Reviewer");
+      assert.equal(owner[0].case.accepted,null);
+      assert.equal(owner[0].case.receipt,null);
+      assert.deepEqual(personas.from("team",end)[0].case.versions,c.versions);
+      frozen = JSON.stringify(c.versions);
+      index = frames.length - 1;
+    }
+    frames = personas.decide(frames,index,"accept");
+    const accepted = frames.at(-1);
+    assert.equal(accepted.case.accepted.rev,3);
+    const publisher = personas.from("publisher",accepted);
+    assert.equal(publisher.at(-1).case.receipt.rev,3);
+    assert.equal(JSON.stringify(publisher.at(-1).case.versions),frozen);
+  }
+});
+
+test("unsupported revisions stay with the team rather than pretending to resolve keyword matches or extra requirements", () => {
+  const frames = personas.frames("customer"), index = frames.findIndex(frame=>frame.case.stage === "review");
+  for (const note of ["Change the customer quote to a red button.","Send the quote to the customer immediately.",
+    "Make the text warmer.","Make it explicit that opening the configurator does not send a quote to the customer. Also add a PDF export."]) {
+    const held = personas.decide(frames,index,"adjust",note).at(-1);
+    assert.equal(held.case.stage,"blocked");
+    assert.equal(held.handoff.role,"Website team");
+    assert.equal(held.case.adjustment,note);
+    assert.equal(held.case.versions.length,1);
+    assert.equal(held.case.accepted,null);
+    assert.equal(held.case.authorization,null);
+    assert.equal(held.case.receipt,null);
+    assert.equal(personas.from("publisher",held)[0].case.stage,"blocked");
+  }
+});
+
+test("review controls cannot create a decision outside a delivered requester review and branching never falls into the default future", () => {
+  const frames = personas.frames("customer");
+  for (const index of [0,1,2,4,5,7]) {
+    assert.equal(personas.canReview(frames[index]),false);
+    assert.equal(personas.decide(frames,index,"accept"),frames);
+  }
+  const i = frames.findIndex(frame=>frame.case.stage === "review");
+  assert.equal(personas.decide(frames,i,"adjust",""),frames);
+  assert.equal(personas.decide(frames,i,"authorize"),frames);
+  const team = personas.frames("team");
+  assert.equal(personas.decide(team,1,"accept"),team);
+  const branch = personas.decide(frames,i,"adjust",personas.suggestChange(frames[i].case));
+  const requested = branch[i + 1];
+  assert.equal(personas.next(requested),requested,"A branch must not silently resume the default V2 future.");
+  assert.deepEqual(personas.next(requested,branch),branch[i + 2]);
+});
+
+test("a user-supplied concern remains personal in every snapshot and derived role, while restarting restores the authored sample", () => {
+  const answer = engine.hesitationAnswers[1];
+  const frames = personas.frames("customer",answer,{personalAnswer:true});
+  for (const frame of frames.filter(item=>item.case.answer)) {
+    assert.equal(frame.personalAnswer,true);
+    assert.equal(frame.case.answerSimulated,false);
+    assert.equal(frame.case.trail.find(event=>event.action === "answer").simulated,false);
+    assert.ok(frame.case.versions.every(version=>version.answerSimulated === false));
+  }
+  const publisher = personas.from("publisher",frames.at(-1));
+  assert.ok(publisher.every(frame=>!frame.case.answerSimulated));
+  assert.ok(publisher.at(-1).case.versions.every(version=>version.answerSimulated === false));
+  const reset = personas.frames("customer");
+  assert.equal(reset[2].case.answer,engine.hesitationAnswers[0]);
+  assert.equal(reset[2].case.answerSimulated,true);
+  assert.equal(reset.at(-1).case.versions.length,2);
+});

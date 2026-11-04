@@ -279,3 +279,10 @@
 }
 
 .ver-copy{white-space:pre-line}
+
+.walk-mode{border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--blue);font-size:12px;min-height:28px;padding:4px 8px;margin-right:6px;white-space:nowrap}
+.walk-mode:hover{background:var(--lav)}
+#practicechange{margin-top:14px}
+#practicechange label{display:block;font-size:14px;margin-bottom:7px}
+@media(max-width:660px){.walk-mode{font-size:12px;min-height:32px;margin-right:3px}.transport .trackmark{display:none}.transport .tracktitle span{white-space:normal}.transport .playtools{flex:none}}
+.stage-task[data-stage="review"]:has([data-go="practice-accept"]) .action-strip{position:sticky;bottom:0;z-index:2;background:var(--paper,#fff);padding:10px 0;margin-top:12px}

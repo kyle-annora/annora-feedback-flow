@@ -241,7 +241,7 @@
       case "deliver": {
         if (c.stage !== "processing" || !view.candidate || view.blocked || view.question) return c;
         const snapshot = {rev:c.rev,text:view.candidate,candidate:view.candidate,source:c.text,
-          answer:c.answer,adjustment:c.adjustment,checks:clone(view.checks),view:clone(view)};
+          answer:c.answer,answerSimulated:c.answerSimulated,adjustment:c.adjustment,checks:clone(view.checks),view:clone(view)};
         next = setStage({...c,versions:[...c.versions,snapshot]},"review");
         message = `Sent V${c.rev} to the reviewer.`;
         break;
@@ -310,7 +310,8 @@
   }
 
   const api = {initialFeedback,hesitationFeedback:Hesitation.feedback,hesitationAnswers:Hesitation.answers,
-    createCase,editSource,editCandidate,reviseAdjustment,derive,resumeWorkingCase,transition,step};
+    createCase,editSource,editCandidate,reviseAdjustment,derive,resumeWorkingCase,transition,step,
+    suggestChange:Hesitation.suggestChange, revisionDraft:Hesitation.revisionDraft};
   root.CaseEngine = api;
   if (common) module.exports = api;
 })(globalThis);

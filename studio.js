@@ -9,7 +9,24 @@ const navRows=[['clarify','ask','Needs your input'],['processing','clock','In pr
 const key='feedbackflow:casework:v2.1', viewKey='feedbackflow:walk:v2.1';
 const createViewKey='feedbackflow:walk:create:v1';
 const roleAnswerKey='feedbackflow:role-answer:v2';
-const roleStoryVersion=2;
+const roleStoryVersion=3;
+const practiceKey='feedbackflow:requester-practice:v3';
+let practice=null;
+try {
+  const saved=JSON.parse(sessionStorage.getItem(practiceKey));
+  if(saved?.frames?.[saved.frontier]?.case&&saved.frames[saved.frontier].personaId==='customer')practice=saved;
+}catch{}
+function writePractice(){
+  try{if(practice)sessionStorage.setItem(practiceKey,JSON.stringify(practice));else sessionStorage.removeItem(practiceKey);}catch{}
+}
+function isPractice(){return tour?.type==='customer'&&tour.inputMode==='practice';}
+function decisionPoint(){return isPractice()&&['draft','clarify','review'].includes(here().stage);}
+function rememberPractice(reset=false){
+  if(!isPractice())return;
+  const frontier=reset?tour.index:Math.max(tour.index,Math.min(practice?.frontier??0,tour.frames.length-1));
+  practice={frames:tour.frames,index:tour.index,frontier,answer:tour.scenarioAnswer};
+  writePractice();
+}
 function savedRoleAnswer(){
   try{return sessionStorage.getItem(roleAnswerKey)||E.hesitationAnswers[0];}
   catch{return E.hesitationAnswers[0];}
@@ -139,14 +156,29 @@ function answerFields(q){
 }
 function proposalHTML(v){
   const p=v.proposal;
+  let items=p.items;
+  if(p.edited){
+    const blocks=v.candidate.trim().split(/\n\s*\n/).map(block=>block.split(/\r?\n/).map(line=>line.trim()).filter(Boolean));
+    const expectedCount=p.branch==='paths'?2:1;
+    if(blocks.length===expectedCount&&blocks.every(lines=>lines.length>1&&lines[0].length<=80)){
+      items=blocks.map(([label,...detail])=>({label,detail:detail.join(' ')}));
+    }
+  }
+  const revisionQuestion=v.checks.find(check=>check.id==='revision'&&check.status==='manual');
+  const reviewQuestion=revisionQuestion?.value||p.reviewQuestion;
   return '<div class="proof team-proof" data-proposal-branch="'+esc(p.branch)+'"><div class="proof-label">'+(p.branch==='paths'?'Homepage · Quote entry points':'Homepage · Quote button')+'</div>'+
-    (p.edited?'<p class="edited-proposal">'+esc(v.candidate)+'</p>':p.items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''))+
-    '<div class="review-prompt"><div>'+I('verify',14)+'Review question</div><p id="review-question">'+esc(p.reviewQuestion)+'</p></div></div>';
+    (items.length?items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''):'<p class="edited-proposal">'+esc(v.candidate)+'</p>')+
+    '<div class="review-prompt"><div>'+I('verify',14)+'Review question</div><p id="review-question">'+esc(reviewQuestion)+'</p></div></div>';
 }
 function candidateHTML(c,v){
 let delivered=Boolean(c.versions.find(a=>a.rev===c.rev))&&!['processing','blocked','clarify'].includes(c.stage);
-const revision='<span class="version">V'+c.rev+'</span>';
-let head='<div class="section-head"><h2>'+I(v.question?'ask':'file',16)+(v.question?'Clarifying question':'Proposed copy')+(!v.question&&v.candidate?revision:'')+'</h2><span class="subtext">'+(v.question?'Needs an answer':delivered?'Submitted version':'Simulated AI draft')+'</span></div>';
+const awaitingRevision=c.stage==='blocked'&&c.adjustment&&c.candidateOverride===null&&c.versions.length;
+const teamEdited=typeof c.candidateOverride==='string';
+const shownRevision=awaitingRevision?c.rev-1:c.rev;
+const revision='<span class="version">V'+shownRevision+'</span>';
+const heading=v.question?'Clarifying question':v.proposal?(awaitingRevision?'Previous proposal':delivered?'Team proposal':teamEdited?'Team revision':'AI draft'):'Proposed copy';
+const provenance=v.question?'Needs an answer':delivered?'Submitted version':awaitingRevision?'Awaiting team revision':teamEdited?(tour?'Sample team revision':'Team revision'):'Simulated AI draft';
+let head='<div class="section-head"><h2>'+I(v.question?'ask':'file',16)+heading+(!v.question&&v.candidate?revision:'')+'</h2><span class="subtext">'+provenance+'</span></div>';
 if(c.stage==='clarify'&&v.question){
   let form;
   if(!tour){
@@ -154,8 +186,9 @@ if(c.stage==='clarify'&&v.question){
   }else if(v.question.type==='wording-retry'){
     form='<form id="touranswerform"><div class="opts">'+v.question.options.map(o=>'<button type="button" data-tour-opt="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><label class="sr" for="tourans">Your answer</label><div class="input-actions"><input id="tourans" required maxlength="500" placeholder="Enter a label for this walkthrough"><button class="control primary">Use answer</button></div></form>';
   }else if(v.question.type==='hesitation'){
-    const sampled=tour.frames[tour.index+1]?.case.answerSimulated;
-    const note=tour.playing?(sampled?'Autoplay will use the first sample answer.':'Autoplay will replay your chosen answer.'):(sampled?'Resume to watch the sample.':'Resume to replay your chosen answer.');
+    const note=tour.inputMode==='practice'?'Your answer will update the proposed copy and review question.':tour.playing?
+      'Autoplay will use a sample answer. Choose or enter your own answer to take over.':
+      'Resume to watch the sample answer, or choose your own to take over.';
     form=answerFields(v.question)+'<span class="question-note">'+note+'</span>';
   }else{
     form='<span class="question-note">This walkthrough uses a sample answer.</span>'+(tour.type==='mine'?btn('tour-answer','Try a different answer','edit','answer-demo'):'');
@@ -170,8 +203,8 @@ if(!v.candidate){if(!tour&&c.candidateOverride!==null&&c.candidateOverride!==und
 const isButton=v.kind==='button';
 if(!tour&&['processing','blocked'].includes(c.stage)&&!v.manual) head=head.replace('</div>',btn('edit-proof','Edit draft','edit','plainbtn')+'</div>');
 if(v.proposal){
-  head=head.replace('Proposed copy','Team proposal');
-  return head+proposalHTML(v)+(v.blocked&&v.reason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
+  const showBlockReason=v.blocked&&v.reason&&tour?.type!=='customer';
+  return head+proposalHTML(v)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
 }
 return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
@@ -186,8 +219,13 @@ function related(c,v){
     (c.adjustment?'<div>'+I('branch',14)+'<span>Requested changes to V'+(c.rev-1)+'</span><strong>'+esc(c.adjustment)+'</strong></div>':'')+'</div>';
 }
 function actions(c,v){
+if(tour?.type==='customer'&&c.stage==='review'){
+  return btn('practice-adjust','Request changes','branch','outline')+btn('practice-accept','Accept V'+c.rev,'check','primary');
+}
+if(isPractice()&&c.stage==='draft')return btn('practice-submit','Submit feedback','send','primary');
 if(tour?.frames[tour.index]?.handoff&&tour.index===tour.frames.length-1)return btn('exit','Finish walkthrough','check','outline');
-if(tour)return v.kind==='hesitation'&&c.answer&&!tour.playing&&tour.index<tour.frames.length-1?btn('toggle','Continue walkthrough','play','outline'):'';let id,label,ico,extra='';
+if(tour)return !isPractice()&&v.kind==='hesitation'&&c.answer&&!tour.playing&&tour.index<tour.frames.length-1?btn('toggle','Play example','play','outline'):'';
+let id,label,ico,extra='';
 switch(c.stage){
 case 'draft':id='submit';label='Submit feedback';ico='send';extra=c.text.trim()?'':'disabled';break;
 case 'processing':id='deliver';label='Send V'+c.rev+' for review';ico='send';extra=v.blocked?'disabled':'';break;
@@ -213,13 +251,18 @@ function transport(){
   const name=tour.type==='create'?'The “Create” walkthrough':tour.type==='mine'?'Your feedback walkthrough':
     P.list.find(item=>item.id===tour.type).label+' walkthrough';
   const previous=tour.index?iconbtn('walkback','back','Previous step'):'<span class="disabled-icon">'+I('back')+'</span>';
-  const toggle=iconbtn('toggle',tour.playing?'pause':last?'replay':'play',tour.playing?'Pause':last?'Replay':'Resume');
-  const next=last?'<span class="disabled-icon">'+I('next')+'</span>':iconbtn('walknext','next','Next step');
+  const gate=decisionPoint();
+  const toggle=gate?'':iconbtn('toggle',tour.playing?'pause':last?'replay':'play',tour.playing?'Pause':last?'Replay':'Resume');
+  const next=last||gate?'':iconbtn('walknext','next','Next step');
+  const modeSwitch=tour.type==='customer'?btn(isPractice()?'reset-example':'take-control',isPractice()?'Restart example':'Try it yourself',null,'walk-mode'):'';
+  const sample=P.list.some(role=>role.id===tour.type);
+  const status=isPractice()?(gate?'Your turn':last?playback:tour.playing?'Team working':'Paused'):
+    sample?(tour.fromPractice?'Your practice':'Watching example')+' · '+playback:playback;
   const frame=tour.frames[tour.index];
   return '<div class="transport" role="group" aria-label="Walkthrough player"><span class="trackmark">'+I('play',14)+'</span>'+
-    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+playback+'</span><span class="sr">'+
+    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+esc(status)+'</span><span class="sr">'+
     'Frame '+(tour.index+1)+' of '+tour.frames.length+' · '+esc(frame.title)+'</span></div>'+
-    '<div class="playtools">'+previous+toggle+next+'</div></div>';
+    '<div class="playtools">'+modeSwitch+previous+toggle+next+'</div></div>';
 }
 
 const phases=['Request','Proposal','Review','Release'];
@@ -261,6 +304,42 @@ function stageCopy(c,v){
   const handoff=tour?.frames[tour.index]?.handoff;
   if(handoff&&tour.index===tour.frames.length-1)return ['Handoff',handoff.title,handoff.description];
   const rev='V'+c.rev;
+  const practice=tour?.inputMode==='practice';
+  if(tour?.type==='customer'){
+    switch(c.stage){
+      case 'draft':return [practice?'Your turn':'Sample request','Describe the problem','Tell the team what felt unclear. You do not need to write the replacement copy.'];
+      case 'clarify':return ['Your turn',v.question?.text||'Clarify your feedback','Describe what gave you pause. The team will propose the wording.'];
+      case 'processing':return ['With the website team',c.rev>1?'The team has revised '+rev:'The team is preparing '+rev,
+        'No action is needed from you until '+rev+' is sent for your review.'];
+      case 'blocked':return ['With the website team',c.adjustment?'Changes requested — waiting for the team':'The team is reviewing your concern',
+        c.adjustment?'Your change request is saved. The team needs to revise the draft before you review '+rev+'.':
+        'The team needs to confirm this concern before there is a proposal for you to review.'];
+      case 'review':return [practice?'Your turn':'Sample review','Review '+rev,practice?
+        'Check the copy against your concern. Accept '+rev+' or tell the team what still needs to change.':
+        (tour.frames[tour.index+1]?.case.accepted?
+          'The example requester will accept '+rev+'. Choose an action below to make your own decision.':
+          'The example requester will ask for changes. Choose an action below to make your own decision.')];
+      case 'release':return ['With the site owner',rev+' accepted — awaiting release approval','Your review is complete. The site owner decides whether to authorize release.'];
+      case 'authorized':return ['With the website team','Release authorized','The site owner has authorized '+rev+'. No further action is needed from you while the team simulates release.'];
+    }
+  }
+  if(tour?.type==='team'){
+    switch(c.stage){
+      case 'processing':return [practice?'Your turn':'Sample team work',c.rev>1?'Check the revised '+rev:'Check the AI draft',
+        'Check '+rev+' against the requester’s concern, then send it to the reviewer.'];
+      case 'blocked':return [practice?'Your turn':'Sample team work','Revise the proposal',
+        'Use the reviewer’s change request to update the draft before sending '+rev+' for review.'];
+      case 'review':return ['With the reviewer','Waiting for the reviewer',rev+' is with the reviewer. Wait for acceptance or a request for changes.'];
+    }
+  }
+  if(tour?.type==='publisher'){
+    switch(c.stage){
+      case 'release':return [practice?'Your turn':'Sample release approval','Authorize the release',
+        'Check the accepted '+rev+' and its target before separately authorizing release.'];
+      case 'authorized':return ['With the website team','Release authorized',
+        'Your authorization is recorded for '+rev+'. The website team now runs the simulated release.'];
+    }
+  }
   switch(c.stage){
     case 'draft':return ['Draft','Describe the change','Tell the team what was confusing or what you want to improve.'];
     case 'clarify':return ['Needs your input',v.question?.text||'Clarify your feedback',v.question?.type==='hesitation'?'Describe what gave you pause. The team will propose the wording.':v.question?.type==='wording-retry'?v.question.reason:'Answer this question so the website team can prepare a proposal.'];
@@ -273,7 +352,9 @@ function stageCopy(c,v){
 }
 function receiptFacts(c){
   const target=c.receipt?.target||c.authorization?.target||'WinQuote homepage';
-  const entries=[['Target',target],['Accepted by',c.accepted?c.accepted.actor+' · V'+c.accepted.rev:'Not recorded']];
+  const acceptedBy=c.accepted&&P.list.some(role=>role.id===tour?.type)&&c.accepted.actor==='Reviewer'?
+    (tour.type==='customer'&&isPractice()&&!c.accepted.simulated?'You (requester)':'Requester'):c.accepted?.actor;
+  const entries=[['Target',target],['Accepted by',c.accepted?acceptedBy+' · V'+c.accepted.rev:'Not recorded']];
   if(c.authorization)entries.push(['Authorized by',c.authorization.actor+' · V'+c.authorization.rev]);
   const saved=c.versions.find(x=>x.rev===(c.receipt?.rev??c.accepted?.rev??c.rev));
   let copy='';
@@ -290,9 +371,13 @@ function candidateSection(c,v){
 }
 function stageTask(c,v){
   const [label,title,lead]=stageCopy(c,v);
-  const prefix=avatar(c.owner,18)+'<span class="person-prop">'+esc(role(c.owner)[2])+'</span><span aria-hidden="true">·</span>';
+  const actingAsRequester=tour?.type==='customer'&&['Requester','Reviewer'].includes(c.owner);
+  const actingAsTeam=tour?.type==='team'&&c.owner==='Website team';
+  const actingAsOwner=tour?.type==='publisher'&&c.owner==='Site owner';
+  const ownerLabel=actingAsRequester?'You · Requester':actingAsTeam?'You · Website team':actingAsOwner?'You · Site owner':role(c.owner)[2];
+  const prefix=avatar(c.owner,18)+'<span class="person-prop">'+esc(ownerLabel)+'</span><span aria-hidden="true">·</span>';
   let body='';
-  if(c.stage==='draft')body=sourceArea(c)+footer(c,v)+candidateSection(c,v);
+  if(c.stage==='draft')body=sourceArea(c)+footer(c,v)+(tour?.type==='customer'?'':candidateSection(c,v));
   else if(c.stage==='clarify')body=candidateSection(c,v);
   else if(usesChecks(c))body=related(c,v)+candidateSection(c,v)+footer(c,v);
   else body=receiptFacts(c)+footer(c,v)+
@@ -337,7 +422,8 @@ function activity(c){
     const date=new Date(event.at);
     const time=Number.isFinite(date.getTime())
       ? '<time datetime="'+esc(event.at)+'">'+esc(date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))+'</time>':'';
-    return '<li>'+avatar(event.actor)+'<div><b>'+esc(event.actor)+'</b>'+time+'<p>'+esc(event.text)+'</p></div></li>';
+    const attribution=tour&&event.simulated?' · Example action':'';
+    return '<li>'+avatar(event.actor)+'<div><b>'+esc(event.actor+attribution)+'</b>'+time+'<p>'+esc(event.text)+'</p></div></li>';
   }).join('')+'</ol>'
     : '<p class="context-note">Submissions, handoffs and review decisions will appear here.</p>';
   return '<div class="ins-section"><div class="side-head"><h2>Activity</h2><span class="sidecount">'+rows.length+'</span></div>'+list+'</div>';
@@ -399,14 +485,25 @@ function close(){if($('dialog').open)$('dialog').close();}
 function stop(){clearTimeout(timer);timer=null;}
 function setPlay(on){
   if(!tour)return;
-  tour.playing=on;stop();
-  if(on){
+  tour.playing=Boolean(on&&!decisionPoint()&&tour.index<tour.frames.length-1);stop();
+  if(tour.playing){
     const choosing=here().stage==='clarify'&&E.derive(here()).question?.type==='hesitation';
-    timer=setTimeout(auto,choosing?14000:4000);
+    const exampleReview=tour.type==='customer'&&here().stage==='review';
+    timer=setTimeout(auto,choosing?14000:exampleReview?9000:4000);
   }
   saveTour();
 }
-function auto(){if(!tour?.playing)return;if(tour.index>=tour.frames.length-1){setPlay(false);render();return;}tour.index++;if(tour.index>=tour.frames.length-1)setPlay(false);else setPlay(true);saveTour();render();announce(tour.frames[tour.index].title);}
+function focusTask(){
+  const title=$('task-title');
+  if(title){title.tabIndex=-1;title.focus({preventScroll:true});}
+}
+function auto(){
+  if(!tour?.playing)return;
+  if(tour.index>=tour.frames.length-1){setPlay(false);render();return;}
+  tour.index++;rememberPractice();setPlay(tour.index<tour.frames.length-1);render();
+  if(decisionPoint())focusTask();
+  announce(tour.frames[tour.index].title);
+}
 function endTour(restore=false){
   stop();
   const wasCreate=tour?.type==='create';
@@ -421,7 +518,8 @@ function appendSteps(frames,c){
   }
   return frames;
 }
-function begin(type){
+function begin(type,reset=false){
+  if(reset){practice=null;writePractice();}
   if(type==='mine'&&!selected().c.text.trim())return;
   // The sample has its own transport and session. Exiting returns to the same work.
   if(type==='create'){stop();tab='checks';activeSource=-1;asideOpen=false;}
@@ -435,11 +533,14 @@ function begin(type){
     const c=clone(selected().c);
     frames=appendSteps([{case:c,title:'Read the feedback'}],c);
   }else{
-    frames=P.frames(type,roleAnswer);
+    frames=practice&&type==='customer'?practice.frames:
+      practice?P.from(type,practice.frames[practice.frontier]):P.frames(type,roleAnswer);
   }
   tour={record:data.current,type,frames,index:0,playing:false,
     ...(P.list.some(role=>role.id===type)?{roleStoryVersion,scenarioAnswer:roleAnswer}:{})};
-  setPlay(frames.length>1);render();announce('Walkthrough started.');
+  if(type==='customer'&&practice){tour.inputMode='practice';tour.index=practice.index;tour.scenarioAnswer=practice.answer;}
+  else if(P.list.some(role=>role.id===type)){tour.inputMode='watch';tour.fromPractice=Boolean(practice);}
+  setPlay(!isPractice()&&frames.length>1);render();announce('Walkthrough started.');
 }
 function clarificationPrefix(){
   if(!tour||!['mine','create','customer'].includes(tour.type))return null;
@@ -457,23 +558,38 @@ function answerTour(value){
   if(tour.type==='customer'){
     roleAnswer=raw;
     try{sessionStorage.setItem(roleAnswerKey,raw);}catch{}
-    tour.frames=P.frames('customer',raw);
+    tour.inputMode='practice';
+    tour.frames=P.frames('customer',raw,{personalAnswer:true});
     tour.index=Math.max(0,tour.frames.findIndex(frame=>frame.case.answer===raw));
     tour.scenarioAnswer=raw;
     tour.roleStoryVersion=roleStoryVersion;
+    rememberPractice(true);
   }else{
     const index=head.length;
     head.push({case:c,title:choseConcern?(c.stage==='blocked'?'Website team investigates the concern':'Website team proposes new copy'):'Your walkthrough answer: '+raw});
     tour.frames=appendSteps(head,c);tour.index=index;
   }
   close();activeSource=-1;tab='checks';asideOpen=false;
-  setPlay(!choseConcern&&tour.index<tour.frames.length-1);render();
-  if(choseConcern){
+  setPlay((isPractice()||!choseConcern)&&tour.index<tour.frames.length-1);render();
+  if(choseConcern&&$('candidate')?.querySelector('h2')){
     const target=$('candidate'),heading=target.querySelector('h2');
     target.classList.add('reconsidered');heading.tabIndex=-1;heading.focus({preventScroll:true});
     if(heading.getBoundingClientRect().top>=window.innerHeight)heading.scrollIntoView({block:'center'});
   }
   announce(c.stage==='clarify'?'Your answer is saved. The requester still needs to clarify the wording.':c.stage==='blocked'?'The website team needs to investigate this answer.':'The draft and checks now reflect your answer.');
+}
+function takeControl(){
+  if(tour?.type!=='customer')return;
+  tour.inputMode='practice';
+  if(tour.index===tour.frames.length-1&&here().stage!=='review')tour.index=0;
+  rememberPractice(true);setPlay(!decisionPoint());render();announce('You are trying the requester role.');
+}
+function chooseReview(choice,note){
+  if(tour?.type!=='customer'||here().stage!=='review')return;
+  const index=tour.index,frames=P.decide(tour.frames,index,choice,note);
+  if(frames===tour.frames||!frames[index+1])return;
+  tour.inputMode='practice';tour.frames=frames;tour.index=index+1;
+  rememberPractice(true);close();setPlay(tour.index<frames.length-1);render();focusTask();announce(frames[tour.index].title);
 }
 function selectCase(id){endTour();if(!data.items.some(x=>x.id===id))return;data.current=id;save();page='case';filter='all';tab='checks';activeSource=-1;render();}
 function newItem(text=''){endTour();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c:E.createCase(text)});selectCase(id);if(!text)$('source')?.focus();}
@@ -518,10 +634,16 @@ function syncSource(text){
 function exampleMenu(){dialog('<div class="dlgrows">'+examples.map(([t,s],i)=>'<button data-go="sample:'+i+'">'+I(i===0?'file':i===1?'edit':i===2?'ask':'hold')+'<span><b>'+esc(t)+'</b><small>'+esc(s)+'</small></span>'+I('next',14)+'</button>').join('')+'</div>','Choose a feedback example');}
 function personaMenu(){
   const roles=['Requester','Website team','Site owner'];
+  const reached=practice?.frames[practice.frontier]?.case;
+  const descriptions={
+    customer:reached?'Return to your request and review decisions.':'Explain your concern and decide whether the team’s proposal resolves it.',
+    team:reached?'See the team’s work on your current request.':'Prepare a proposal, revise it, and send it back for review.',
+    publisher:reached?(reached.accepted?'Check the accepted V'+reached.accepted.rev+' before authorizing its simulated release.':'See what still needs acceptance before release.'):'Check the accepted version and authorize its simulated release.'
+  };
   const options=P.list.map((role,index)=>
     '<button data-go="persona:'+role.id+'">'+avatar(roles[index])+'<span><b>'+esc(role.label)+'</b><small>'+
-    esc(role.description)+'</small></span>'+I('play',15)+'</button>').join('');
-  dialog('<p class="dlgdesc">Follow the same feedback from your role. Sample actions play automatically, and each route stops at its handoff.</p>'+
+    esc(descriptions[role.id])+'</small></span>'+I('play',15)+'</button>').join('');
+  dialog('<p class="dlgdesc">Follow the same feedback from your role. Watch the example, or try the requester’s decisions yourself. Each route stops at its handoff.</p>'+
     '<div class="dlgrows">'+options+'</div>','Choose your role');
 }
 
@@ -537,20 +659,30 @@ case 'find':endTour();filter='all';search='';page='list';render();$('searchbox')
 case 'new':newItem();return;case 'case':selectCase(arg);return;case 'walk':begin('mine');return;case 'personas':personaMenu();return;case 'persona':begin(arg);return;
 case 'create-tour':begin('create');return;
 case 'exit':endTour(true);render();return;
-case 'walkback':case 'walknext':if(!tour)return;setPlay(false);tour.index=Math.max(0,Math.min(tour.frames.length-1,tour.index+(k==='walkback'?-1:1)));saveTour();render();return;
+case 'take-control':takeControl();return;
+case 'reset-example':begin('customer',true);return;
+case 'practice-submit':if(isPractice()&&here().stage==='draft'){tour.index++;rememberPractice();setPlay(false);render();focusTask();}return;
+case 'practice-accept':chooseReview('accept');return;
+case 'practice-adjust':{
+  if(tour?.type!=='customer'||here().stage!=='review')return;
+  setPlay(false);render();
+  dialog('<form id="practicechange"><label for="adj">What still needs to be clearer?</label><textarea id="adj" maxlength="1000" required>'+esc(P.suggestChange(here()))+'</textarea><p class="dlgdesc">Edit this suggestion or describe your own change. The team will review your note.</p><div class="dlgfoot">'+btn('close','Cancel',null,'outline')+'<button class="control primary">Send change request</button></div></form>','Request changes to V'+here().rev);
+  $('adj').focus();return;
+}
+case 'walkback':case 'walknext':if(!tour||(k==='walknext'&&decisionPoint()))return;setPlay(false);tour.index=Math.max(0,Math.min(tour.frames.length-1,tour.index+(k==='walkback'?-1:1)));rememberPractice();saveTour();render();return;
 case 'tour-answer':{
   const head=clarificationPrefix();if(!head)return;
   const q=E.derive(head.at(-1).case).question;
   setPlay(false);render();
   if(q.type==='hesitation'){
-    dialog('<p class="answer-prompt">'+esc(q.text)+'</p>'+answerFields(q)+'<p class="dlgdesc">A new answer replays the team’s proposal in this walkthrough only.</p>','Try another answer');
+    dialog('<p class="answer-prompt">'+esc(q.text)+'</p>'+answerFields(q)+'<p class="dlgdesc">Choosing an answer starts a new proposal for this walkthrough.</p>','Try another answer');
     $('dialog').querySelector('[data-tour-opt]')?.focus();
   }else{
     dialog('<form id="touranswerform"><label for="tourans">'+esc(q.text)+'</label><div class="opts">'+q.options.map(o=>'<button type="button" data-tour-opt="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><input id="tourans" required maxlength="500" placeholder="Enter an answer for this walkthrough"><div class="dlgfoot"><button class="control primary">Continue with this answer</button></div></form>','Change walkthrough answer');$('tourans').focus();
   }
   return;
 }
-case 'toggle':if(!tour)return;if(!tour.playing&&tour.index===tour.frames.length-1)tour.index=0;setPlay(!tour.playing&&tour.frames.length>1);render();return;
+case 'toggle':if(!tour||decisionPoint())return;if(!tour.playing&&tour.index===tour.frames.length-1)tour.index=0;setPlay(!tour.playing&&tour.frames.length>1);render();return;
 case 'tab':tab=arg;activeSource=-1;caseMain();document.querySelector('[data-go="tab:'+arg+'"]')?.focus({preventScroll:true});return;
 case 'refine':
   tab='context';asideOpen=true;caseMain();
@@ -577,7 +709,7 @@ case 'submit':case 'deliver':case 'accept':case 'authorize':case 'publish':apply
 }}
 document.addEventListener('click',ev=>{const target=ev.target.closest('[data-go]');if(target){doAction(target.dataset.go);return;}const opt=ev.target.closest('[data-tour-opt]');if(opt){answerTour(opt.dataset.tourOpt);return;}const ans=ev.target.closest('[data-answer]');if(ans){apply('answer',ans.dataset.answer);return;}if(ev.target===$('shade')){navOpen=false;renderNav();}if(ev.target===$('dialog'))close();});
 document.addEventListener('focusin',ev=>{
-  if(!tour?.playing||!ev.target.closest('#touranswerform'))return;
+  if(!tour?.playing||!ev.target.closest('#touranswerform, [data-go="practice-adjust"], [data-go="practice-accept"]'))return;
   setPlay(false);
   const transportNode=document.querySelector('.transport');
   if(transportNode)transportNode.outerHTML=transport();
@@ -585,14 +717,17 @@ document.addEventListener('focusin',ev=>{
   if(note)note.textContent='Paused while you answer. Resume to keep watching.';
 });
 document.addEventListener('input',ev=>{if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
-document.addEventListener('submit',ev=>{if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
+document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){endTour(true);render();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
 if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthrough)){
+  const startPractice=requestedWalkthrough==='customer'&&launchURL.searchParams.get('mode')==='practice';
+  if(startPractice)launchURL.searchParams.delete('mode');
   launchURL.searchParams.delete('walkthrough');
   history.replaceState(history.state,'',launchURL.href);
   if(tour?.type===requestedWalkthrough)render();else begin(requestedWalkthrough);
+  if(startPractice&&!isPractice())takeControl();
 }else render();
 })();
