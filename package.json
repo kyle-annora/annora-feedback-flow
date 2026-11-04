@@ -1,0 +1,10 @@
+{
+  "name": "annora-feedback-flow",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test *.test.cjs",
+    "bundle": "node scripts/bundle.mjs"
+  },
+  "description": "An Annora feedback workflow prototype with WinQuote as its first example."
+}
