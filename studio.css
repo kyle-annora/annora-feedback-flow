@@ -262,3 +262,18 @@
   .version-list>button>span:first-child>b{font-size:13px}
   .version-list>button>span:first-child>small{font-size:11px}
 }
+
+/* Completion has one result; its record belongs in Details. */
+.stage-task.completion-result{margin-top:24px;display:grid;justify-items:start;gap:12px}
+.completion-result>.receipt-mark{width:30px;height:30px;margin-bottom:2px}
+.completion-result .receipt-mark svg{width:17px;height:17px}
+.completion-result>.stage-title{font-size:28px;line-height:1.2;font-weight:620;letter-spacing:-.03em;margin:0}
+.completion-context{font-size:13px;line-height:1.5;color:#6b6874}
+.completion-result>.record-back{margin-top:8px}
+.context-release .receipt-facts{margin:3px 0 0;border:0}
+.context-release .receipt-facts>div{grid-template-columns:90px minmax(0,1fr);gap:10px;padding:7px 0;font-size:12px}
+.context-release .receipt-facts dd{font-weight:450;overflow-wrap:anywhere}
+@media(max-width:660px){
+  .stage-task.completion-result{margin-top:14px;gap:11px}
+  .completion-result>.stage-title{font-size:25px}
+}

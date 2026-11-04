@@ -267,6 +267,21 @@
   .version-list>button>span:first-child>b{font-size:13px}
   .version-list>button>span:first-child>small{font-size:11px}
 }
+
+/* Completion has one result; its record belongs in Details. */
+.stage-task.completion-result{margin-top:24px;display:grid;justify-items:start;gap:12px}
+.completion-result>.receipt-mark{width:30px;height:30px;margin-bottom:2px}
+.completion-result .receipt-mark svg{width:17px;height:17px}
+.completion-result>.stage-title{font-size:28px;line-height:1.2;font-weight:620;letter-spacing:-.03em;margin:0}
+.completion-context{font-size:13px;line-height:1.5;color:#6b6874}
+.completion-result>.record-back{margin-top:8px}
+.context-release .receipt-facts{margin:3px 0 0;border:0}
+.context-release .receipt-facts>div{grid-template-columns:90px minmax(0,1fr);gap:10px;padding:7px 0;font-size:12px}
+.context-release .receipt-facts dd{font-weight:450;overflow-wrap:anywhere}
+@media(max-width:660px){
+  .stage-task.completion-result{margin-top:14px;gap:11px}
+  .completion-result>.stage-title{font-size:25px}
+}
 </style></head>
 <body>
 <a href="#main" class="skip">Skip to feedback</a>
@@ -2344,7 +2359,8 @@ function contextPanel(c,v){
           I('external',13)+'<p>'+esc(preview)+'</p></button>';
       }).join('')+'</div>'
     : '<p class="context-note">No versions have been submitted yet.</p>';
-  return '<div class="context-panel"><section class="history-copy context-original">'+sourceHeader+source+'</section>'+
+  const release=c.stage==='published'?'<section class="context-release"><h3>Release record</h3>'+receiptFacts(c)+'</section>':'';
+  return '<div class="context-panel">'+release+'<section class="history-copy context-original">'+sourceHeader+source+'</section>'+
     answer+request+'<section class="history-copy"><h3>Version history</h3>'+versions+'</section></div>';
 }
 function stageCopy(c,v){
@@ -2357,7 +2373,6 @@ function stageCopy(c,v){
     case 'review':return ['Ready for review','Review '+rev,'Accept this version or send it back to the website team with a change request.'];
     case 'release':return ['Awaiting authorization','Authorize the release','The reviewer accepted this version. The site owner decides whether it can be released.'];
     case 'authorized':return ['Authorized','Run the simulated release','The site owner authorized this version. The website team can now run the simulation.'];
-    case 'published':return ['Release receipt','V'+(c.receipt?.rev??c.rev)+' released in simulation','No further action is needed.'];
   }
 }
 function receiptFacts(c){
@@ -2378,20 +2393,33 @@ function candidateSection(c,v){
   return '<section class="candidate-block" id="candidate">'+candidateHTML(c,v)+'</section>';
 }
 function stageTask(c,v){
-  const [label,title,lead]=stageCopy(c,v),complete=c.stage==='published';
-  const prefix=complete?'<span class="receipt-mark">'+I('check',14)+'</span>':avatar(c.owner,18)+'<span class="person-prop">'+esc(role(c.owner)[2])+'</span><span aria-hidden="true">·</span>';
+  const [label,title,lead]=stageCopy(c,v);
+  const prefix=avatar(c.owner,18)+'<span class="person-prop">'+esc(role(c.owner)[2])+'</span><span aria-hidden="true">·</span>';
   let body='';
   if(c.stage==='draft')body=sourceArea(c)+footer(c,v)+candidateSection(c,v);
   else if(c.stage==='clarify')body=candidateSection(c,v);
   else if(usesChecks(c))body=related(c,v)+candidateSection(c,v)+footer(c,v);
-  else body=receiptFacts(c)+(complete?(tour?btn('exit','Finish walkthrough','check','record-back'):btn('filter:all','Back to inbox','back','record-back')):footer(c,v))+
-    (!complete&&alternateAnswer(c,v)?'<div class="thread-notes">'+alternateAnswer(c,v)+'</div>':'');
+  else body=receiptFacts(c)+footer(c,v)+
+    (alternateAnswer(c,v)?'<div class="thread-notes">'+alternateAnswer(c,v)+'</div>':'');
 
   return '<section class="stage-task" data-stage="'+esc(c.stage)+'" aria-labelledby="task-title"><div class="stage-eyebrow">'+prefix+esc(label)+'</div><h2 class="stage-title" id="task-title">'+esc(title)+'</h2><p class="stage-lead">'+esc(lead)+'</p>'+body+'</section>';
 }
+function completion(c){
+  const version=c.receipt?.rev??c.rev;
+  const back=tour?btn('exit','Finish walkthrough','check','record-back'):
+    btn('filter:all','Back to inbox','back','record-back');
+  return '<section class="stage-task completion-result" data-stage="published" aria-labelledby="task-title">'+
+    '<span class="receipt-mark" aria-hidden="true">'+I('check',17)+'</span>'+
+    '<h1 class="stage-title" id="task-title">Release simulated</h1>'+
+    '<p class="completion-context">'+esc(label(c))+' · V'+version+'</p>'+back+'</section>';
+}
 function doc(c,v){
-  return '<div class="doc" id="doc"><div class="docbody flow-record"><header class="record-header"><div class="record-context">'+fileTag()+'<span>WinQuote</span><span aria-hidden="true">/</span><span>Feedback</span></div><h1 id="title">'+esc(label(c))+'</h1></header>'+
-    progressRow(c)+stageTask(c,v)+'<button id="mobaside" class="mobile-insight" data-go="mobileaside" aria-label="Open feedback details"></button>'+'</div></div>';
+  const complete=c.stage==='published';
+  const content=complete?completion(c):
+    '<header class="record-header"><div class="record-context">'+fileTag()+'<span>WinQuote</span><span aria-hidden="true">/</span><span>Feedback</span></div><h1 id="title">'+esc(label(c))+'</h1></header>'+
+    progressRow(c)+stageTask(c,v);
+  return '<div class="doc" id="doc"><div class="docbody flow-record">'+content+
+    '<button id="mobaside" class="mobile-insight" data-go="mobileaside" aria-label="Open feedback details"></button></div></div>';
 }
 function evidenceList(v){
 if(v.question)return '<div class="pending-proof">'+I('ask',19)+'<b>One question to resolve</b><p>Once the requester answers, the draft and its acceptance checks will appear here.</p></div>';

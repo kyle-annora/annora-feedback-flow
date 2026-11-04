@@ -103,7 +103,7 @@ Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b
 | Decision | Reference → application |
 | --- | --- |
 | Document sheet | Cycle’s quiet left navigation and white document surface frame the record. Keep the object title compact enough for the current task to lead. |
-| Task hierarchy | Four milestones orient the reader. The current step shows the owner, their decision and the action that moves the record forward. The completed view leads with one versioned receipt. |
+| Task hierarchy | Four milestones orient the reader. The current step shows the owner, their decision and the action that moves the record forward. The completed view contains one result heading, a subject/version line and one return action. |
 | Secondary pane | Cycle’s tab row and divider. The persistent right panel holds Details and Activity. Details contains the original request, requester answer and immutable submitted versions. Drafting, preparation and review also expose Checks. On phones, Feedback details opens the same panel as a bottom sheet. |
 | Accent + components | Small 16px strokes, compact toolbar, slate tones and an indigo primary action. Semantic colors limited to people, requirement status, and handoffs. No large purple panels. |
 | Editing | Selected source phrase, updated candidate and measured value share one short pulse. Edited record remains anchored; reduced motion omits the pulse. |
@@ -112,7 +112,7 @@ Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b
 
 ## Overview
 
-A record opens to its current task. Past feedback, answers and delivered versions live in the right-hand Details tab, with the event timeline in Activity. After release, the main workspace contains a single receipt identifying the released version and its approval. Walkthroughs start from navigation.
+A record opens to its current task. Past feedback, answers and delivered versions live in the right-hand Details tab, with the event timeline in Activity. After release, the main workspace contains a compact result. Details holds the released version, target and approvals. Walkthroughs start from navigation.
 
 ## Colors
 
