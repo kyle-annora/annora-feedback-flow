@@ -6,12 +6,12 @@
     { id: "team", label: "Website team", description: "Resolve a word limit before sending the draft for review." },
     { id: "publisher", label: "Site owner", description: "Verify the accepted version and authorize its release." },
   ];
-  const newButton = () => engine.createCase('The "Create" button label on the WinQuote homepage is unclear.');
+  const newButton = () => engine.createCase('The homepage “Create” button needs a new label. I know what I want it to say.');
   const act = (name, value) => (record) => engine.transition(record, name, value);
   const frame = (title, description, run) => ({ title, description, run });
 
   const customer = [
-    frame("Write the feedback", 'The requester finds the homepage “Create” button unclear. They haven’t chosen a replacement label yet.', newButton),
+    frame("Write the feedback", 'The requester wants to rename “Create” and already knows the replacement wording.', newButton),
     frame("Ask for the missing label", "The requester sees one question about the button wording.", act("submit")),
     frame("Draft the button label", 'The sample answer is “Start a quote.” The website team can now check the proposed label.', act("answer", "Start a quote")),
     frame("Send V1 for review", "The reviewer can accept V1 or ask the team to change the wording.", act("deliver")),

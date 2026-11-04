@@ -3,6 +3,7 @@
   const common = typeof module === "object" && module.exports;
   const Model = common ? require("./model.js") : root.FlowModel;
   const Personal = common ? require("./custom-story.js") : root.FlowCustomStory;
+  const Hesitation = common ? require("./hesitation.js") : root.FlowHesitation;
   const initialFeedback = "Recommend templates first for standard quotes, and start custom quotes from scratch. Keep the reminder to add customer details next. Use no more than 18 words.";
   const ownerByStage = {
     draft: "Requester", clarify: "Requester", processing: "Website team", review: "Reviewer",
@@ -15,9 +16,17 @@
   const askKey = q => q ? JSON.stringify([q.prompt, q.source, q.options]) : "";
   const apiKind = kind => ["entry", "button"].includes(kind) ? kind : "other";
 
+  function intakeQuestion(c) {
+    const suggested = Model.suggest(c.text);
+    const previous = suggested.question;
+    // A saved answer to the original wording question remains exact copy.
+    if (c.intakeVersion !== 2 || (previous && c.answerKey === askKey(previous))) return previous;
+    return Hesitation.question(c.text, suggested) || previous;
+  }
+
   function createCase(text = initialFeedback) {
     return {
-      text: String(text), stage: "draft", owner: ownerByStage.draft, rev: 1,
+      text: String(text), intakeVersion:2, stage: "draft", owner: ownerByStage.draft, rev: 1,
       versions: [], trail: [], answer: "", answerKey: "", answerSimulated: false,
       adjustment: "", adjustments: [], candidateOverride:null,
       accepted: null, authorization: null, receipt: null,
@@ -95,6 +104,10 @@
     const view = {kind:"other", question:null, candidate:"", checks:[], blocked:false,
       manual:false, reason:"", wordCount:0, limit:null};
     if (!clean(c.text)) return {...view,reason:"Write your feedback to see a draft and its review criteria here."};
+    const intake = intakeQuestion(c);
+    if (intake?.type === "hesitation") {
+      return Hesitation.derive(c, intake, !!c.answer && c.answerKey === askKey(intake), view);
+    }
     const record = recordFor(c);
     const suggested = Model.suggest(c.text);
     view.kind = apiKind(suggested.kind);
@@ -147,8 +160,8 @@
     const raw = String(text);
     if (raw === c.text) return c;
     if (c.versions.length) return createCase(raw);
-    const fresh = {...c,text:raw,candidateOverride:null};
-    if (!c.answerKey || askKey(Model.suggest(raw).question) !== c.answerKey) {
+    const fresh = {...c,text:raw,intakeVersion:2,candidateOverride:null};
+    if (!c.answerKey || askKey(intakeQuestion(fresh)) !== c.answerKey) {
       Object.assign(fresh,{answer:"",answerKey:"",answerSimulated:false});
     }
     if (c.stage === "draft" || !raw.trim()) return setStage(fresh,"draft");
@@ -184,7 +197,7 @@
         break;
       case "answer": {
         if (c.stage !== "clarify" || !note || !view.question) return c;
-        const answered = {...c,answer:note,answerKey:askKey(Model.suggest(c.text).question),answerSimulated:simulated};
+        const answered = {...c,answer:note,answerKey:askKey(intakeQuestion(c)),answerSimulated:simulated};
         next = setStage(answered,workStage(derive(answered)));
         message = "Answered the question: " + note;
         break;
@@ -257,7 +270,8 @@
     }
   }
 
-  const api = {initialFeedback,createCase,editSource,editCandidate,reviseAdjustment,derive,transition,step};
+  const api = {initialFeedback,hesitationFeedback:Hesitation.feedback,hesitationAnswers:Hesitation.answers,
+    createCase,editSource,editCandidate,reviseAdjustment,derive,transition,step};
   root.CaseEngine = api;
   if (common) module.exports = api;
 })(globalThis);

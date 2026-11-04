@@ -87,12 +87,18 @@
     const before = s.slice(0, marker.index),
       after = s.slice(marker.index + marker[0].length).trim();
     if (visualChange(before)) return "";
+    // People also name the homepage control without saying “button”:
+    // “Create” is unclear. Rename it to “Start a quote”.
+    const namesCreate = /[“"'‘「]\s*create\s*[”"'’」]|\b(?:rename|relabel)\s+create\b|\bcreate\s+is\s+(?:unclear|confusing)\b/i.test(before);
     if (
       !buttonContext &&
+      !namesCreate &&
       !/按钮|CTA|button|(?:首页|把|将)\s*(?:的)?\s*[A-Za-z「“"]/i.test(before + marker[0])
     )
       return "";
     const quote = quotedLabel(after);
+    // “The button label ‘Create’ is unclear” describes the existing control.
+    if (quote && /^create$/i.test(quote) && /^label\s*$/i.test(marker[0]) && /unclear|confus|看不懂|不明白/i.test(after)) return "";
     if (quote) return val(quote);
     if (/^[「“"‘']/.test(after)) return "";
     return val(clauses(after)[0])
