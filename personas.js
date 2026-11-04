@@ -308,7 +308,32 @@
     }
     return [];
   }
-  const api = {list, frames, start, next, canReview, decide, from, suggestChange:engine.suggestChange,
+  function pendingAccepted(c) {
+    return c?.stage==="release"&&c.owner==="Site owner"&&c.accepted?.simulated!==true&&
+      c.accepted?.rev===c.rev&&c.versions.at(-1)?.rev===c.rev&&!c.authorization&&!c.receipt;
+  }
+  function canOpenOwner(source) {
+    return source?.personaId==="customer"&&pendingAccepted(source.case);
+  }
+  function releaseSteps(source,action,revision) {
+    const c=source.case;
+    if(!Number.isInteger(revision)||revision!==c.rev||c.accepted?.rev!==revision||
+      c.accepted.simulated===true||c.versions.at(-1)?.rev!==revision||c.receipt)return [];
+    let next=c,title;
+    if(action==="view-owner"&&canOpenOwner(source))title="Check accepted V"+revision;
+    else if(action==="approve"&&source.personaId==="publisher"&&pendingAccepted(c)){
+      next=engine.transition(c,"authorize");
+      title="V"+revision+" approved for simulated release";
+    }else if(action==="execute"&&source.personaId==="publisher"&&c.stage==="authorized"&&
+      c.owner==="Website team"&&c.authorization?.rev===revision&&c.authorization.simulated!==true&&
+      c.authorization.actor==="Site owner"&&c.authorization.target==="WinQuote homepage"){
+      next=simulate(c,"publish");title="V"+revision+" released in simulation";
+    }else return [];
+    const index=(source.index??0)+1;
+    return [{...source,case:next,title,description:"",personaId:"publisher",handoff:undefined,
+      index,total:index+1,interactive:true,done:next.stage==="published"}];
+  }
+  const api = {list, frames, start, next, canReview, decide, from, canOpenOwner,releaseSteps,suggestChange:engine.suggestChange,
     teamStart,teamDraft,teamSteps};
   root.CasePersonas = api;
   if (typeof module === "object" && module.exports) module.exports = api;

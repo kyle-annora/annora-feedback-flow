@@ -16,17 +16,20 @@ const practiceKey='feedbackflow:requester-practice:v3';
 let practice=null;
 try {
   const saved=JSON.parse(sessionStorage.getItem(practiceKey));
-  if(saved?.frames?.[saved.frontier]?.case&&saved.frames[saved.frontier].personaId==='customer')practice=saved;
+  const frame=saved?.frames?.[saved.frontier];
+  if(frame?.case&&(frame.personaId==='customer'||(frame.personaId==='publisher'&&frame.case.accepted)))practice=saved;
 }catch{}
 function writePractice(){
   try{if(practice)sessionStorage.setItem(practiceKey,JSON.stringify(practice));else sessionStorage.removeItem(practiceKey);}catch{}
 }
 function isPractice(){return tour?.type==='customer'&&tour.inputMode==='practice';}
 function isTeamPractice(current=tour){return current?.type==='team'&&current.inputMode==='practice';}
+function isHandsOn(current=tour){return current?.inputMode==='practice'&&['customer','team'].includes(current.type);}
+function inOwnerView(current=tour){return isHandsOn(current)&&teamPerspective(current)==='publisher';}
 function teamPerspective(current=tour){return current.frames[current.index].personaId;}
 function practiceFrontier(){return isTeamPractice()?tour.frames.length-1:practice?.frontier;}
 function inPracticeHistory(){return (isTeamPractice()||isPractice())&&tour.index<practiceFrontier();}
-function decisionPoint(){return isTeamPractice()||(isPractice()&&['draft','clarify','review'].includes(here().stage));}
+function decisionPoint(){return isTeamPractice()||inOwnerView()||(isPractice()&&['draft','clarify','review'].includes(here().stage));}
 function rememberPractice(reset=false,current=tour){
   if(current?.type!=='customer'||current.inputMode!=='practice')return;
   const frontier=reset?current.index:Math.max(current.index,Math.min(practice?.frontier??0,current.frames.length-1));
@@ -293,6 +296,7 @@ if(v.proposal){
 return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
 function alternateAnswer(c,v){
+  if(isHandsOn()&&['release','authorized','published'].includes(c.stage))return '';
   const explore=tour&&!inPracticeHistory()&&['create','mine','customer'].includes(tour.type)&&c.answer&&v.kind==='hesitation';
   return explore?btn('tour-answer','Try another answer','branch','swap-answer'):'';
 }
@@ -306,6 +310,18 @@ function related(c,v){
 }
 function actions(c,v){
 if(inPracticeHistory())return '';
+if(isHandsOn()&&c.stage==='release'){
+  const rev=c.accepted?.rev;
+  if(rev!==c.rev||!c.versions.some(version=>version.rev===rev))return '';
+  if(inOwnerView())return btn('approve-release:'+rev,'Approve simulated release of V'+rev,'verify','primary');
+  if(P.canOpenOwner(tour.frames[tour.index]))return btn('view-site-owner:'+rev,'View as Site owner','flag','primary');
+  return '';
+}
+if(isHandsOn()&&c.stage==='authorized')return '';
+if(isHandsOn()&&c.stage==='published'){
+  return btn('filter:all','Back to inbox','back','record-back')+
+    (isTeamPractice()?btn('team-restart','Start a new team practice','replay','subtle'):'');
+}
 if(isTeamPractice()){
   if(['processing','blocked'].includes(c.stage)){
     const ready=teamDraftState().ready;
@@ -317,9 +333,7 @@ if(isTeamPractice()){
     }
     return c.rev===1?'':btn('team-view-requester','View as Requester','customer','primary');
   }
-  return c.stage==='release'&&c.accepted?
-    btn('filter:all','Back to inbox','back','record-back')+
-    btn('team-restart','Start a new team practice','replay','subtle'):'';
+  return '';
 }
 if(tour?.type==='customer'&&c.stage==='review'){
   return btn('practice-adjust','Request changes','branch','outline')+btn('practice-accept','Accept V'+c.rev,'check','primary');
@@ -347,12 +361,15 @@ function footer(c,v){
 }
 function transport(){
   if(!tour)return '';
-  if(isTeamPractice()){
+  if(isTeamPractice()||(isHandsOn()&&['release','authorized','published'].includes(here().stage))){
     const history=inPracticeHistory();
-    const status=history?'Earlier step · Read only':teamPerspective()==='customer'?'Requester view':'Website team view';
-    const historyTools=history?btn('walkcurrent','Return to current step',null,'walk-current')+iconbtn('walknext','next','Next step'):'';
+    const status=history?'Earlier step · Read only':inOwnerView()?'Site owner view':
+      tour.type==='customer'||teamPerspective()==='customer'?'Requester view':'Website team view';
+    const historyTools=history?btn('walkcurrent','Return to current step',null,'walk-current')+iconbtn('walknext','next','Next step'):
+      isTeamPractice()&&P.canOpenOwner(tour.frames[tour.index])?btn('team-restart','Start a new team practice',null,'walk-mode'):'';
     return '<div class="transport'+(history?' is-history':'')+'" role="group" aria-label="Walkthrough player">'+
-      '<span class="trackmark">'+I(history?'history':'people',14)+'</span><div class="tracktitle"><b>Team practice</b><span>'+esc(status)+'</span></div>'+
+      '<span class="trackmark">'+I(history?'history':inOwnerView()?'flag':'people',14)+'</span><div class="tracktitle"><b>'+
+      (isTeamPractice()?'Team practice':'Requester practice')+'</b><span>'+esc(status)+'</span></div>'+
       '<div class="playtools">'+historyTools+'</div></div>';
   }
   const last=tour.index===tour.frames.length-1;
@@ -408,7 +425,7 @@ function contextPanel(c,v){
           I('external',13)+'<p>'+esc(preview)+'</p></button>';
       }).join('')+'</div>'
     : '<p class="context-note">No versions have been submitted yet.</p>';
-  const release=c.stage==='published'?'<section class="context-release"><h3>Release record</h3>'+receiptFacts(c)+'</section>':'';
+  const release=c.stage==='published'&&!isHandsOn()?'<section class="context-release"><h3>Release record</h3>'+receiptFacts(c)+'</section>':'';
   return '<div class="context-panel">'+release+'<section class="history-copy context-original">'+sourceHeader+source+'</section>'+
     answer+request+'<section class="history-copy"><h3>Version history</h3>'+versions+'</section></div>';
 }
@@ -418,9 +435,17 @@ function stageCopy(c,v){
   if(inPracticeHistory()){
     const titles={draft:'Original request',clarify:v.question?.text||'Clarification',review:rev+' review',
       processing:c.rev>1?'The team revised '+rev:'The team prepared '+rev,
-      blocked:c.adjustment?'Changes requested to V'+(c.rev-1):'Team investigation'};
+      blocked:c.adjustment?'Changes requested to V'+(c.rev-1):'Team investigation',
+      release:inOwnerView()?'Release approval for '+rev:rev+' accepted',authorized:rev+' release authorized'};
     const status=dockStatus({...tour,index:practiceFrontier()});
     return ['Earlier step',titles[c.stage]||stages[c.stage],'Current step · '+status.join(' · ')];
+  }
+  if(isHandsOn()){
+    if(c.stage==='release'){
+      if(inOwnerView())return ['Your turn','Approve '+rev+' for release','Check the accepted copy and its destination before approving the simulated release.'];
+      return ['Awaiting release approval',rev+' accepted','The site owner decides whether to release this version.'];
+    }
+    if(c.stage==='authorized')return ['Running simulation','Release authorized','The website team is running the '+rev+' simulation. Its receipt will appear here.'];
   }
   if(isTeamPractice()){
     switch(c.stage){
@@ -431,8 +456,6 @@ function stageCopy(c,v){
         if(teamPerspective()==='customer')return ['Your turn','Review '+rev,'Read the two options and the review question. Accept this version or ask the team for another change.'];
         return c.rev===1?['Simulated review','V1 is with the requester','A simulated requester will respond to these two entry options. There’s nothing for you to send while you wait.']:
           ['Waiting for review',rev+' is with the requester','The requester has the version you sent. Open their view to review its exact copy.'];
-      case 'release':
-        return ['Release approval',rev+' accepted','The site owner now decides whether to authorize release.'];
     }
   }
   if(handoff&&tour.index===tour.frames.length-1)return ['Handoff',handoff.title,handoff.description];
@@ -498,6 +521,27 @@ function receiptFacts(c){
   }
   return '<dl class="receipt-facts">'+copy+entries.map(([k,v])=>'<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>').join('')+'</dl>';
 }
+function releasePacket(c){
+  const rev=c.receipt?.rev??c.authorization?.rev??c.accepted?.rev;
+  const snapshot=c.versions.find(version=>version.rev===rev);
+  if(!snapshot)return '';
+  const target=c.receipt?.target??c.authorization?.target??'WinQuote homepage';
+  const items=snapshot.view?.proposal?.items;
+  const copy=items?.length?'<dl class="release-options">'+items.map(item=>'<div><dt>'+esc(item.label)+'</dt><dd>'+esc(item.detail)+'</dd></div>').join('')+'</dl>':
+    '<p class="release-exact-copy">'+esc(snapshot.candidate)+'</p>';
+  const acceptedBy=c.accepted.actor==='Reviewer'?'Requester':c.accepted.actor;
+  const facts=[['Accepted by',acceptedBy+' · V'+c.accepted.rev]];
+  if(c.authorization)facts.push(['Approved by',c.authorization.actor+' · V'+c.authorization.rev]);
+  const published=c.receipt&&c.trail.find(event=>event.action==='publish'&&event.rev===rev);
+  if(published){
+    const when=new Date(published.at);
+    const at=Number.isFinite(when.getTime())?' · '+when.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    facts.push(['Simulated by',published.actor+' · V'+rev+at]);
+  }
+  return '<section class="release-packet" aria-label="Accepted copy V'+rev+'"><div class="release-packet-head">'+
+    '<h3>Accepted copy <span class="version">V'+rev+'</span></h3><p class="release-target">'+I('target',14)+esc(target)+'</p></div>'+copy+
+    '<dl class="release-signatures">'+facts.map(([key,value])=>'<div><dt>'+esc(key)+'</dt><dd>'+esc(value)+'</dd></div>').join('')+'</dl></section>';
+}
 function candidateSection(c,v){
   return '<section class="candidate-block" id="candidate">'+candidateHTML(c,v)+'</section>';
 }
@@ -505,8 +549,8 @@ function stageTask(c,v){
   const [label,title,lead]=stageCopy(c,v);
   const isRequesterView=tour?.type==='customer'||(isTeamPractice()&&teamPerspective()==='customer');
   const actingAsRequester=isRequesterView&&['Requester','Reviewer'].includes(c.owner);
-  const actingAsTeam=tour?.type==='team'&&c.owner==='Website team';
-  const actingAsOwner=tour?.type==='publisher'&&c.owner==='Site owner';
+  const actingAsTeam=tour?.type==='team'&&c.owner==='Website team'&&!inOwnerView();
+  const actingAsOwner=(tour?.type==='publisher'||inOwnerView())&&c.owner==='Site owner';
   const ownerLabel=actingAsRequester?'You · Requester':actingAsTeam?'You · Website team':actingAsOwner?'You · Site owner':
     isTeamPractice()&&c.owner==='Reviewer'?'Requester':role(c.owner)[2];
   const prefix=avatar(c.owner,18)+'<span class="person-prop">'+esc(ownerLabel)+'</span><span aria-hidden="true">·</span>';
@@ -514,6 +558,9 @@ function stageTask(c,v){
   if(c.stage==='draft')body=sourceArea(c)+footer(c,v)+(tour?.type==='customer'?'':candidateSection(c,v));
   else if(c.stage==='clarify')body=candidateSection(c,v);
   else if(usesChecks(c))body=related(c,v)+candidateSection(c,v)+footer(c,v);
+  else if(isHandsOn()&&['release','authorized'].includes(c.stage)){
+    body=(inOwnerView()?releasePacket(c):'')+footer(c,v);
+  }
   else body=receiptFacts(c)+footer(c,v)+
     (alternateAnswer(c,v)?'<div class="thread-notes">'+alternateAnswer(c,v)+'</div>':'');
 
@@ -521,6 +568,13 @@ function stageTask(c,v){
 }
 function completion(c){
   const version=c.receipt?.rev??c.rev;
+  if(isHandsOn()&&c.receipt){
+    return '<section class="stage-task completion-result" data-stage="published" aria-labelledby="task-title">'+
+      '<span class="receipt-mark" aria-hidden="true">'+I('check',17)+'</span>'+
+      '<h1 class="stage-title" id="task-title">Simulated release receipt</h1>'+
+      '<p class="completion-context">The simulation is complete for V'+version+'.</p>'+
+      releasePacket(c)+footer(c,E.derive(c))+'</section>';
+  }
   const back=tour?btn('exit','Finish walkthrough','check','record-back'):
     btn('filter:all','Back to inbox','back','record-back');
   return '<section class="stage-task completion-result" data-stage="published" aria-labelledby="task-title">'+
@@ -614,13 +668,17 @@ function dockStatus(current){
   if(!current)return ['Requester','Try the requester role'];
   const c=current.frames[current.index].case;
   const rev='V'+c.rev;
+  if(isHandsOn(current)){
+    if(c.stage==='release')return inOwnerView(current)?['You · Site owner','Approve '+rev+' for simulation']:['Site owner','View '+rev+' as Site owner'];
+    if(c.stage==='authorized')return ['Website team','Wait for the '+rev+' simulation receipt'];
+    if(c.stage==='published')return ['Complete','View the '+rev+' simulation receipt'];
+  }
   if(isTeamPractice(current)){
     switch(c.stage){
       case 'processing':case 'blocked':return ['You · Website team',c.rev===1?'Check and send V1':'Edit and send '+rev];
       case 'review':
         if(teamPerspective(current)==='customer')return ['You · Requester','Review '+rev];
         return ['Requester',c.rev===1?'Await the sample reply':'View '+rev+' as requester'];
-      case 'release':return ['Site owner','Await '+rev+' release approval'];
     }
   }
   if(current.type!=='customer'||current.inputMode!=='practice'){
@@ -670,27 +728,39 @@ function teamDraftState(){
   const frame=tour.frames[tour.index];
   return P.teamDraft(frame,inPracticeHistory()?null:tour.teamInputs);
 }
-function appendTeamSteps(current,steps){
+function appendPracticeSteps(current,steps){
   if(!steps.length||current.index!==current.frames.length-1)return false;
   current.frames=current.frames.concat(steps);current.index=current.frames.length-1;
   delete current.teamInputs;
-  saveTour();return true;
+  rememberPractice(true,current);saveTour();return true;
 }
-function scheduleTeamReply(current){
+function schedulePracticeEvent(current){
   const frame=current.frames[current.index];
-  if(current.index!==current.frames.length-1||frame.personaId!=='team'||
-    frame.case.stage!=='review'||frame.case.rev!==1)return;
+  if(current.index!==current.frames.length-1)return;
+  const c=frame.case;
+  const execution=inOwnerView(current)&&c.stage==='authorized';
+  const firstReply=isTeamPractice(current)&&frame.personaId==='team'&&c.stage==='review'&&c.rev===1;
+  if(!execution&&!firstReply)return;
   timer=setTimeout(()=>{
-    if(current!==(tour||parkedTour)||!appendTeamSteps(current,P.teamSteps(frame,'sample-change')))return;
+    if(current!==(tour||parkedTour)||frame!==current.frames[current.index])return;
+    const steps=execution?P.releaseSteps(frame,'execute',c.rev):P.teamSteps(frame,'sample-change');
+    if(!appendPracticeSteps(current,steps))return;
     if(tour){render();focusTask();}else renderDock();
-    announce('The example requester asked for changes. The website team owns V2.');
+    announce(execution?'The website team completed the simulated release of V'+c.rev+'.':
+      'The example requester asked for changes. The website team owns V2.');
   },4000);
 }
 function teamAction(action,value){
   if(!isTeamPractice()||inPracticeHistory())return;
   const steps=P.teamSteps(tour.frames[tour.index],action,value);
-  if(!appendTeamSteps(tour,steps))return;
+  if(!appendPracticeSteps(tour,steps))return;
   close();setPlay(false);render();focusTask();announce(steps.at(-1).title);
+}
+function ownerAction(action,revision){
+  if(!isHandsOn()||inPracticeHistory())return;
+  const steps=P.releaseSteps(tour.frames[tour.index],action,revision);
+  if(!appendPracticeSteps(tour,steps))return;
+  close();setPlay(false);render();focusTask();announce(steps[0].title);
 }
 function updateTeamDraft(){
   if(!isTeamPractice()||inPracticeHistory()||teamPerspective()!=='team')return;
@@ -705,7 +775,7 @@ function updateTeamDraft(){
 }
 function setPlay(on){
   if(!tour)return;
-  if(isTeamPractice()){stop();tour.playing=false;saveTour();scheduleTeamReply(tour);return;}
+  if(isTeamPractice()||inOwnerView()){stop();tour.playing=false;saveTour();schedulePracticeEvent(tour);return;}
   tour.playing=Boolean(on&&!inPracticeHistory()&&!decisionPoint()&&tour.index<tour.frames.length-1);stop();
   if(tour.playing){
     const choosing=here().stage==='clarify'&&E.derive(here()).question?.type==='hesitation';
@@ -736,7 +806,7 @@ function endTour(restore=false){
 }
 function scheduleParkedStep(){
   const current=parkedTour;
-  if(isTeamPractice(current)){scheduleTeamReply(current);return;}
+  if(isTeamPractice(current)||inOwnerView(current)){schedulePracticeEvent(current);return;}
   if(current?.type!=='customer'||current.inputMode!=='practice')return;
   const c=current.frames[current.index].case;
   if(!['processing','blocked'].includes(c.stage)||current.index>=current.frames.length-1)return;
@@ -810,7 +880,7 @@ function begin(type,reset=false,startPractice=false,watchTeamExample=false){
   setPlay(frames.length>1&&(!isPractice()||!decisionPoint()));render();announce('Walkthrough started.');
 }
 function clarificationPrefix(){
-  if(!tour||inPracticeHistory()||!['mine','create','customer'].includes(tour.type))return null;
+  if(!tour||inPracticeHistory()||inOwnerView()||!['mine','create','customer'].includes(tour.type))return null;
   const index=tour.frames.slice(0,tour.index+1).findLastIndex(f=>f.case.stage==='clarify');
   if(index!==-1)return tour.frames.slice(0,index+1);
   // A personal walkthrough may start from an already answered, versioned record.
@@ -912,7 +982,8 @@ function personaMenu(){
   const options=P.list.map((role,index)=>
     (role.id==='team'?'<button data-go="team-practice">'+avatar('Website team')+
       '<span><b>Practice as the website team</b><small>Send V1, revise the two entry points, and hand V2 to the requester.</small></span>'+I('next',15)+'</button>':'')+
-    '<button data-go="persona:'+role.id+'">'+avatar(roles[index])+'<span><b>'+esc(role.id==='team'?'Watch the website team example':role.label)+'</b><small>'+
+    '<button data-go="persona:'+role.id+'">'+avatar(roles[index])+'<span><b>'+esc(role.id==='team'?'Watch the website team example':
+      role.id==='publisher'?'Watch the site owner example':role.label)+'</b><small>'+
     esc(descriptions[role.id])+'</small></span>'+I('play',15)+'</button>').join('');
   dialog('<p class="dlgdesc">Practice the team’s edits and handoffs, try the requester’s decisions, or watch a role example.</p>'+
     '<div class="dlgrows">'+options+'</div>','Choose your role');
@@ -942,7 +1013,10 @@ case 'project':case 'filter':parkActive();filter=k==='project'?'all':arg;page='l
 case 'find':parkActive();filter='all';search='';page='list';render();$('searchbox').focus();return;
 case 'new':newItem();return;case 'case':selectCase(arg);return;case 'walk':begin('mine');return;case 'personas':personaMenu();return;case 'persona':begin(arg);return;
 case 'team-practice':begin('team',false,true);return;
-case 'team-restart':if(isTeamPractice()&&!inPracticeHistory()&&here().stage==='release'&&here().accepted)begin('team',true,true);return;
+case 'team-restart':if(isTeamPractice()&&!inPracticeHistory()&&(P.canOpenOwner(tour.frames[tour.index])||
+  (here().stage==='published'&&here().receipt)))begin('team',true,true);return;
+case 'view-site-owner':ownerAction('view-owner',Number(arg));return;
+case 'approve-release':ownerAction('approve',Number(arg));return;
 case 'team-deliver':teamAction('deliver',tour?.teamInputs);return;
 case 'team-view-requester':teamAction('view-requester');return;
 case 'create-tour':begin('create');return;

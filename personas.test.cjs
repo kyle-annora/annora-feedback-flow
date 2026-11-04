@@ -285,3 +285,48 @@ test("team practice preserves two edited fields in the exact release handoff and
   assert.deepEqual(v3.case.versions[1],v2);
   assert.equal(v3.case.versions[2].rev,3);
 });
+
+test("owner perspective, human approval and simulated execution are separate and bound to one frozen version", () => {
+  let frame = personas.teamStart();
+  frame = personas.teamSteps(frame,"deliver").at(-1);
+  frame = personas.teamSteps(frame,"sample-change").at(-1);
+  const items=[{label:"Standard template",detail:"Start a standard walk-in from the preset."},
+    {label:"Start from scratch",detail:"Choose custom sizes for your layout."}];
+  const sent=personas.teamSteps(frame,"deliver",items).at(-1);
+  const reviewer=personas.teamSteps(sent,"view-requester")[0];
+  assert.deepEqual(personas.releaseSteps(reviewer,"view-owner",2),[]);
+  const [accepted]=personas.teamSteps(reviewer,"accept");
+  const version=structuredClone(accepted.case.versions[1]);
+  assert.equal(personas.canOpenOwner(accepted),true);
+  assert.deepEqual(personas.releaseSteps(accepted,"approve",2),[]);
+  assert.deepEqual(personas.releaseSteps(accepted,"view-owner",1),[]);
+  const [owner]=personas.releaseSteps(accepted,"view-owner",2);
+  assert.equal(owner.case,accepted.case);
+  assert.equal(owner.case.authorization,null);
+  assert.equal(owner.case.receipt,null);
+  assert.deepEqual(personas.releaseSteps(owner,"view-owner",2),[]);
+  assert.deepEqual(personas.releaseSteps(owner,"approve",1),[]);
+  assert.deepEqual(personas.releaseSteps(owner,"execute",2),[]);
+  const [authorized]=personas.releaseSteps(owner,"approve",2);
+  assert.equal(authorized.case.owner,"Website team");
+  assert.deepEqual(authorized.case.authorization,{rev:2,actor:"Site owner",target:"WinQuote homepage",simulated:false});
+  assert.equal(authorized.case.receipt,null);
+  assert.deepEqual(personas.releaseSteps(authorized,"approve",2),[]);
+  assert.deepEqual(personas.releaseSteps(authorized,"execute",1),[]);
+  const [published]=personas.releaseSteps(authorized,"execute",2);
+  assert.deepEqual(published.case.receipt,{rev:2,target:"WinQuote homepage",simulated:true});
+  assert.deepEqual(published.case.versions.at(-1),version);
+  assert.deepEqual(published.case.trail.slice(-2).map(({action,actor,simulated})=>[action,actor,simulated]),
+    [["authorize","Site owner",false],["publish","Website team",true]]);
+  assert.deepEqual(personas.releaseSteps(published,"execute",2),[]);
+  assert.deepEqual(personas.releaseSteps(published,"approve",2),[]);
+
+  const customer=personas.frames("customer",engine.hesitationAnswers[0],{personalAnswer:true});
+  const early=personas.decide(customer,3,"accept").at(-1);
+  assert.equal(early.case.accepted.rev,1);
+  assert.equal(personas.canOpenOwner(early),true);
+  assert.equal(personas.releaseSteps(early,"view-owner",1)[0].case.versions[0],early.case.versions[0]);
+  const example=personas.frames("customer",engine.hesitationAnswers[0]).at(-1);
+  assert.equal(personas.canOpenOwner(example),false);
+  assert.deepEqual(personas.releaseSteps(example,"view-owner",2),[]);
+});
