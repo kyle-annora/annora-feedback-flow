@@ -19,7 +19,7 @@
   function intakeQuestion(c) {
     const suggested = Model.suggest(c.text);
     const previous = suggested.question;
-    // A saved answer to the original wording question remains exact copy.
+    // Keep the original wording question for answers saved on that route.
     if (c.intakeVersion !== 2 || (previous && c.answerKey === askKey(previous))) return previous;
     return Hesitation.question(c.text, suggested) || previous;
   }
@@ -43,8 +43,28 @@
       record.needsQuestion = false;
     }
     record.adjustments = c.adjustments.map(item => ({round:item.rev, note:item.text}));
+    // A repaired pending record starts a new review without inventing a
+    // requester revision. The delivered version remains in history.
+    if (c.reopenedAfter && c.versions.at(-1)?.rev === c.reopenedAfter &&
+        !record.adjustments.some(a=>a.round === c.reopenedAfter)) {
+      record.adjustments.push({round:c.reopenedAfter, note:""});
+    }
     record.rounds = c.versions.map(v => ({n:v.rev, text:v.candidate}));
     return record;
+  }
+
+  function needsWordingRetry(c, intake = intakeQuestion(c)) {
+    return !!(intake && intake.type !== "hesitation" && !intake.options.length &&
+      c.answer && c.answerKey === askKey(intake) && c.answer !== "Ask the team" &&
+      c.answer !== "请团队建议" && !Model.buttonAnswer(c.answer));
+  }
+
+  function wordingRetry(c, base) {
+    const explanation = "Your answer is saved as context. You can ask the team to suggest wording or enter an exact label in quotes.";
+    return {...base, kind:"button", reason:explanation, question:{
+      type:"wording-retry", text:"Would you like the team to suggest the button wording?",
+      reason:explanation, source:c.answer, options:["Ask the team"],
+    }};
   }
 
   // Use the same complete-clause coverage check as the personal tour. It catches, for instance,
@@ -108,6 +128,7 @@
     if (intake?.type === "hesitation") {
       return Hesitation.derive(c, intake, !!c.answer && c.answerKey === askKey(intake), view);
     }
+    if (needsWordingRetry(c, intake)) return wordingRetry(c, view);
     const record = recordFor(c);
     const suggested = Model.suggest(c.text);
     view.kind = apiKind(suggested.kind);
@@ -156,6 +177,20 @@
     return {...c, trail:[...c.trail,{action,actor,text,rev:c.rev,simulated,at:new Date().toISOString()}]};
   }
 
+  // Old builds sometimes delivered the raw reply as if it were requested
+  // copy. Reopen only outstanding work; never regenerate a completed release.
+  function resumeWorkingCase(c) {
+    if (!c.answer || ["draft","published","clarify"].includes(c.stage) || !needsWordingRetry(c)) return c;
+    const last = c.versions.at(-1);
+    if (!workStages.includes(c.stage)) {
+      if (!last || last.rev !== c.rev || last.candidate !== c.answer) return c;
+      const next = setStage({...c, rev:c.rev + 1, reopenedAfter:c.rev,
+        candidateOverride:null, accepted:null, authorization:null}, "clarify");
+      return log(next, "reopen", "Website team", `V${c.rev} used an unconfirmed answer as copy. Ask for clarification before a new review.`, false);
+    }
+    return setStage(c,"clarify");
+  }
+
   function editSource(c,text) {
     const raw = String(text);
     if (raw === c.text) return c;
@@ -187,6 +222,7 @@
 
   function transition(c,action,value) { return apply(c,action,value,false); }
   function apply(c,action,value,simulated) {
+    c = resumeWorkingCase(c);
     const view = derive(c), note = clean(value);
     let next = c, message, actor = c.owner;
     switch (action) {
@@ -250,11 +286,14 @@
   }
 
   function step(c) {
+    const repaired = resumeWorkingCase(c);
+    if (repaired !== c) return repaired;
     const view = derive(c);
     const run = (action,value) => apply(c,action,value,true);
     switch (c.stage) {
       case "draft": return run("submit");
-      case "clarify": return run("answer",view.question.options[0] || "Start a quote");
+      case "clarify": return !view.question || view.question.type === "wording-retry" ? c :
+        run("answer",view.question.options[0] || "Start a quote");
       case "processing": return run("deliver");
       case "review": {
         if (c.rev !== 1) return run("accept");
@@ -271,7 +310,7 @@
   }
 
   const api = {initialFeedback,hesitationFeedback:Hesitation.feedback,hesitationAnswers:Hesitation.answers,
-    createCase,editSource,editCandidate,reviseAdjustment,derive,transition,step};
+    createCase,editSource,editCandidate,reviseAdjustment,derive,resumeWorkingCase,transition,step};
   root.CaseEngine = api;
   if (common) module.exports = api;
 })(globalThis);

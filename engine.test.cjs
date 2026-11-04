@@ -180,3 +180,51 @@ test("previously saved Chinese feedback keeps its original wording and produces 
   assert.equal(view(c).question.source.includes("按钮"), true);
   assert.equal(view(act(c, "answer", "Start a quote")).candidate, "Start a quote");
 });
+
+test("an unexplained reply to a button question is context, not a candidate or a simulated approval", () => {
+  const asked = act(create("New employees find the homepage quote button label confusing."), "submit");
+  for (const reply of ["221", "?", "I don't know", "I thought this would email the customer.", "看不懂"]) {
+    const waiting = act(asked,"answer",reply), v = view(waiting);
+    assert.deepEqual([waiting.stage,waiting.owner,v.question.type,v.candidate], ["clarify","Requester","wording-retry",""]);
+    assert.equal(v.question.source, reply);
+    assert.deepEqual(v.checks, []);
+    assert.equal(E.step(waiting), waiting);
+    for (const action of ["deliver","accept","authorize","publish"]) assert.equal(act(waiting,action),waiting);
+    const fixed = act(waiting,"answer","Start a quote");
+    assert.equal(act(fixed,"deliver").versions[0].candidate,"Start a quote");
+    assert.equal(fixed.trail.some(e=>e.action==="answer" && e.text.includes(reply)),true);
+    assert.equal(act(waiting,"answer","Ask the team").owner,"Website team");
+  }
+  for (const literal of ["“221”",'Use "221"', "Use the exact label 221"]) {
+    const chosen = act(asked,"answer",literal);
+    assert.equal(act(chosen,"deliver").versions[0].candidate,"221");
+  }
+  const direct = act(create('Change the homepage button label to "221".'),"submit");
+  assert.equal(view(direct).candidate,"221");
+});
+
+test("reopening a prior unresolved delivery preserves its snapshot; completed releases stay frozen", () => {
+  const asked = act(create("New employees find the homepage quote button label confusing."),"submit");
+  const literal = act(asked,"answer",'"221"');
+  // Previous builds treated the same unquoted reply as exact copy.
+  const submitted = act(literal,"deliver");
+  const old = {...submitted, answer:"221", versions:submitted.versions.map(v=>({...v,answer:"221"}))};
+  const frozen = JSON.stringify(old.versions);
+  assert.equal(E.resumeWorkingCase({...literal,answer:"221"}).stage,"clarify");
+  for (const action of ["step","accept"]) {
+    const reopened = action === "step" ? E.step(old) : act(old,action);
+    assert.equal(reopened.stage,"clarify");
+    assert.equal(reopened.rev,2);
+    assert.equal(reopened.accepted,null);
+    assert.equal(E.step(reopened),reopened);
+    assert.equal(JSON.stringify(reopened.versions),frozen);
+    const fixed = act(act(reopened,"answer","Get price"),"deliver");
+    assert.equal(fixed.stage,"review");
+    assert.equal(fixed.versions[1].candidate,"Get price");
+    assert.equal(fixed.versions[0],old.versions[0]);
+  }
+  const complete = {...old,stage:"published",owner:"Complete",receipt:{rev:1,simulated:true}};
+  assert.equal(E.resumeWorkingCase(complete),complete);
+  assert.equal(E.step(complete),complete);
+  assert.equal(view(complete).candidate,"221");
+});

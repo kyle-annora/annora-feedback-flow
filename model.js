@@ -73,6 +73,24 @@
     clauses(text).map((x) => source(x, label));
   const labelQuotes = /^(?:「([^」]+)」|“([^”]+)”|"([^"]+)"|‘([^’]+)’|'(.+)')/u;
   const quotedLabel = s => s.match(labelQuotes)?.slice(1).find(Boolean);
+  // A clarification can describe a problem without supplying literal copy. Only
+  // infer an unquoted label from a short action; quotes allow any exact wording.
+  function buttonAnswer(raw) {
+    const text = val(raw);
+    const literal = text.match(/^(?:「([^」]+)」|“([^”]+)”|"([^"]+)"|‘([^’]+)’|'([^']+)')[.!。]?$/u);
+    if (literal) return val(literal.slice(1).find(Boolean));
+    const use = text.match(/^(?:(?:please\s+)?use\s+(?:the\s+(?:exact\s+)?(?:label|wording)\s+)?)([“"‘'「].+)$/i);
+    if (use && quotedLabel(use[1])) return buttonAnswer(use[1]);
+    if (/^(?:(?:please\s+)?(?:change|rename|relabel|set|switch|label|call|name)|(?:it|the (?:button|label)) should (?:read|say))\b|^(?:(?:把|将).{0,15})?(?:改成|改为|换成|换为|写成)/i.test(text)) {
+      const explicit = replacement(text, true);
+      if (explicit) return explicit;
+    }
+    const named = text.match(/^(?:please\s+)?(?:use the (?:exact )?(?:label|wording)|(?:label|call|name) (?:it|the (?:homepage )?button))\s+(.+?)\.?$/i);
+    if (named) return quotedLabel(named[1]) || val(named[1]);
+    if (text.length > 64 || text.split(/\s+/).length > 8 ||
+        /[?!。！？;\n]|\b(?:worr(?:y|ied)|confus(?:ed|ing)|unsure|unclear|looks|means|might|maybe|whether|because|not sure|don['’]t know|can['’]t tell)\b|担心|不清楚|不确定|不知道|看不懂/i.test(text)) return "";
+    return /^(?:start|create|new(?=\s+(?:quotes?|draft|estimate|project|order)\b|$)|request|build|get|continue|next|back|cancel|save|choose|select|use|open|view|see|edit|review|submit|send|share|copy|add|go|return|begin|resume|configure|preview|try|finish|confirm|proceed|generate|calculate|customize|customise|download|upload|export|import|sign|log)\b|^(?:开始|新建|创建|继续|查看|选择|获取|提交|返回|保存|确认|立即报价)/i.test(text) ? text : "";
+  }
   const visualChange = (s) =>
     /颜色|位置|字号|间距|尺寸|背景|样式|\b(?:color|position|size|spacing)\b/i.test(
       s,
@@ -322,10 +340,10 @@
       r.answer.note
     ) {
       const answer = val(r.answer.note);
-      const quoted = quotedLabel(answer);
-      target = {
+      const copy = buttonAnswer(answer);
+      if (copy) target = {
         ...source(answer, "Requester’s answer"),
-        value: quoted || answer,
+        value: copy,
       };
     }
     const original = source(r.raw, "Original feedback");
@@ -987,6 +1005,7 @@
     draft,
     assess,
     clauses,
+    buttonAnswer,
     isEntryConstraint,
     questionDraft,
     adjustmentPreview,

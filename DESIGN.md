@@ -102,9 +102,9 @@ Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b
 
 | Decision | Reference → application |
 | --- | --- |
-| Document sheet | Cycle’s quiet left nav, shallow cover, object title and compact properties. Light cool neutral surround, white work surface; lists and details belong to one workspace, not a demo landing page. |
-| Cover | The light Cycle record includes a contextual image; WinQuote gets an original engineering drawing of its walk-in cooler instead of stock media or a reproduction of Cycle’s photo. |
-| Secondary pane | Cycle’s tab row and divider. Keep evidence and activity here; do not restate the whole feedback as an AI insight. |
+| Document sheet | Cycle’s quiet left navigation and white document surface frame the record. Keep the object title compact enough for the current task to lead. |
+| Task hierarchy | Four milestones orient the reader. The current step shows the owner, their decision and the action that moves the record forward. The completed view leads with one versioned receipt. |
+| Secondary pane | Cycle’s tab row and divider. Show checks and activity during drafting, preparation and review. Clarification and release decisions get a focused single-column view. |
 | Accent + components | Small 16px strokes, compact toolbar, slate tones and an indigo primary action. Semantic colors limited to people, requirement status, and handoffs. No large purple panels. |
 | Editing | Selected source phrase, updated candidate and measured value share one short pulse. Edited record remains anchored; reduced motion omits the pulse. |
 | Accountability | Woven review packet and agreed user journey: separate the requirement from its result, exact sources, visible owner, recorded snapshots, accepted version separate from publication. |
@@ -112,7 +112,7 @@ Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b
 
 ## Overview
 
-The white document holds the original request, its candidate and the responsible person. The evidence pane aligns each check with the words or measurement supporting it.
+A record opens to its current task. Past feedback, answers and delivered versions sit behind a disclosure. After release, a single receipt identifies the released version and the decisions that led to it. Walkthroughs start from navigation.
 
 ## Colors
 
@@ -120,7 +120,7 @@ Use indigo for the walkthrough, forward actions and the active tab underline. Th
 
 ## Typography
 
-Use the system sans stack for Chinese and English. The record title has the strongest weight. Candidate copy is larger than the 14px source text and uses a lighter weight. The retained next-step instruction begins on its own line. IDs and version tags use system monospace. Evidence measurements use tabular numerals.
+Use the system sans stack for Chinese and English. The current task is the most prominent heading. Candidate copy is larger than the 14px source text and uses a lighter weight. The retained next-step instruction begins on its own line. IDs and version tags use system monospace. Evidence measurements use tabular numerals.
 
 ## Layout
 
@@ -129,7 +129,7 @@ Use the system sans stack for Chinese and English. The record title has the stro
 | Above 1120px | 198px rail and 52px top bar. The document body caps at 850px. At 1640px and wider, the document column’s contents cap at 1130px. | Width follows `clamp(267px, 23vw, 342px)`. |
 | 821–1120px | 164px rail and 21px document side padding. | Fixed 248px pane. |
 | 661–820px | 210px off-canvas navigation, 48px top bar and edge-to-edge sheet. | Fixed 240px pane. |
-| 660px and below | Single column with 16px side padding. The 90px cover hides its caption. | Summary below the candidate opens a bottom sheet capped at the smaller of 77dvh and 640px. |
+| 660px and below | Single column with 16px side padding. All four progress labels are visible. | Summary below the candidate opens a bottom sheet capped at the smaller of 77dvh and 640px. |
 
 ## Elevation & Depth
 
@@ -143,5 +143,5 @@ Use small rectangles for actions and version tags, softly rounded corners for th
 
 - **Feedback source.** The field grows from 56px to 320px. Its minimum rises to 76px on small screens. Focus changes its background to white and adds a 2px lavender outline.
 - **Candidate and checks.** A version tag sits beside the candidate section heading. Changed candidate fragments and affected evidence rows briefly highlight. Opening a check reveals its source. A failed word count also shows the excess in words.
-- **Owner and actions.** The footer pairs a named owner with the current action. The inspector identifies the next person. A handoff briefly animates both owner marks. Reduced-motion preferences disable animations and transitions.
-- **Review and release.** Separate controls label acceptance, authorization and simulated publication. The activity tab records decisions in chronological context.
+- **Owner and actions.** The current step names the responsible role and gives that person one primary action. Reduced-motion preferences disable animations and transitions.
+- **Review and release.** Separate controls label acceptance, authorization and simulated publication. The receipt keeps acceptance and site-owner authorization distinct. Older versions and the activity log can be opened on demand.

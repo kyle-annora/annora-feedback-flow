@@ -4,7 +4,6 @@ const E=window.CaseEngine, P=window.CasePersonas, I=window.Glyph, $=id=>document
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stages={draft:'Draft',clarify:'Needs your input',processing:'In progress',blocked:'Needs team input',review:'Ready for review',release:'Awaiting authorization',authorized:'Authorized',published:'Release simulated'};
 const actorModes={'Requester':['customer','lilac','Requester'],'Website team':['people','mint','Website team'],'Reviewer':['verify','amber','Reviewer'],'Site owner':['flag','rose','Site owner'],'Complete':['checks','mint','Complete']};
-const meta={draft:'Submit your feedback when it’s ready.',clarify:'Answer the question so the team can draft the copy.',processing:'Check the draft against the requirements, then send it to the reviewer.',blocked:'Resolve the outstanding requirements before sending this for review.',review:'Read this version, then accept it or request changes.',release:'The reviewer accepted this version. The site owner can now authorize release.',authorized:'The site owner authorized release. The website team can now run the simulation.',published:'The simulated release is complete.'};
 const examples=[['Homepage quote instructions',E.initialFeedback],['Specify a button label','Change the WinQuote homepage button label from “Create” to “Start a quote”.'],['Clarify a button label','New employees find the homepage quote button label confusing.'],['Pricing rule change','Change the homepage discount rules so staff can edit quote prices.']];
 const navRows=[['clarify','ask','Needs your input'],['processing','clock','In progress'],['review','verify','Ready for review'],['release','release','Release approvals']];
 const key='feedbackflow:casework:v2.1', viewKey='feedbackflow:walk:v2.1';
@@ -16,12 +15,24 @@ try {
   const stored=JSON.parse(localStorage.getItem(key));
   const valid=Array.isArray(stored?.items)&&stored.items.some(item=>item.id===stored.current);
   data=valid?window.CaseUpgrade.workspace(stored):init();
+  if(valid){
+    data.items=data.items.map(item=>({...item,c:E.resumeWorkingCase(item.c)}));
+  }
 } catch { data=init(); }
 function savedTour(storageKey){
   try {
     const cached=JSON.parse(sessionStorage.getItem(storageKey));
     if(cached?.frames?.[cached.index]?.case&&cached.record===data.current){
       const validated=storageKey===createViewKey?cached:window.CaseUpgrade.walkthrough(cached);
+      if(validated.type==='mine'){
+        for(const [index,frame] of validated.frames.entries()){
+          const repaired=E.resumeWorkingCase(frame.case);
+          if(repaired!==frame.case){
+            const frames=[...validated.frames.slice(0,index),{case:repaired,title:'Clarify the requested wording'}];
+            return {...validated,frames,index:Math.min(index,validated.index),playing:false};
+          }
+        }
+      }
       return {...validated,playing:false};
     }
   } catch {}
@@ -41,19 +52,53 @@ const btn=(action,txt,icon,cls='',extra='')=>'<button type="button" data-go="'+a
 const iconbtn=(act,icon,label)=>'<button type="button" class="iconbtn" data-go="'+act+'" aria-label="'+esc(label)+'" title="'+esc(label)+'">'+I(icon)+'</button>';
 const label=c=>{if(!c.text.trim())return 'New feedback';const v=E.derive(c);if(['button','hesitation'].includes(v.kind))return 'Homepage quote button';if(v.kind==='entry')return 'Homepage quote instructions';if(/rules?|discounts?|pric(?:e|ing)|规则|折扣|价格/i.test(c.text))return 'Homepage pricing rules';return 'Homepage feedback';};
 const badge=c=>'<span class="state '+esc(c.stage)+'"><i></i>'+esc(stages[c.stage])+'</span>';
-function matches(c,f){return f==='all'||c.stage===f||f==='processing'&&c.stage==='blocked'||f==='release'&&['release','authorized','published'].includes(c.stage);}
+function matches(c,filter){
+  if(filter==='all')return true;
+  if(filter==='processing')return ['processing','blocked','authorized'].includes(c.stage);
+  return c.stage===filter;
+}
 
 function announce(s){clearTimeout(notifyTimer);$('live').textContent=s;notifyTimer=setTimeout(()=>{$('live').textContent=''},2400);}
 function renderNav(){
-const n=$('nav');n.innerHTML='<div class="brand"><span class="flowmark">'+FlowMark+'</span><strong>Feedback Flow</strong></div><div class="navgroup topnav">'+btn('find','Search feedback','search','navrow','title="Search feedback"')+btn('filter:all','Feedback inbox','inbox','navrow '+(filter==='all'?'selected':''), '')+btn('new','New feedback','plus','navrow newlink')+'</div><div class="navgroup"><span class="navlabel">Queues</span>'+navRows.map(([f,ic,l])=>'<button class="navrow '+(filter===f?'selected':'')+'" data-go="filter:'+f+'">'+I(ic)+'<span>'+l+'</span><small>'+data.items.filter(x=>matches(x.c,f)).length+'</small></button>').join('')+'</div><div class="navgroup project-group"><span class="navlabel">Projects</span><button class="navrow" data-go="project">'+fileTag()+'<span>WinQuote</span></button></div><div class="rail-end"><button data-go="personas" class="navrow"><span class="tour-ico">'+I('play',13)+'</span>Role walkthroughs</button><div class="local"><span class="local-dot"></span>Local demo workspace</div></div>';
-n.classList.toggle('show',navOpen);$('shade').hidden=!navOpen;}
-function renderBar(){
-const c=here(),isCase=page==='case';
-$('topbar').innerHTML='<div class="crumb">'+iconbtn('nav','menu','Open navigation')+'<span class="crumbicon">'+I('inbox',15)+'</span><button data-go="filter:all" class="txtbtn">Feedback inbox</button>'+(isCase?'<span class="slash">/</span><span class="crumbid">'+esc(tour&&tour.type!=='mine'?'Sample feedback':data.current)+'</span>':'')+'</div><div class="tools">'+(isCase?(tour?btn('exit','Exit walkthrough','cross','subtle'):btn('walk','Play walkthrough','play','walkbtn',c.text.trim()?'':'disabled')):'')+'</div>';
+  const nav=$('nav');
+  const queueLinks=navRows.map(([id,icon,title])=>{
+    const count=data.items.filter(item=>matches(item.c,id)).length;
+    return '<button class="navrow '+(filter===id?'selected':'')+'" data-go="filter:'+id+'">'+
+      I(icon)+'<span>'+title+'</span><small>'+count+'</small></button>';
+  }).join('');
+  nav.innerHTML='<div class="brand"><span class="flowmark">'+FlowMark+'</span><strong>Feedback Flow</strong></div>'+
+    '<div class="navgroup topnav">'+
+      btn('find','Search feedback','search','navrow')+
+      btn('filter:all','Feedback inbox','inbox','navrow '+(filter==='all'?'selected':''))+
+      btn('new','New feedback','plus','navrow newlink')+'</div>'+
+    '<div class="navgroup"><span class="navlabel">Queues</span>'+queueLinks+'</div>'+
+    '<div class="navgroup project-group"><span class="navlabel">Projects</span><button class="navrow" data-go="project">'+fileTag()+'<span>WinQuote</span></button></div>'+
+    '<div class="rail-end"><span class="navlabel">Walkthroughs</span>'+
+      '<button class="navrow" data-go="create-tour">'+I('branch',16)+'Explore “Create”</button>'+
+      '<button class="navrow" data-go="personas">'+I('play',15)+'Role walkthroughs</button>'+
+      '<div class="local"><span class="local-dot"></span>Local demo workspace</div></div>';
+  nav.classList.toggle('show',navOpen);
+  $('shade').hidden=!navOpen;
 }
-function cover(){return '<div class="cover" role="img" aria-label="Engineering drawing of a WinQuote walk-in cooler"><div class="cover-brand"><span class="cover-w">W</span> WinQuote</div><div class="cover-caption">Walk-in cooler <span>/</span> Assembly drawing</div></div>';}
-function sourceArea(c){const isEdit=!tour&&!c.versions.length,example=isEdit?btn('examples','Try an example','down','plainbtn revert'):'';
-return '<section class="source-block"><div class="section-head"><h2>'+I('quote',15)+'Original feedback</h2>'+example+'</div>'+(isEdit?'<textarea id="source" rows="2" maxlength="2000" aria-label="Original feedback" placeholder="What would you change on the homepage?">'+esc(c.text)+'</textarea>':'<div class="saved-source">'+esc(c.text||'No feedback yet')+'</div>')+(isEdit?'<div class="edit-under"><span>'+I('edit',12)+'Editable</span><div id="quick"></div></div>':'')+'</section>';}
+function renderBar(){
+  const c=here(),isCase=page==='case';
+  const crumb=isCase?'<span class="slash">/</span><span class="crumbid">'+esc(tour&&tour.type!=='mine'?'Sample feedback':data.current)+'</span>':'';
+  let tool='';
+  if(isCase&&tour)tool=btn('exit','Exit walkthrough','cross','subtle');
+  else if(isCase&&c.stage!=='published')tool=btn('walk','Play walkthrough','play','outline',c.text.trim()?'':'disabled');
+  $('topbar').innerHTML='<div class="crumb">'+iconbtn('nav','menu','Open navigation')+
+    '<span class="crumbicon">'+I('inbox',15)+'</span><button data-go="filter:all" class="txtbtn">Feedback inbox</button>'+
+    crumb+'</div><div class="tools">'+tool+'</div>';
+}
+function sourceArea(c){
+  const isEdit=!tour&&!c.versions.length;
+  const example=isEdit&&c.stage==='draft'?btn('examples','Try an example','down','plainbtn revert'):'';
+  const field=isEdit
+    ? '<textarea id="source" rows="2" maxlength="2000" aria-label="Original feedback" placeholder="What would you change on the homepage?">'+esc(c.text)+'</textarea>'
+    : '<div class="saved-source">'+esc(c.text||'No feedback yet')+'</div>';
+  return '<section class="source-block"><div class="section-head"><h2>'+I('quote',15)+'Original feedback</h2>'+example+'</div>'+field+
+    (isEdit?'<div class="edit-under"><span>'+I('edit',12)+'Editable</span><div id="quick"></div></div>':'')+'</section>';
+}
 function budgetToken(raw,limit){
   if(!Number.isInteger(limit)||limit<=0)return null;
   const amount='(?<!\\d)'+limit+'(?!\\d)';
@@ -91,15 +136,25 @@ function candidateHTML(c,v){
 let delivered=Boolean(c.versions.find(a=>a.rev===c.rev))&&!['processing','blocked','clarify'].includes(c.stage);
 const revision='<span class="version">V'+c.rev+'</span>';
 let head='<div class="section-head"><h2>'+I(v.question?'ask':'file',16)+(v.question?'Clarifying question':'Proposed copy')+(!v.question&&v.candidate?revision:'')+'</h2><span class="subtext">'+(v.question?'Needs an answer':delivered?'Submitted version':'Simulated AI draft')+'</span></div>';
-if(v.question?.type==='hesitation'&&tour&&c.stage==='clarify'){
-  const sampled=tour.frames[tour.index+1]?.case.answerSimulated;
-  const cue=tour.playing?(sampled?'Autoplay will use the first sample answer.':'Autoplay will replay your chosen answer.'):(sampled?'Resume to watch the sample.':'Resume to replay your chosen answer.');
-  return '<div class="section-head"><h2>'+I('ask',16)+'Annora asks</h2><span class="subtext">Requester’s turn</span></div><div class="question-pane"><p>'+esc(v.question.text)+'</p>'+answerFields(v.question)+'<span class="question-note">'+cue+' Choose an answer to explore it at your pace.</span></div>';
+if(c.stage==='clarify'&&v.question){
+  let form;
+  if(!tour){
+    form='<form id="answerform"><div class="opts">'+v.question.options.map(o=>'<button type="button" data-answer="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><label class="sr" for="answer">Your answer</label><div class="input-actions"><input id="answer" placeholder="Enter your answer" maxlength="500"><button class="control primary">Submit answer</button></div></form>';
+  }else if(v.question.type==='wording-retry'){
+    form='<form id="touranswerform"><div class="opts">'+v.question.options.map(o=>'<button type="button" data-tour-opt="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><label class="sr" for="tourans">Your answer</label><div class="input-actions"><input id="tourans" required maxlength="500" placeholder="Enter a label for this walkthrough"><button class="control primary">Use answer</button></div></form>';
+  }else if(v.question.type==='hesitation'){
+    const sampled=tour.frames[tour.index+1]?.case.answerSimulated;
+    const note=tour.playing?(sampled?'Autoplay will use the first sample answer.':'Autoplay will replay your chosen answer.'):(sampled?'Resume to watch the sample.':'Resume to replay your chosen answer.');
+    form=answerFields(v.question)+'<span class="question-note">'+note+'</span>';
+  }else{
+    form='<span class="question-note">This walkthrough uses a sample answer.</span>'+(tour.type==='mine'?btn('tour-answer','Try a different answer','edit','answer-demo'):'');
+  }
+  return '<div class="question-pane">'+form+'</div>';
 }
 if(v.kind==='hesitation'&&v.manual&&v.blocked){
   return '<div class="section-head"><h2>'+I('people',16)+'Team investigation</h2><span class="subtext">Needs team input</span></div><p class="empty-copy">'+esc(v.reason)+'</p>';
 }
-if(v.question)return head+'<div class="question-pane"><p>'+esc(v.question.text)+'</p>'+(c.stage==='clarify'&&!tour?'<form id="answerform"><div class="opts">'+v.question.options.map(o=>'<button type="button" data-answer="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><label class="sr" for="answer">Your answer</label><div class="input-actions"><input id="answer" placeholder="Enter your answer" maxlength="500"><button class="control primary">Submit answer</button></div></form>':'<span class="question-note">'+(tour?(tour.type==='mine'&&c.stage==='clarify'?'This walkthrough will use a sample answer.':'This walkthrough uses a sample answer.'):'After submission, the requester answers this question.')+'</span>'+(tour?.type==='mine'&&c.stage==='clarify'?btn('tour-answer','Try a different answer','edit','answer-demo'):'') )+'</div>';
+if(v.question)return head+'<div class="question-pane"><p>'+esc(v.question.text)+'</p><span class="question-note">After submission, the requester answers this question.</span></div>';
 if(!v.candidate){if(!tour&&c.candidateOverride!==null&&c.candidateOverride!==undefined&&c.stage==='blocked')head=head.replace('</div>',btn('edit-proof','Edit draft','edit','plainbtn')+'</div>');return head+'<p class="empty-copy">'+esc(v.reason||'Enter feedback to see a draft or a clarifying question.')+'</p>';}
 const isButton=v.kind==='button';
 if(!tour&&['processing','blocked'].includes(c.stage)&&!v.manual) head=head.replace('</div>',btn('edit-proof','Edit draft','edit','plainbtn')+'</div>');
@@ -109,16 +164,24 @@ if(v.proposal){
 }
 return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
+function alternateAnswer(c,v){
+  const explore=tour&&['create','mine'].includes(tour.type)&&c.answer&&v.kind==='hesitation';
+  return explore?btn('tour-answer','Try another answer','branch','swap-answer'):'';
+}
 function related(c,v){
-  const explore=Boolean(tour&&['create','mine'].includes(tour.type)&&c.answer&&v.kind==='hesitation');
-  const clarification=v.kind==='hesitation'?'Requester’s concern':'Clarification';
-  return (c.answer||c.adjustment)?'<div class="thread-notes">'+(c.answer?'<div>'+I('ask',14)+'<span>'+clarification+'</span><strong>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</strong></div>':'')+(explore?btn('tour-answer','Try another answer','branch','swap-answer'):'')+(c.adjustment?'<div>'+I('branch',14)+'<span>Requested changes</span><strong>'+esc(c.adjustment)+'</strong></div>':'')+'</div>':'';
+  const concern=v.kind==='hesitation'&&c.answer;
+  if(!concern&&!c.adjustment)return '';
+  return '<div class="thread-notes">'+(concern?'<div>'+I('ask',14)+'<span>Requester’s concern</span><strong>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</strong></div>'+alternateAnswer(c,v):'')+
+    (c.adjustment?'<div>'+I('branch',14)+'<span>Requested changes to V'+(c.rev-1)+'</span><strong>'+esc(c.adjustment)+'</strong></div>':'')+'</div>';
 }
 function actions(c,v){if(tour)return v.kind==='hesitation'&&c.answer&&!tour.playing&&tour.index<tour.frames.length-1?btn('toggle','Continue walkthrough','play','outline'):'';let id,label,ico,extra='';
 switch(c.stage){
 case 'draft':id='submit';label='Submit feedback';ico='send';extra=c.text.trim()?'':'disabled';break;
 case 'processing':id='deliver';label='Send V'+c.rev+' for review';ico='send';extra=v.blocked?'disabled':'';break;
-case 'blocked':if(c.versions.length) return btn('revise-note','Revise request','edit','outline');return '';
+case 'blocked':
+  if(c.versions.length)return btn('revise-note','Revise request','edit','outline');
+  if(v.manual&&!c.versions.length)return btn('refine','Refine the feedback','edit','outline');
+  return '';
 case 'review':return btn('adjust','Request changes','branch','outline')+btn('accept','Accept V'+c.rev,'check','primary');
 case 'release':id='authorize';label='Authorize release';ico='verify';break;
 case 'authorized':id='publish';label='Simulate release';ico='release';break;
@@ -126,17 +189,99 @@ default:return '';}
 return btn(id,label,ico,c.stage==='draft'?'outline':'primary',extra);
 }
 function footer(c,v){
-const next=v.kind==='hesitation'?({clarify:'Describe what gave you pause. The team will propose the wording.',processing:'Check the proposal against the requester’s concern, then send it for review.',review:'Use the review question with the requester, then accept this version or ask for changes.'}[c.stage]||meta[c.stage]):meta[c.stage];
-return '<div class="action-strip"><div class="ownerline">'+avatar(c.owner)+'<div><b>'+esc(role(c.owner)[2])+'</b><p>'+esc(next)+'</p></div></div><div class="action-btns" id="actions">'+actions(c,v)+'</div></div>';}
+  const buttons=actions(c,v);
+  return buttons?'<div class="action-strip"><div class="action-btns" id="actions">'+buttons+'</div></div>':'';
+}
 function revisionList(c){return c.versions.length?'<div class="revision-list"><span>'+I('history',14)+'Version history</span>'+c.versions.map(a=>btn('ver:'+a.rev,'V'+a.rev,'file','revision-tag')).join('')+'</div>':'';}
-function transport(){if(!tour)return '';
-const f=tour.frames[tour.index];
-return '<div class="transport"><span class="trackmark">'+I('play',14)+'</span><div class="tracktitle"><b>'+esc(tour.type==='create'?'The “Create” walkthrough':tour.type==='mine'?'Your feedback walkthrough':P.list.find(x=>x.id===tour.type).label+' walkthrough')+'</b><span>'+(tour.index+1)+' / '+tour.frames.length+' · '+esc(f.title)+'</span></div><div class="playtools">'+(tour.index?iconbtn('walkback','back','Previous step'):'<span class="disabled-icon">'+I('back')+'</span>')+iconbtn('toggle',tour.playing?'pause':tour.index===tour.frames.length-1?'replay':'play',tour.playing?'Pause':tour.index===tour.frames.length-1?'Replay':'Resume')+(tour.index<tour.frames.length-1?iconbtn('walknext','next','Next step'):'<span class="disabled-icon">'+I('next')+'</span>')+'</div><div class="t-progress" style="--done:'+((tour.index+1)/tour.frames.length*100)+'%"></div></div>';}
-function createEntry(){
-  return '<button class="case-tour-link" data-go="create-tour"><span class="tour-ico">'+I('play',12)+'</span><span><b>Explore “Create”</b><small>One unclear button, two different concerns</small></span>'+I('next',14)+'</button>';
+function transport(){
+  if(!tour)return '';
+  const last=tour.index===tour.frames.length-1;
+  const waiting=last&&E.derive(here()).question?.type==='wording-retry';
+  const playback=waiting?'Waiting for your answer':tour.playing?'Playing':last?'Finished':'Paused';
+  const name=tour.type==='create'?'The “Create” walkthrough':tour.type==='mine'?'Your feedback walkthrough':
+    P.list.find(item=>item.id===tour.type).label+' walkthrough';
+  const previous=tour.index?iconbtn('walkback','back','Previous step'):'<span class="disabled-icon">'+I('back')+'</span>';
+  const toggle=iconbtn('toggle',tour.playing?'pause':last?'replay':'play',tour.playing?'Pause':last?'Replay':'Resume');
+  const next=last?'<span class="disabled-icon">'+I('next')+'</span>':iconbtn('walknext','next','Next step');
+  const frame=tour.frames[tour.index];
+  return '<div class="transport" role="group" aria-label="Walkthrough player"><span class="trackmark">'+I('play',14)+'</span>'+
+    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+playback+'</span><span class="sr">'+
+    'Frame '+(tour.index+1)+' of '+tour.frames.length+' · '+esc(frame.title)+'</span></div>'+
+    '<div class="playtools">'+previous+toggle+next+'</div></div>';
+}
+
+const phases=['Request','Proposal','Review','Release'];
+const phaseByStage={draft:0,clarify:0,processing:1,blocked:1,review:2,release:3,authorized:3,published:3};
+const usesChecks=c=>['draft','processing','blocked','review'].includes(c.stage);
+
+function progressRow(c){
+  return '<ol class="flow-progress" aria-label="Feedback progress">'+phases.map((phase,i)=>{
+    const state=c.stage==='published'||i<phaseByStage[c.stage]?'done':i===phaseByStage[c.stage]?'current':'upcoming';
+    const reason=state==='current'&&c.stage==='clarify'?'Needs clarification':state==='current'&&c.stage==='blocked'?'Needs team input':state;
+    return '<li data-phase="'+state+'"'+(state==='current'?' aria-current="step"':'')+'><span class="phase-index" aria-hidden="true">'+(state==='done'?I('check',12):i+1)+'</span><span class="phase-label">'+phase+'</span><span class="sr">: '+reason+'</span></li>';
+  }).join('')+'</ol>';
+}
+function historyActivity(c){
+  if(!c.trail.length)return '';
+  return '<section class="history-activity"><h3>Activity</h3><ol class="activities">'+[...c.trail].reverse().map(row=>{
+    const date=new Date(row.at);
+    const at=Number.isFinite(date.getTime())?'<time datetime="'+esc(row.at)+'">'+esc(date.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))+'</time>':'';
+    return '<li>'+avatar(row.actor)+'<div><b>'+esc(row.actor)+'</b> '+at+'<p>'+esc(row.text)+'</p></div></li>';
+  }).join('')+'</ol></section>';
+}
+function historyDetails(c,v){
+  if(c.stage==='draft'&&!c.trail.length)return '';
+  const latest=c.versions.at(-1);
+  const answer=c.answer?'<div class="history-copy"><h3>Requester’s answer</h3><p>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</p>'+(c.stage==='published'?alternateAnswer(c,v):'')+'</div>':'';
+  const version=latest?'<div class="history-copy"><h3>Submitted proposal · V'+esc(latest.rev)+'</h3><p>'+esc(latest.candidate)+'</p></div>':'';
+  return '<details class="record-history"><summary>'+I('history',15)+'<span>Feedback &amp; version history</span>'+I('down',14)+'</summary><div class="history-content">'+
+    (c.stage==='draft'?'':sourceArea(c))+answer+version+revisionList(c)+historyActivity(c)+'</div></details>';
+}
+function stageCopy(c,v){
+  const rev='V'+c.rev;
+  switch(c.stage){
+    case 'draft':return ['Draft','Describe the change','Tell the team what was confusing or what you want to improve.'];
+    case 'clarify':return ['Needs your input',v.question?.text||'Clarify your feedback',v.question?.type==='hesitation'?'Describe what gave you pause. The team will propose the wording.':v.question?.type==='wording-retry'?v.question.reason:'Answer this question so the website team can prepare a proposal.'];
+    case 'processing':return ['In progress',c.rev>1?'Prepare the revised proposal':'Prepare the proposal','Check '+rev+' against the feedback, then send it to the reviewer.'];
+    case 'blocked':return ['Needs team input','Resolve the open issue',v.manual?'The website team needs to clarify the request before it can go to review.':'Update the draft to meet the outstanding requirements before sending it for review.'];
+    case 'review':return ['Ready for review','Review '+rev,'Accept this version or send it back to the website team with a change request.'];
+    case 'release':return ['Awaiting authorization','Authorize the release','The reviewer accepted this version. The site owner decides whether it can be released.'];
+    case 'authorized':return ['Authorized','Run the simulated release','The site owner authorized this version. The website team can now run the simulation.'];
+    case 'published':return ['Release receipt','V'+(c.receipt?.rev??c.rev)+' released in simulation','No further action is needed.'];
+  }
+}
+function receiptFacts(c){
+  const target=c.receipt?.target||c.authorization?.target||'WinQuote homepage';
+  const entries=[['Target',target],['Accepted by',c.accepted?c.accepted.actor+' · V'+c.accepted.rev:'Not recorded']];
+  if(c.authorization)entries.push(['Authorized by',c.authorization.actor+' · V'+c.authorization.rev]);
+  const saved=c.versions.find(x=>x.rev===(c.receipt?.rev??c.accepted?.rev??c.rev));
+  let copy='';
+  if(saved){
+    const labels=saved.view?.proposal?.items?.map(item=>item.label);
+    if(labels?.length)entries.unshift([labels.length===1?'Button label':'Button labels',labels.join(' / ')]);
+    else if(saved.view?.kind==='button'&&saved.candidate.length<=100)entries.unshift(['Button label',saved.candidate]);
+    else copy='<div><dt>Approved copy</dt><dd>'+btn('ver:'+saved.rev,'View V'+saved.rev+' copy','file','plainbtn')+'</dd></div>';
+  }
+  return '<dl class="receipt-facts">'+copy+entries.map(([k,v])=>'<div><dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd></div>').join('')+'</dl>';
+}
+function candidateSection(c,v){
+  return '<section class="candidate-block" id="candidate">'+candidateHTML(c,v)+'</section>';
+}
+function stageTask(c,v){
+  const [label,title,lead]=stageCopy(c,v),complete=c.stage==='published';
+  const prefix=complete?'<span class="receipt-mark">'+I('check',14)+'</span>':avatar(c.owner,18)+'<span class="person-prop">'+esc(role(c.owner)[2])+'</span><span aria-hidden="true">·</span>';
+  let body='';
+  if(c.stage==='draft')body=sourceArea(c)+footer(c,v)+candidateSection(c,v);
+  else if(c.stage==='clarify')body=candidateSection(c,v);
+  else if(usesChecks(c))body=related(c,v)+candidateSection(c,v)+footer(c,v);
+  else body=receiptFacts(c)+(complete?(tour?btn('exit','Finish walkthrough','check','record-back'):btn('filter:all','Back to inbox','back','record-back')):footer(c,v))+
+    (!complete&&alternateAnswer(c,v)?'<div class="thread-notes">'+alternateAnswer(c,v)+'</div>':'');
+  if(usesChecks(c))body+='<button id="mobaside" class="mobile-insight" data-go="mobileaside" aria-label="View acceptance checks"></button>';
+  return '<section class="stage-task" data-stage="'+esc(c.stage)+'" aria-labelledby="task-title"><div class="stage-eyebrow">'+prefix+esc(label)+'</div><h2 class="stage-title" id="task-title">'+esc(title)+'</h2><p class="stage-lead">'+esc(lead)+'</p>'+body+'</section>';
 }
 function doc(c,v){
-return '<div class="doc" id="doc">'+cover()+'<div class="docbody"><h1 id="title">'+esc(label(c))+'</h1><div class="properties"><span class="project-prop">'+fileTag()+'WinQuote</span><span class="prop-sep"></span>'+badge(c)+'<span class="prop-sep"></span><span class="person-prop">'+avatar(c.owner,16)+esc(role(c.owner)[2])+'</span></div>'+(tour?'':createEntry())+sourceArea(c)+related(c,v)+'<section class="candidate-block" id="candidate">'+candidateHTML(c,v)+'</section><button id="mobaside" class="mobile-insight" data-go="mobileaside" aria-label="View acceptance checks"></button>'+footer(c,v)+decisionDetail(c)+revisionList(c)+'</div></div>';
+  return '<div class="doc" id="doc"><div class="docbody flow-record"><header class="record-header"><div class="record-context">'+fileTag()+'<span>WinQuote</span><span aria-hidden="true">/</span><span>Feedback</span></div><h1 id="title">'+esc(label(c))+'</h1></header>'+
+    progressRow(c)+stageTask(c,v)+historyDetails(c,v)+'</div></div>';
 }
 function evidenceList(v){
 if(v.question)return '<div class="pending-proof">'+I('ask',19)+'<b>One question to resolve</b><p>Once the requester answers, the draft and its acceptance checks will appear here.</p></div>';
@@ -168,26 +313,21 @@ function mobileSummary(v){
   return '<div class="ms-left">'+I(hasFailed?'hold':'rulers',15)+'<span>'+label+'</span></div><span class="ms-num">'+detail+I('next',12)+'</span>';
 }
 function inspectorContent(c,v){
-if(tab==='activity')return activity(c);
-const {autoText,manualText}=checkSummary(v.checks);
-const title=v.question?'Awaiting clarification':(autoText||'Acceptance criteria');
-const nextOwner={draft:'Website team',clarify:'Website team',processing:'Reviewer',blocked:'Website team',review:'Site owner',release:'Website team',authorized:'Complete',published:null}[c.stage];
-const roles='<div class="ownership"><span class="handoff-avatar">'+avatar(c.owner,24)+'</span><div><b>'+esc(role(c.owner)[2])+'</b><span>Current owner</span></div></div>';
-return '<div class="ins-section evidence"><div class="side-head"><h2>'+esc(title)+'</h2><span class="ai-label">'+(manualText||I('rulers',13)+'Live checks')+'</span></div>'+evidenceList(v)+'</div><div class="ins-section owner-section"><div class="side-head"><h2>Handoff</h2>'+I('branch',14)+'</div>'+roles+'<div class="handoff-next">'+(nextOwner&&nextOwner!==c.owner?I('branch',14)+'<span>Up next · '+esc(role(nextOwner)[2])+'</span>':'<span>'+(c.stage==='published'?'Simulated release recorded':'The website team is working on this')+'</span>')+'</div>'+(c.stage==='review'?'<p class="aside-note">Requesting changes sends this back to the website team.</p>':'')+'</div><div class="ins-section location"><div class="side-head"><h2>Page location</h2></div><button class="locator" data-go="location">'+fileTag()+'<span><b>WinQuote homepage</b><small>Quote entry</small></span>'+I('target',15)+'</button></div>';
+  if(tab==='activity')return activity(c);
+  const {autoText,manualText}=checkSummary(v.checks);
+  const title=v.question?'Awaiting clarification':(autoText||'Acceptance criteria');
+  return '<div class="ins-section evidence"><div class="side-head"><h2>'+esc(title)+'</h2>'+
+    '<span class="ai-label">'+(manualText||I('rulers',13)+'Live checks')+'</span></div>'+evidenceList(v)+'</div>';
 }
-function updateAside(c,v){$('sideinner').innerHTML=inspectorContent(c,v);const b=$('mobaside');if(b){b.innerHTML=mobileSummary(v);b.classList.toggle('warn',v.checks.some(x=>x.status==='fail'));}}
-function decisionDetail(c){
-if(!['release','authorized','published'].includes(c.stage))return '';
-const label=c.stage==='published'?'Simulated release receipt':c.stage==='authorized'?'Release authorized':'Release request';
-return '<div class="decision-detail">'+I(c.stage==='published'?'checks':'release',16)+'<div><b>'+label+' · V'+c.rev+'</b><p>'+esc(c.stage==='published'?'The release was simulated for the WinQuote homepage.':c.stage==='authorized'?'The site owner authorized release. The website team can run the simulation.':'Review complete. Awaiting release authorization.')+'</p></div></div>';
-}
+function updateAside(c,v){const inner=$('sideinner');if(!inner)return;inner.innerHTML=inspectorContent(c,v);const b=$('mobaside');if(b){b.innerHTML=mobileSummary(v);b.classList.toggle('warn',v.checks.some(x=>x.status==='fail'));}}
 function caseMain(){
-const c=here(), v=E.derive(c);
-$('main').innerHTML=transport()+'<div class="workspace">'+doc(c,v)+'<aside class="inspector '+(asideOpen?'aside-open':'')+'" id="inspector" aria-label="Feedback panel"><div class="tabs" role="group" aria-label="Feedback panel tabs">'+btn('tab:checks','Acceptance checks','rulers','tab '+(tab==='checks'?'active':''))+btn('tab:activity','Activity','history','tab '+(tab==='activity'?'active':''))+'<button class="mobile-close iconbtn" data-go="mobileaside" aria-label="Close panel">'+I('cross')+'</button></div><div id="sideinner"></div></aside></div>';
-if($('quick'))$('quick').innerHTML=quick(v);
-updateAside(c,v);
-if(priorOwner&&priorOwner!==c.owner){document.querySelector('.handoff-avatar')?.classList.add('handed');document.querySelector('.ownerline>.avatar')?.classList.add('handed');}
-priorOwner=c.owner;
+  const c=here(),v=E.derive(c),checks=usesChecks(c);
+  const inspector=checks?'<aside class="inspector '+(asideOpen?'aside-open':'')+'" id="inspector" aria-label="Feedback panel"><div class="tabs" role="group" aria-label="Feedback panel tabs">'+btn('tab:checks','Acceptance checks','rulers','tab '+(tab==='checks'?'active':''))+btn('tab:activity','Activity','history','tab '+(tab==='activity'?'active':''))+'<button class="mobile-close iconbtn" data-go="mobileaside" aria-label="Close panel">'+I('cross')+'</button></div><div id="sideinner"></div></aside>':'';
+  $('main').innerHTML=transport()+'<div class="workspace'+(checks?'':' is-focused')+'">'+doc(c,v)+inspector+'</div>';
+  if($('quick'))$('quick').innerHTML=quick(v);
+  if(checks)updateAside(c,v);else asideOpen=false;
+  if(priorOwner&&priorOwner!==c.owner)document.querySelector('.stage-eyebrow>.avatar')?.classList.add('handed');
+  priorOwner=c.owner;
 }
 function inbox(){
 const rows=data.items.filter(x=>matches(x.c,filter)&&(!search.trim()||(x.id+label(x.c)+x.c.text).toLowerCase().includes(search.trim().toLowerCase())));
@@ -266,7 +406,7 @@ function answerTour(value){
     target.classList.add('reconsidered');heading.tabIndex=-1;heading.focus({preventScroll:true});
     if(heading.getBoundingClientRect().top>=window.innerHeight)heading.scrollIntoView({block:'center'});
   }
-  announce(c.stage==='blocked'?'The website team needs to investigate this answer.':'The draft and checks now reflect your answer.');
+  announce(c.stage==='clarify'?'Your answer is saved. The requester still needs to clarify the wording.':c.stage==='blocked'?'The website team needs to investigate this answer.':'The draft and checks now reflect your answer.');
 }
 function selectCase(id){endTour();if(!data.items.some(x=>x.id===id))return;data.current=id;save();page='case';filter='all';tab='checks';activeSource=-1;render();}
 function newItem(text=''){endTour();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c:E.createCase(text)});selectCase(id);if(!text)$('source')?.focus();}
@@ -274,24 +414,37 @@ function apply(action,val){
 if(tour)return;const item=selected();const next=E.transition(item.c,action,val);
 if(next===item.c){announce('This action is unavailable at the current stage.');return;}item.c=next;save();activeSource=-1;close();render();announce(next.trail.at(-1)?.text||stages[next.stage]);}
 function syncSource(text){
-const item=selected(),c=item.c;if(tour||c.versions.length)return;
-const prior=E.derive(c);const n=E.editSource(c,text),v=E.derive(n);item.c=n;save();
-
-$('candidate').innerHTML=candidateHTML(n,v);$('title').textContent=label(n);
-if($('quick'))$('quick').innerHTML=quick(v);
-updateAside(n,v);
-
-const p=document.querySelector('.properties .state');if(p)p.outerHTML=badge(n);
-const foot=document.querySelector('.action-strip');if(foot)foot.outerHTML=footer(n,v);
-const pp=document.querySelector('.person-prop');if(pp)pp.innerHTML=avatar(n.owner,16)+esc(role(n.owner)[2]);
-const w=document.querySelector('[data-go="walk"]');if(w)w.disabled=!text.trim();
-if(prior.candidate!==v.candidate||prior.limit!==v.limit){
-const oldFrags=fragCandidate(prior.candidate);
-document.querySelectorAll('[data-frag]').forEach(el=>{if(!oldFrags.includes(el.textContent))el.classList.add('pulse');});
-if(v.kind==='button')document.querySelector('.button-proof')?.classList.add('pulse');
-document.querySelectorAll('.checkrow').forEach((row,i)=>{if(v.checks[i]?.value!==prior.checks[i]?.value||v.checks[i]?.label!==prior.checks[i]?.label)row.classList.add('pulse');});
+  const item=selected(),c=item.c;if(tour||c.versions.length)return;
+  const prior=E.derive(c),n=E.editSource(c,text),v=E.derive(n);item.c=n;save();
+  if(c.stage!==n.stage||c.stage!=='draft'){
+    const field=$('source'),wasFocused=document.activeElement===field;
+    const selection=wasFocused?[field.selectionStart,field.selectionEnd,field.selectionDirection]:null;
+    const wasExpanded=document.querySelector('.record-history')?.open;
+    renderNav();caseMain();
+    const history=document.querySelector('.record-history');
+    if(history&&(wasExpanded||wasFocused))history.open=true;
+    if(selection&&$('source')){
+      $('source').focus({preventScroll:true});$('source').setSelectionRange(...selection);
+    }
+  }else{
+    const block=$('candidate');if(block)block.innerHTML=candidateHTML(n,v);
+    $('title').textContent=label(n);
+    const [,title,lead]=stageCopy(n,v);
+    $('task-title').textContent=title;
+    document.querySelector('.stage-lead').textContent=lead;
+    if($('quick'))$('quick').innerHTML=quick(v);
+    if(usesChecks(n))updateAside(n,v);
+    const foot=document.querySelector('.action-strip');
+    if(foot)foot.outerHTML=footer(n,v);
+  }
+  const w=document.querySelector('[data-go="walk"]');if(w)w.disabled=!text.trim();
+  if(prior.candidate!==v.candidate||prior.limit!==v.limit){
+    const oldFrags=fragCandidate(prior.candidate);
+    document.querySelectorAll('[data-frag]').forEach(el=>{if(!oldFrags.includes(el.textContent))el.classList.add('pulse');});
+    if(v.kind==='button')document.querySelector('.button-proof')?.classList.add('pulse');
+    document.querySelectorAll('.checkrow').forEach((row,i)=>{if(v.checks[i]?.value!==prior.checks[i]?.value||v.checks[i]?.label!==prior.checks[i]?.label)row.classList.add('pulse');});
+  }
 }
-if(c.stage!==n.stage)renderNav();}
 function exampleMenu(){dialog('<div class="dlgrows">'+examples.map(([t,s],i)=>'<button data-go="sample:'+i+'">'+I(i===0?'file':i===1?'edit':i===2?'ask':'hold')+'<span><b>'+esc(t)+'</b><small>'+esc(s)+'</small></span>'+I('next',14)+'</button>').join('')+'</div>','Choose a feedback example');}
 function personaMenu(){dialog('<p class="dlgdesc">Choose a role to follow a sample from one handoff to the next.</p><div class="dlgrows">'+P.list.map((x,i)=>'<button data-go="persona:'+x.id+'">'+avatar(['Requester','Website team','Site owner'][i])+'<span><b>'+esc(x.label)+'</b><small>'+esc(x.description)+'</small></span>'+I('play',15)+'</button>').join('')+'</div>','Choose a walkthrough');}
 function doAction(g){
@@ -321,6 +474,10 @@ case 'tour-answer':{
 }
 case 'toggle':if(!tour)return;if(!tour.playing&&tour.index===tour.frames.length-1)tour.index=0;setPlay(!tour.playing&&tour.frames.length>1);render();return;
 case 'tab':tab=arg;activeSource=-1;caseMain();return;
+case 'refine':{
+  const history=document.querySelector('.record-history');if(history)history.open=true;
+  $('source')?.focus();return;
+}
 case 'examples':exampleMenu();return;
 case 'sample':close();if(!here().versions.length){syncSource(examples[+arg][1]);render();$('source')?.focus();}return;
 case 'budget':{
