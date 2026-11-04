@@ -286,3 +286,77 @@
 #practicechange label{display:block;font-size:14px;margin-bottom:7px}
 @media(max-width:660px){.walk-mode{font-size:12px;min-height:32px;margin-right:3px}.transport .trackmark{display:none}.transport .tracktitle span{white-space:normal}.transport .playtools{flex:none}}
 .stage-task[data-stage="review"]:has([data-go="practice-accept"]) .action-strip{position:sticky;bottom:0;z-index:2;background:var(--paper,#fff);padding:10px 0;margin-top:12px}
+
+/* The reply and the decision belong to the same delivered version. */
+.review-proof{padding:0;overflow:hidden;background:var(--paper);container-type:inline-size}
+.review-proof .proposal-source{padding:12px 16px;background:#f8f8fb;border-bottom:1px solid var(--line)}
+.proposal-source-head,.proposal-source-head>span{display:flex;align-items:center;gap:6px}
+.proposal-source-head{min-height:20px;justify-content:space-between;flex-wrap:wrap;gap:2px 12px}
+.proposal-source-head>span,.proposal-change b{font-size:11px;font-weight:560;color:#66636f}
+.proposal-source-head svg{color:#767081}
+.proposal-source blockquote{margin:3px 0 0;font-size:14px;line-height:1.5;color:#36343e;overflow-wrap:anywhere;white-space:pre-wrap}
+.proposal-source .swap-answer{min-height:24px;padding:2px 3px;margin:0;font-size:11px;line-height:1.4}
+.proposal-change{margin-top:6px;font-size:12px;line-height:1.5;color:var(--ink2);white-space:pre-wrap}
+.proposal-change b{margin-right:4px}
+.review-proof .proposal-preview{padding:14px 16px}
+.review-proof .proof-label{margin:0 0 7px}
+.review-proof .proposal-options{display:grid;gap:10px 14px}
+.review-proof .proposal-option{padding:0;min-width:0}
+.review-proof .proposal-option+.proposal-option{margin:0}
+.review-proof .review-prompt{margin:0;padding:12px 16px;background:#fcfbfe}
+.review-proof .review-prompt>div{font-weight:560;color:#625574}
+.review-proof .review-prompt p{margin-top:4px;color:#35313f}
+@container (min-width:420px){
+  .review-proof[data-proposal-branch="paths"] .proposal-options:has(>.proposal-option:nth-child(2)){
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+/* Reserve a row for the entry. Long records scroll above it, so even the
+   last line of the current editor is readable while the guide is parked. */
+.sheet.has-walk-dock{height:calc(100dvh - 14px);min-height:0}
+.sheet.has-walk-dock #main{min-height:0;overflow-y:auto;scrollbar-gutter:stable}
+.sheet.has-walk-dock .inspector{top:0}
+#walkthrough-dock:not([hidden]){
+  display:flex;align-items:center;flex:none;min-width:0;
+  padding:8px 20px max(9px,env(safe-area-inset-bottom));border-top:1px solid var(--line);
+  background:var(--paper);
+}
+#walkthrough-dock[hidden]{display:none}
+.walk-dock-button,.walk-minimize{
+  display:inline-flex;align-items:center;min-width:0;gap:9px;min-height:39px;
+  padding:5px 13px 5px 9px;border:1px solid #dcdbe4;border-radius:22px;background:var(--paper);
+}
+.walk-dock-button{
+  max-width:100%;pointer-events:auto;line-height:1.4;
+  box-shadow:0 2px 5px rgba(40,35,65,.07),0 1px 2px rgba(40,35,65,.04);
+}
+.walk-dock-button:hover,.walk-minimize:hover{background:#faf9fc;border-color:#bcb6ce}
+.walk-dock-icon{
+  display:grid;place-items:center;flex:none;width:25px;height:25px;
+  border-radius:50%;background:var(--lav);color:#63529c;
+}
+.walk-dock-icon svg{width:14px;height:14px}
+.walk-dock-copy,.walk-dock-status{display:flex;align-items:baseline;flex-wrap:wrap;min-width:0}
+.walk-dock-copy{gap:1px 9px}
+.walk-dock-name{font-size:12px;font-weight:590;letter-spacing:-.01em;color:var(--type)}
+.walk-dock-status{gap:0 4px;color:#5a5664;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.walk-dock-action{font-weight:540;color:#51466f}
+.walk-dock-arrow{display:grid;place-items:center;flex:none;color:#797284}
+.walk-dock-arrow svg{width:13px;height:13px}
+.walk-minimize{padding:4px 9px;min-height:30px;font-size:12px;font-weight:520;color:#514a66}
+.walk-minimize svg{width:14px;height:14px}
+@media(max-width:820px){
+  .sheet.has-walk-dock{height:100dvh}
+}
+@media(max-width:660px){
+  .sheet.has-walk-dock #main{scrollbar-gutter:auto}
+  .sheet.has-walk-dock .inspector{top:auto}
+  #walkthrough-dock:not([hidden]){padding:6px 12px max(9px,env(safe-area-inset-bottom))}
+  .walk-dock-button{min-height:44px;gap:8px;padding:5px 11px 5px 8px;border-radius:15px}
+  .walk-dock-copy{display:grid;justify-items:start}
+  .walk-dock-name,.walk-dock-status{font-size:12px}
+  .walk-dock-status{gap:0 4px}
+  .walk-minimize{min-height:34px}
+  .review-proof .proposal-preview,.review-proof .review-prompt,.review-proof .proposal-source{padding:11px 13px}
+}

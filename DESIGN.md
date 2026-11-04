@@ -109,6 +109,8 @@ Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b
 | Editing | Selected source phrase, updated candidate and measured value share one short pulse. Edited record remains anchored; reduced motion omits the pulse. |
 | Accountability | Woven review packet and agreed user journey: separate the requirement from its result, exact sources, visible owner, recorded snapshots, accepted version separate from publication. |
 | Walkthrough | Use the actual record and a compact player. Watching example labels scripted decisions. Requester practice waits for the person at clarification and review. Show team-owned steps as waiting, label edited drafts as team revisions, and put the version-specific review question next to the candidate. Practice never changes a saved feedback record. |
+| Collapsed walkthrough | Attio’s Getting started control (reference images 9–10) keeps a return point inside the workspace. Annora’s entry names the person responsible and the next action for this feedback. Expanding it returns to the same step and version. The control fits around those words and wraps on phones. |
+| Requester review | Attio’s email-sharing example (reference image 5) highlights only the affected area. Put the submitted answer, a local preview of the proposed button or entry choices, and the review question inside one versioned proposal. On a revision, show the requested change under the original answer. Keep the full feedback and version history in Details. |
 
 ## Overview
 

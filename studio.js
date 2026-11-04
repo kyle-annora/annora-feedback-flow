@@ -8,6 +8,7 @@ const examples=[['Homepage quote instructions',E.initialFeedback],['Specify a bu
 const navRows=[['clarify','ask','Needs your input'],['processing','clock','In progress'],['review','verify','Ready for review'],['release','release','Release approvals']];
 const key='feedbackflow:casework:v2.1', viewKey='feedbackflow:walk:v2.1';
 const createViewKey='feedbackflow:walk:create:v1';
+const dockKey='feedbackflow:walkthrough-resume:v1';
 const roleAnswerKey='feedbackflow:role-answer:v2';
 const roleStoryVersion=3;
 const practiceKey='feedbackflow:requester-practice:v3';
@@ -21,10 +22,10 @@ function writePractice(){
 }
 function isPractice(){return tour?.type==='customer'&&tour.inputMode==='practice';}
 function decisionPoint(){return isPractice()&&['draft','clarify','review'].includes(here().stage);}
-function rememberPractice(reset=false){
-  if(!isPractice())return;
-  const frontier=reset?tour.index:Math.max(tour.index,Math.min(practice?.frontier??0,tour.frames.length-1));
-  practice={frames:tour.frames,index:tour.index,frontier,answer:tour.scenarioAnswer};
+function rememberPractice(reset=false,current=tour){
+  if(current?.type!=='customer'||current.inputMode!=='practice')return;
+  const frontier=reset?current.index:Math.max(current.index,Math.min(practice?.frontier??0,current.frames.length-1));
+  practice={frames:current.frames,index:current.index,frontier,answer:current.scenarioAnswer};
   writePractice();
 }
 function savedRoleAnswer(){
@@ -45,9 +46,12 @@ try {
 } catch { data=init(); }
 function savedTour(storageKey){
   try {
-    const cached=JSON.parse(sessionStorage.getItem(storageKey));
-    if(cached?.frames?.[cached.index]?.case&&cached.record===data.current){
-      const validated=storageKey===createViewKey?cached:window.CaseUpgrade.walkthrough(cached);
+    const durable=storageKey===dockKey;
+    const cached=JSON.parse((durable?localStorage:sessionStorage).getItem(storageKey));
+    if(cached?.frames?.[cached.index]?.case&&data.items.some(item=>item.id===cached.record)){
+      const validated=cached.type==='create'?cached:window.CaseUpgrade.walkthrough(cached);
+      // A new tab starts in the workspace. Its saved walkthrough stays one click away.
+      if(durable)validated.minimized=true;
       if(P.list.some(role=>role.id===validated.type)&&validated.roleStoryVersion!==roleStoryVersion){
         const frames=P.frames(validated.type,validated.scenarioAnswer||roleAnswer);
         return {...validated,frames,index:0,roleStoryVersion,playing:false};
@@ -66,13 +70,24 @@ function savedTour(storageKey){
   } catch {}
   return null;
 }
-let tour=savedTour(createViewKey)||savedTour(viewKey);
-let page='case',filter='all',tab='checks',search='',navOpen=false,asideOpen=false,activeSource=-1,timer=null,notifyTimer=null,priorOwner=null,panelStage=null;
+const previousTour=savedTour(createViewKey)||savedTour(viewKey)||savedTour(dockKey);
+let tour=previousTour?.minimized?null:previousTour;
+let parkedTour=previousTour?.minimized?previousTour:null;
+if(previousTour&&!practice)rememberPractice(true,previousTour);
+let page=parkedTour?'list':'case',filter='all',tab='checks',search='',navOpen=false,asideOpen=false,activeSource=-1,timer=null,notifyTimer=null,priorOwner=null,panelStage=null;
 const selected=()=>data.items.find(x=>x.id===data.current);
 const here=()=>tour?tour.frames[tour.index].case:selected().c;
 const clone=x=>JSON.parse(JSON.stringify(x));
 function save(){try{localStorage.setItem(key,JSON.stringify(data));}catch{}}
-function saveTour(){try{if(tour)sessionStorage.setItem(tour.type==='create'?createViewKey:viewKey,JSON.stringify({...tour,playing:false}));else sessionStorage.removeItem(viewKey);}catch{}}
+function saveTour(){
+  const current=tour||parkedTour;
+  const snapshot=current?JSON.stringify({...current,minimized:!tour,playing:false}):null;
+  try{
+    if(snapshot)sessionStorage.setItem(current.type==='create'?createViewKey:viewKey,snapshot);
+    else{sessionStorage.removeItem(createViewKey);sessionStorage.removeItem(viewKey);}
+  }catch{}
+  try{if(snapshot)localStorage.setItem(dockKey,snapshot);else localStorage.removeItem(dockKey);}catch{}
+}
 const role=(who)=>actorModes[who]||['customer','lilac',who];
 const avatar=(who,s=17)=>{const r=role(who);return '<span class="avatar '+r[1]+'" aria-hidden="true">'+I(r[0],s-5)+'</span>'};
 const fileTag=()=>'<span class="wmark" aria-hidden="true">W</span>';
@@ -110,9 +125,9 @@ function renderNav(){
 }
 function renderBar(){
   const c=here(),isCase=page==='case';
-  const crumb=isCase?'<span class="slash">/</span><span class="crumbid">'+esc(tour&&tour.type!=='mine'?'Sample feedback':data.current)+'</span>':'';
+  const crumb=isCase?'<span class="slash">/</span><span class="crumbid">'+esc(tour?(tour.type==='mine'?tour.record:'Sample feedback'):data.current)+'</span>':'';
   let tool='';
-  if(isCase&&tour)tool=btn('exit','Exit walkthrough','cross','subtle');
+  if(isCase&&tour)tool=btn('minimize-tour','Minimize walkthrough','down','subtle walk-minimize','aria-expanded="true" aria-controls="main"');
   else if(isCase&&c.stage!=='published')tool=btn('walk','Play walkthrough','play','outline',c.text.trim()?'':'disabled');
   $('topbar').innerHTML='<div class="crumb">'+iconbtn('nav','menu','Open navigation')+
     '<span class="crumbicon">'+I('inbox',15)+'</span><button data-go="filter:all" class="txtbtn">Feedback inbox</button>'+
@@ -154,7 +169,18 @@ return items.map(span).join(' ');
 function answerFields(q){
   return '<form id="touranswerform"><div class="opts concern-options">'+q.options.map(o=>'<button type="button" data-tour-opt="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div><label for="tourans">Or describe what made you hesitate</label><div class="input-actions"><input id="tourans" required maxlength="500" placeholder="In your own words…"><button class="control outline">Use answer</button></div></form>';
 }
-function proposalHTML(v){
+function reviewSource(c,v){
+  if(c.stage!=='review'||!c.answer)return '';
+  const snapshot=c.versions.find(version=>version.rev===c.rev);
+  const answer=snapshot?.answer??c.answer;
+  const sample=snapshot?.answerSimulated??c.answerSimulated;
+  const change=snapshot?.adjustment??c.adjustment;
+  const sourceLabel=sample?'Sample requester answer':tour?.type==='customer'?'Your answer':'Requester’s answer';
+  return '<div class="proposal-source"><div class="proposal-source-head"><span>'+I('quote',13)+
+    esc(sourceLabel)+'</span>'+alternateAnswer(c,v)+'</div><blockquote>'+esc(answer)+'</blockquote>'+
+    (change?'<p class="proposal-change"><b>Requested change to V'+(c.rev-1)+'</b> '+esc(change)+'</p>':'')+'</div>';
+}
+function proposalHTML(c,v){
   const p=v.proposal;
   let items=p.items;
   if(p.edited){
@@ -166,8 +192,10 @@ function proposalHTML(v){
   }
   const revisionQuestion=v.checks.find(check=>check.id==='revision'&&check.status==='manual');
   const reviewQuestion=revisionQuestion?.value||p.reviewQuestion;
-  return '<div class="proof team-proof" data-proposal-branch="'+esc(p.branch)+'"><div class="proof-label">'+(p.branch==='paths'?'Homepage · Quote entry points':'Homepage · Quote button')+'</div>'+
-    (items.length?items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''):'<p class="edited-proposal">'+esc(v.candidate)+'</p>')+
+  const source=reviewSource(c,v);
+  return '<div class="proof team-proof'+(source?' review-proof':'')+'" data-proposal-branch="'+esc(p.branch)+'">'+source+
+    '<div class="proposal-preview"><div class="proof-label">'+(p.branch==='paths'?'Homepage · Quote entry points':'Homepage · Quote button')+'</div><div class="proposal-options">'+
+    (items.length?items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''):'<p class="edited-proposal">'+esc(v.candidate)+'</p>')+'</div></div>'+
     '<div class="review-prompt"><div>'+I('verify',14)+'Review question</div><p id="review-question">'+esc(reviewQuestion)+'</p></div></div>';
 }
 function candidateHTML(c,v){
@@ -204,7 +232,7 @@ const isButton=v.kind==='button';
 if(!tour&&['processing','blocked'].includes(c.stage)&&!v.manual) head=head.replace('</div>',btn('edit-proof','Edit draft','edit','plainbtn')+'</div>');
 if(v.proposal){
   const showBlockReason=v.blocked&&v.reason&&tour?.type!=='customer';
-  return head+proposalHTML(v)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
+  return head+proposalHTML(c,v)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
 }
 return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
@@ -213,6 +241,7 @@ function alternateAnswer(c,v){
   return explore?btn('tour-answer','Try another answer','branch','swap-answer'):'';
 }
 function related(c,v){
+  if(c.stage==='review'&&v.proposal&&c.answer)return '';
   const concern=v.kind==='hesitation'&&c.answer;
   if(!concern&&!c.adjustment)return '';
   return '<div class="thread-notes">'+(concern?'<div>'+I('ask',14)+'<span>Requester’s concern</span><strong>'+esc(c.answer)+(c.answerSimulated?' (sample answer)':'')+'</strong></div>'+alternateAnswer(c,v):'')+
@@ -475,7 +504,46 @@ const rows=data.items.filter(x=>matches(x.c,filter)&&(!search.trim()||(x.id+labe
 const nm=navRows.find(x=>x[0]===filter)?.[2]||'Feedback inbox';
 $('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>'+esc(nm)+'</h1><p>WinQuote <span>/</span> '+rows.length+' '+(rows.length===1?'feedback item':'feedback items')+'</p></div>'+btn('new','New feedback','plus','primary')+'</div><div class="listtools"><span>'+I('feedback')+'Feedback</span><label>'+I('search',15)+'<input id="searchbox" aria-label="Search feedback" placeholder="Search feedback…" value="'+esc(search)+'"></label></div><div class="listrows">'+(rows.length?rows.map(x=>'<button class="listitem" data-go="case:'+x.id+'"><span class="list-id">'+esc(x.id)+'</span><div><strong>'+esc(label(x.c))+'</strong><span>'+esc(x.c.text||'Empty draft')+'</span></div>'+badge(x.c)+I('next',15)+'</button>').join(''):'<div class="listempty">'+I('inbox',24)+'<p>No feedback here yet.</p>'+btn('filter:all','Back to inbox','','outline')+'</div>')+'</div></div>';
 }
-function render(){renderNav();renderBar();page==='case'?caseMain():inbox();}
+function dockStatus(current){
+  if(!current)return ['Requester','Try the requester role'];
+  const c=current.frames[current.index].case;
+  const rev='V'+c.rev;
+  if(current.type!=='customer'||current.inputMode!=='practice'){
+    // These routes show example actions. Opening a paused example never takes that action.
+    const next={draft:'Watch feedback submission',clarify:'Watch the clarification',processing:'Watch '+rev+' preparation',
+      blocked:'View the open request',review:'Watch '+rev+' review',release:'View '+rev+' awaiting approval',
+      authorized:'View '+rev+' release authorization',published:'View the '+rev+' release receipt'};
+    return [c.owner,next[c.stage]];
+  }
+  switch(c.stage){
+    case 'draft':return ['You · Requester','Submit feedback'];
+    case 'clarify':return ['You · Requester','Answer one question'];
+    case 'processing':return ['Website team','Wait for '+rev];
+    case 'blocked':return ['Website team',c.adjustment?'Wait for the '+rev+' revision':'Wait for team input'];
+    case 'review':return ['You · Requester','Review '+rev];
+    case 'release':return ['Site owner','Await '+rev+' release approval'];
+    case 'authorized':return ['Website team','Await simulated release of '+rev];
+    case 'published':return ['Complete','View the '+rev+' release receipt'];
+  }
+}
+function renderDock(){
+  const dock=$('walkthrough-dock');
+  const visible=!tour;
+  dock.hidden=!visible;
+  dock.parentElement.classList.toggle('has-walk-dock',visible);
+  dock.parentElement.classList.toggle('has-parked-tour',visible&&Boolean(parkedTour));
+  if(!visible)return;
+  if(!dock.firstElementChild){
+    dock.innerHTML='<button class="walk-dock-button" data-go="open-walkthrough" type="button" aria-controls="main" aria-expanded="false">'+
+      '<span class="walk-dock-icon">'+I('play',15)+'</span><span class="walk-dock-copy"><strong class="walk-dock-name">Walkthrough</strong>'+
+      '<span class="walk-dock-status"><span class="walk-dock-owner"></span> <span class="walk-dock-separator" aria-hidden="true">·</span> <span class="walk-dock-action"></span></span></span>'+
+      '<span class="walk-dock-arrow">'+I('next',14)+'</span></button>';
+  }
+  const [owner,action]=dockStatus(parkedTour);
+  dock.querySelector('.walk-dock-owner').textContent=owner;
+  dock.querySelector('.walk-dock-action').textContent=action;
+}
+function render(){renderNav();renderBar();page==='case'?caseMain():inbox();renderDock();}
 function refreshDlgProof(){
 const f=$('candidateedit');if(!f)return;const c=E.editCandidate(here(),f.value),v=E.derive(c),q=$('edit-status');
 q.textContent=v.blocked?v.reason:(v.limit!==null?v.wordCount+' / '+v.limit+' words · ':'')+'Ready for team review.';
@@ -506,10 +574,46 @@ function auto(){
 }
 function endTour(restore=false){
   stop();
-  const wasCreate=tour?.type==='create';
-  if(wasCreate){try{sessionStorage.removeItem(createViewKey);}catch{}}
-  tour=wasCreate&&restore?savedTour(viewKey):null;
+  const parent=restore&&tour?.type==='create'?savedTour(viewKey):null;
+  try{sessionStorage.removeItem(createViewKey);}catch{}
+  tour=parent?.minimized?null:parent;
+  parkedTour=parent?.minimized?parent:null;
   saveTour();tab='checks';activeSource=-1;asideOpen=false;
+  if(parkedTour){page='list';scheduleParkedStep();}
+}
+function scheduleParkedStep(){
+  const current=parkedTour;
+  if(current?.type!=='customer'||current.inputMode!=='practice')return;
+  const c=current.frames[current.index].case;
+  if(!['processing','blocked'].includes(c.stage)||current.index>=current.frames.length-1)return;
+  stop();
+  timer=setTimeout(()=>{
+    if(parkedTour!==current)return;
+    current.index++;
+    rememberPractice(false,current);saveTour();renderDock();
+    if(current.frames[current.index].case.stage==='review')announce('The website team sent V'+current.frames[current.index].case.rev+' for your review. Open Walkthrough to review it.');
+    scheduleParkedStep();
+  },4000);
+}
+function parkActive(){
+  if(!tour)return;
+  stop();tour.playing=false;
+  if(isPractice()&&practice)tour.index=practice.frontier;
+  parkedTour=tour;tour=null;
+  asideOpen=false;tab='checks';activeSource=-1;panelStage=null;priorOwner=null;
+  saveTour();scheduleParkedStep();
+}
+function minimizeWalkthrough(){
+  if(!tour)return;
+  parkActive();page='list';filter='all';search='';render();
+  $('walkthrough-dock').firstElementChild?.focus({preventScroll:true});
+}
+function openWalkthrough(){
+  if(!parkedTour){begin('customer',false,true);focusTask();return;}
+  stop();tour=parkedTour;parkedTour=null;
+  page='case';filter='all';tab='checks';activeSource=-1;asideOpen=false;panelStage=null;
+  if(isPractice())rememberPractice(true);
+  setPlay(isPractice()&&!decisionPoint());render();focusTask();
 }
 function appendSteps(frames,c){
   for(let i=0;i<15;i++){
@@ -518,11 +622,11 @@ function appendSteps(frames,c){
   }
   return frames;
 }
-function begin(type,reset=false){
+function begin(type,reset=false,startPractice=false){
   if(reset){practice=null;writePractice();}
   if(type==='mine'&&!selected().c.text.trim())return;
   // The sample has its own transport and session. Exiting returns to the same work.
-  if(type==='create'){stop();tab='checks';activeSource=-1;asideOpen=false;}
+  if(type==='create'){stop();parkedTour=null;tab='checks';activeSource=-1;asideOpen=false;}
   else endTour();
   close();page='case';filter='all';
   let frames=[];
@@ -540,7 +644,8 @@ function begin(type,reset=false){
     ...(P.list.some(role=>role.id===type)?{roleStoryVersion,scenarioAnswer:roleAnswer}:{})};
   if(type==='customer'&&practice){tour.inputMode='practice';tour.index=practice.index;tour.scenarioAnswer=practice.answer;}
   else if(P.list.some(role=>role.id===type)){tour.inputMode='watch';tour.fromPractice=Boolean(practice);}
-  setPlay(!isPractice()&&frames.length>1);render();announce('Walkthrough started.');
+  if(type==='customer'&&startPractice){tour.inputMode='practice';rememberPractice();}
+  setPlay(frames.length>1&&(!isPractice()||!decisionPoint()));render();announce('Walkthrough started.');
 }
 function clarificationPrefix(){
   if(!tour||!['mine','create','customer'].includes(tour.type))return null;
@@ -591,8 +696,8 @@ function chooseReview(choice,note){
   tour.inputMode='practice';tour.frames=frames;tour.index=index+1;
   rememberPractice(true);close();setPlay(tour.index<frames.length-1);render();focusTask();announce(frames[tour.index].title);
 }
-function selectCase(id){endTour();if(!data.items.some(x=>x.id===id))return;data.current=id;save();page='case';filter='all';tab='checks';activeSource=-1;render();}
-function newItem(text=''){endTour();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c:E.createCase(text)});selectCase(id);if(!text)$('source')?.focus();}
+function selectCase(id){if(!data.items.some(x=>x.id===id))return;parkActive();data.current=id;save();page='case';filter='all';tab='checks';activeSource=-1;render();}
+function newItem(text=''){const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c:E.createCase(text)});selectCase(id);if(!text)$('source')?.focus();}
 function apply(action,val){
 if(tour)return;const item=selected();const next=E.transition(item.c,action,val);
 if(next===item.c){announce('This action is unavailable at the current stage.');return;}item.c=next;save();activeSource=-1;close();render();announce(next.trail.at(-1)?.text||stages[next.stage]);}
@@ -654,10 +759,12 @@ switch(k){
 case 'close':close();return;
 case 'nav':navOpen=!navOpen;renderNav();return;
 case 'mobileaside':asideOpen=!asideOpen;$('inspector')?.classList.toggle('aside-open',asideOpen);(asideOpen?document.querySelector('.mobile-close'):$('mobaside'))?.focus({preventScroll:true});return;
-case 'project':case 'filter':endTour();filter=k==='project'?'all':arg;page='list';search='';render();return;
-case 'find':endTour();filter='all';search='';page='list';render();$('searchbox').focus();return;
+case 'project':case 'filter':parkActive();filter=k==='project'?'all':arg;page='list';search='';render();return;
+case 'find':parkActive();filter='all';search='';page='list';render();$('searchbox').focus();return;
 case 'new':newItem();return;case 'case':selectCase(arg);return;case 'walk':begin('mine');return;case 'personas':personaMenu();return;case 'persona':begin(arg);return;
 case 'create-tour':begin('create');return;
+case 'minimize-tour':minimizeWalkthrough();return;
+case 'open-walkthrough':openWalkthrough();return;
 case 'exit':endTour(true);render();return;
 case 'take-control':takeControl();return;
 case 'reset-example':begin('customer',true);return;
@@ -718,7 +825,7 @@ document.addEventListener('focusin',ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
 document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){endTour(true);render();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
@@ -727,7 +834,13 @@ if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthr
   if(startPractice)launchURL.searchParams.delete('mode');
   launchURL.searchParams.delete('walkthrough');
   history.replaceState(history.state,'',launchURL.href);
-  if(tour?.type===requestedWalkthrough)render();else begin(requestedWalkthrough);
+  if(parkedTour?.type===requestedWalkthrough)openWalkthrough();
+  else if(tour?.type===requestedWalkthrough){setPlay(isPractice()&&!decisionPoint());render();}
+  else begin(requestedWalkthrough,false,startPractice);
   if(startPractice&&!isPractice())takeControl();
-}else render();
+}else{
+  if(tour&&isPractice())setPlay(!decisionPoint());
+  if(parkedTour)scheduleParkedStep();
+  render();
+}
 })();
