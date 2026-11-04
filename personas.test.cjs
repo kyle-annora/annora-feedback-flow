@@ -330,3 +330,105 @@ test("owner perspective, human approval and simulated execution are separate and
   assert.equal(personas.canOpenOwner(example),false);
   assert.deepEqual(personas.releaseSteps(example,"view-owner",2),[]);
 });
+
+test("watch explanations follow every actual role or personal case without changing it", () => {
+  const frames=[];
+  for(const role of personas.list){
+    for(const answer of [...engine.hesitationAnswers,"I worry about the pricing API."]){
+      frames.push(...personas.frames(role.id,answer,{personalAnswer:true}));
+    }
+  }
+  // The Create and personal-feedback routes wrap engine cases directly rather
+  // than decorating them with a role or selecting a default persona fixture.
+  for(const text of [engine.hesitationFeedback,engine.initialFeedback,
+    'Change the homepage button label to "Prepare my estimate".',"Fix the pricing API integration."]){
+    let c=engine.createCase(text);
+    for(let count=0;count<15;count++){
+      frames.push({case:c});
+      const next=engine.step(c);
+      if(next===c)break;
+      c=next;
+    }
+  }
+  for(const frame of frames){
+    const before=JSON.stringify(frame),view=engine.derive(frame.case),savedView=JSON.stringify(view);
+    const narration=personas.explain(frame,view);
+    for(const field of ["purpose","notice","next","actor"]){
+      assert.equal(typeof narration[field],"string",frame.case.stage+" needs "+field);
+      assert.ok(narration[field].trim(),frame.case.stage+" has empty "+field);
+      assert.doesNotMatch(narration[field],/undefined|NaN/);
+    }
+    const owner=frame.case.owner;
+    assert.equal(narration.actor,owner==="Reviewer"&&frame.personaId?"Requester":owner);
+    assert.equal(JSON.stringify(frame),before);
+    assert.equal(JSON.stringify(view),savedView);
+    if(["release","authorized","published"].includes(frame.case.stage)){
+      assert.match(narration.purpose+" "+narration.notice+" "+narration.next,/simulated/);
+    }
+  }
+});
+
+test("explanations distinguish a paired entry proposal from the sending concern and retain the displayed version", () => {
+  const paths=personas.frames("customer",engine.hesitationAnswers[1]);
+  const sending=personas.frames("customer",engine.hesitationAnswers[0]);
+  const ask=personas.explain(paths[1]);
+  assert.match(ask.purpose,/why.*hesitates/);
+  assert.match(ask.next,/concern.*team.*wording/);
+  for(const index of [3,6]){
+    const frame=paths[index],v=frame.case.rev,explanation=personas.explain(frame);
+    assert.match(explanation.notice,/together in one homepage proposal/);
+    assert.match(explanation.notice,new RegExp("V"+v));
+    assert.ok(explanation.notice.includes("Use a template"));
+    assert.ok(explanation.notice.includes("Start from scratch"));
+    assert.doesNotMatch(explanation.notice,/alternative versions/);
+    const other=personas.explain(sending[index]);
+    assert.ok(other.notice.includes("Configure a walk-in"));
+    assert.match(other.notice,/whether a quote is sent to the customer/);
+    assert.match(other.notice,new RegExp("V"+v));
+    assert.doesNotMatch(other.notice,/two entry|standard or custom/);
+  }
+  const held=personas.explain(paths[4]);
+  assert.equal(held.actor,"Website team");
+  assert.match(held.notice,/V1 remains the last delivered version/);
+  assert.match(held.next,/before sending V2/);
+
+  let c=engine.transition(engine.createCase("New employees find the homepage quote button label confusing."),"submit");
+  c=engine.transition(c,"answer","221");
+  const retry=personas.explain({case:c});
+  assert.match(retry.purpose,/what the earlier reply means/);
+  assert.match(retry.next,/team.*wording/);
+  assert.doesNotMatch(retry.notice,/221.*proposed.*label/);
+});
+
+test("explanations use frozen custom labels and exact accepted versions instead of later drafts or fixture defaults", () => {
+  const original=personas.teamSteps(personas.teamStart(),"deliver")[0];
+  const revise=personas.teamSteps(original,"sample-change")[0];
+  const items=[{label:"Standard preset",detail:"For a standard walk-in, start from a template.\n\nCheck the size first."},
+    {label:"Custom layout",detail:"For custom work, start from scratch."}];
+  const sent=personas.teamSteps(revise,"deliver",items).at(-1);
+  const pollutedView={...engine.derive(sent.case),candidate:"Wrong later label",proposal:{branch:"paths",items:[{label:"Wrong A"},{label:"Wrong B"}]}};
+  const current=personas.explain(sent,pollutedView);
+  assert.ok(current.notice.includes("Standard preset"));
+  assert.ok(current.notice.includes("Custom layout"));
+  assert.doesNotMatch(current.notice,/Check the size first|Wrong|Use a template/);
+  assert.match(current.notice,/V2/);
+  const historical=personas.explain(original,pollutedView);
+  assert.match(historical.notice,/Use a template/);
+  assert.match(historical.notice,/V1/);
+  assert.doesNotMatch(historical.notice,/Standard preset|Wrong|V2/);
+
+  const customer=personas.frames("customer",engine.hesitationAnswers[0],{personalAnswer:true});
+  const accepted=personas.decide(customer,3,"accept").at(-1);
+  const owner=personas.releaseSteps(accepted,"view-owner",1)[0];
+  const authorized=personas.releaseSteps(owner,"approve",1)[0];
+  const published=personas.releaseSteps(authorized,"execute",1)[0];
+  for(const [frame,actor] of [[owner,"Site owner"],[authorized,"Website team"],[published,"Complete"]]){
+    const narration=personas.explain(frame,pollutedView);
+    assert.equal(narration.actor,actor);
+    assert.match(narration.notice,/V1/);
+    assert.doesNotMatch(narration.notice,/V2|Wrong/);
+  }
+  assert.match(personas.explain(owner).purpose,/acceptance and release approval as separate decisions/);
+  assert.match(personas.explain(authorized).purpose,/handoff/);
+  assert.match(personas.explain(published).notice,/receipt.*acceptance.*approval/);
+});

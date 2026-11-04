@@ -215,7 +215,7 @@ function reviewSource(c,v){
     esc(sourceLabel)+'</span>'+alternateAnswer(c,v)+'</div><blockquote>'+esc(answer)+'</blockquote>'+
     (change?'<p class="proposal-change"><b>Requested change to V'+(c.rev-1)+'</b> '+esc(change)+'</p>':'')+'</div>';
 }
-function proposalHTML(c,v){
+function proposalHTML(c,v,shownRevision=c.rev){
   const p=v.proposal;
   let items=p.items;
   if(p.edited&&!items.length){
@@ -229,7 +229,8 @@ function proposalHTML(c,v){
   const reviewQuestion=revisionQuestion?.value||p.reviewQuestion;
   const source=reviewSource(c,v);
   return '<div class="proof team-proof'+(source?' review-proof':'')+'" data-proposal-branch="'+esc(p.branch)+'">'+source+
-    '<div class="proposal-preview"><div class="proof-label">'+(p.branch==='paths'?'Homepage · Quote entry points':'Homepage · Quote button')+'</div><div class="proposal-options">'+
+    '<div class="proposal-preview"><div class="proof-label">Proposed homepage copy · V'+shownRevision+'</div>'+
+    (items.length>1?'<p class="proposal-scope">Both entry points are part of this proposal.</p>':'')+'<div class="proposal-options">'+
     (items.length?items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''):'<p class="edited-proposal">'+esc(v.candidate)+'</p>')+'</div></div>'+
     '<div class="review-prompt"><div>'+I('verify',14)+'Review question</div><p id="review-question">'+esc(reviewQuestion)+'</p></div></div>';
 }
@@ -291,9 +292,9 @@ const isButton=v.kind==='button';
 if(!tour&&['processing','blocked'].includes(c.stage)&&!v.manual) head=head.replace('</div>',btn('edit-proof','Edit draft','edit','plainbtn')+'</div>');
 if(v.proposal){
   const showBlockReason=v.blocked&&v.reason&&tour?.type!=='customer';
-  return head+proposalHTML(c,v)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
+  return head+proposalHTML(c,v,shownRevision)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
 }
-return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
+return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">Proposed homepage copy · V'+shownRevision+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
 function alternateAnswer(c,v){
   if(isHandsOn()&&['release','authorized','published'].includes(c.stage))return '';
@@ -359,6 +360,15 @@ function footer(c,v){
   const buttons=actions(c,v);
   return buttons?'<div class="action-strip"><div class="action-btns" id="actions">'+buttons+'</div></div>':'';
 }
+function walkExplanation(frame){
+  if(isHandsOn())return '';
+  const explanation=P.explain(frame);
+  return '<section class="walk-explanation" aria-label="About this walkthrough step">'+
+    '<p class="walk-purpose"><b>Why this step</b> '+esc(explanation.purpose)+'</p>'+
+    '<details id="walk-explanation"'+(tour.explanationOpen?' open':'')+'><summary>What to notice'+I('down',12)+'</summary>'+
+    '<div class="walk-notes"><p class="walk-notice">'+esc(explanation.notice)+'</p>'+
+    '<p class="walk-next"><b>'+esc(explanation.actor)+'</b><span>'+esc(explanation.next)+'</span></p></div></details></section>';
+}
 function transport(){
   if(!tour)return '';
   if(isTeamPractice()||(isHandsOn()&&['release','authorized','published'].includes(here().stage))){
@@ -373,14 +383,18 @@ function transport(){
       '<div class="playtools">'+historyTools+'</div></div>';
   }
   const last=tour.index===tour.frames.length-1;
+  const watching=!isHandsOn();
   const waiting=last&&E.derive(here()).question?.type==='wording-retry';
   const playback=waiting?'Waiting for your answer':tour.playing?'Playing':last?(tour.frames[tour.index].handoff&&here().stage!=='published'?'Handoff complete':'Finished'):'Paused';
   const name=tour.type==='create'?'The “Create” walkthrough':tour.type==='mine'?'Your feedback walkthrough':
     P.list.find(item=>item.id===tour.type).label+' walkthrough';
   const history=inPracticeHistory();
   const gate=decisionPoint();
-  const toggle=history||gate||(isPractice()&&last)?'':iconbtn('toggle',tour.playing?'pause':last?'replay':'play',tour.playing?'Pause':last?'Replay':'Resume');
-  const next=history||(!last&&!gate)?iconbtn('walknext','next','Next step'):'';
+  const toggleLabel=tour.playing?'Pause':last?'Replay':'Resume';
+  const toggle=history||gate||(isPractice()&&last)?'':watching?
+    btn('toggle',toggleLabel,tour.playing?'pause':last?'replay':'play','walk-play'):
+    iconbtn('toggle',tour.playing?'pause':last?'replay':'play',toggleLabel);
+  const next=history||(!last&&!gate)?(watching?btn('walknext','Next','next','walk-next-step'):iconbtn('walknext','next','Next step')):'';
   const modeSwitch=history?btn('walkcurrent','Return to current step',null,'walk-current'):
     tour.type==='customer'?btn(isPractice()?'reset-example':'take-control',isPractice()?'Restart example':'Try it yourself',null,'walk-mode'):
     tour.type==='team'?btn('team-practice','Try it yourself',null,'walk-mode'):'';
@@ -388,10 +402,12 @@ function transport(){
   const status=history?'Earlier step · Read only':isPractice()?(gate?'Your turn':last?playback:tour.playing?'Team working':'Paused'):
     sample?(tour.fromPractice?'Your practice':'Watching example')+' · '+playback:playback;
   const frame=tour.frames[tour.index];
-  return '<div class="transport'+(history?' is-history':'')+'" role="group" aria-label="Walkthrough player"><span class="trackmark">'+I(history?'history':'play',14)+'</span>'+
-    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+esc(status)+'</span><span class="sr">'+
+  const player='<span class="trackmark">'+I(history?'history':'play',14)+'</span>'+
+    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+esc(status)+(watching?' · '+(tour.index+1)+' of '+tour.frames.length:'')+'</span><span class="sr">'+
     'Frame '+(tour.index+1)+' of '+tour.frames.length+' · '+esc(frame.title)+'</span></div>'+
-    '<div class="playtools">'+modeSwitch+toggle+next+'</div></div>';
+    '<div class="playtools">'+modeSwitch+toggle+next+'</div>';
+  return '<div class="transport'+(watching?' with-explanation':'')+(history?' is-history':'')+'" role="group" aria-label="Walkthrough player">'+
+    (watching?'<div class="walk-player">'+player+'</div>'+walkExplanation(frame):player)+'</div>';
 }
 
 const phases=['Request','Proposal','Review','Release'];
@@ -639,6 +655,10 @@ function inspectorContent(c,v){
 }
 function updateAside(c,v){const inner=$('sideinner');if(!inner)return;inner.innerHTML=inspectorContent(c,v);const b=$('mobaside');if(b){b.innerHTML=mobileSummary(v);b.classList.toggle('warn',v.checks.some(x=>x.status==='fail'));}}
 function displayedView(c){return isEditingTeamDraft(c)?teamDraftState().view:E.derive(c);}
+function syncWalkthroughHeight(){
+  const height=document.querySelector('.transport')?.offsetHeight||0;
+  $('main').style.setProperty('--walkthrough-height',height+'px');
+}
 function caseMain(){
   const c=here(),v=displayedView(c),checks=usesChecks(c);
   if(panelStage!==c.stage){
@@ -654,6 +674,7 @@ function caseMain(){
     '<button class="mobile-close iconbtn" data-go="mobileaside" aria-label="Close details">'+I('cross')+'</button></div>'+
     '<div id="sideinner"></div></aside>';
   $('main').innerHTML=transport()+'<div class="workspace">'+doc(c,v)+inspector+'</div>';
+  syncWalkthroughHeight();
   if($('quick'))$('quick').innerHTML=quick(v);
   updateAside(c,v);
   if(priorOwner&&priorOwner!==c.owner)document.querySelector('.stage-eyebrow>.avatar')?.classList.add('handed');
@@ -775,12 +796,13 @@ function updateTeamDraft(){
 }
 function setPlay(on){
   if(!tour)return;
+  if(on&&!isHandsOn())tour.explanationOpen=false;
   if(isTeamPractice()||inOwnerView()){stop();tour.playing=false;saveTour();schedulePracticeEvent(tour);return;}
   tour.playing=Boolean(on&&!inPracticeHistory()&&!decisionPoint()&&tour.index<tour.frames.length-1);stop();
   if(tour.playing){
     const choosing=here().stage==='clarify'&&E.derive(here()).question?.type==='hesitation';
     const exampleReview=tour.type==='customer'&&here().stage==='review';
-    timer=setTimeout(auto,choosing?14000:exampleReview?9000:4000);
+    timer=setTimeout(auto,choosing?14000:exampleReview?9000:isHandsOn()?4000:8000);
   }
   saveTour();
 }
@@ -1084,7 +1106,22 @@ document.addEventListener('focusin',ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.matches('[data-team-field]'))updateTeamDraft();if(ev.target.id==='tourans'&&tour&&!$('dialog').open&&!inPracticeHistory()){tour.answerDraft=ev.target.value;saveTour();}if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
 document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('toggle',event=>{
+  const details=event.target;
+  if(details.id!=='walk-explanation'||!tour||isHandsOn())return;
+  if(Boolean(tour.explanationOpen)===details.open)return;
+  tour.explanationOpen=details.open;
+  if(details.open){
+    setPlay(false);
+    render();
+    $('walk-explanation')?.querySelector('summary')?.focus({preventScroll:true});
+  }else{
+    saveTour();
+    syncWalkthroughHeight();
+  }
+},true);
+window.addEventListener('resize',syncWalkthroughHeight);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');

@@ -457,6 +457,47 @@
 @media(max-width:660px){
   .release-packet-head,.release-options,.release-exact-copy,.release-signatures{padding-inline:12px}
 }
+
+/* Demo narration explains the displayed task without changing its product state. */
+.transport.with-explanation{display:block;flex:none;padding:0;background:#f8f7fb}
+.walk-player{display:flex;align-items:center;gap:9px;padding:8px 20px}
+.walk-player .tracktitle b{font-size:12px}
+.walk-player .playtools{gap:3px}
+.walk-play,.walk-next-step{min-height:30px;padding:4px 8px;color:#514966;background:transparent;font-size:12px;white-space:nowrap}
+.walk-play svg,.walk-next-step svg{width:13px;height:13px}
+.walk-play:hover,.walk-next-step:hover{background:#eeebf6}
+.walk-next-step{flex-direction:row-reverse}
+.walk-explanation{padding:0 20px 9px;color:#514d5b;line-height:1.5}
+.walk-purpose{margin:0;font-size:13px;max-width:92ch;text-wrap:pretty}
+.walk-purpose>b{font-size:11.5px;font-weight:600;color:#695f7d;margin-right:6px}
+#walk-explanation{margin-top:2px;font-size:12px}
+#walk-explanation>summary{display:flex;align-items:center;gap:5px;width:fit-content;min-height:28px;padding:2px 0;color:#665b7f;cursor:pointer;list-style:none}
+#walk-explanation>summary::-webkit-details-marker{display:none}
+#walk-explanation>summary:hover{color:var(--blue)}
+#walk-explanation>summary:focus-visible{outline:2px solid #9387c2;outline-offset:2px;border-radius:3px}
+#walk-explanation[open]>summary svg{transform:rotate(180deg)}
+.walk-notes{max-width:85ch;padding:3px 0 3px 11px;border-left:2px solid #d8d1e6}
+.walk-notice{margin:0;color:#494453;font-size:12.5px;line-height:1.55}
+.walk-next{display:flex;gap:5px 10px;flex-wrap:wrap;margin:8px 0 0;color:#66616f;font-size:12px}
+.walk-next b{font-weight:570;color:#51475f}
+.walk-next span{flex:1;min-width:min(200px,100%)}
+.proposal-scope{margin:-2px 0 13px;color:#73707c;font-size:12px;line-height:1.5}
+.transport.with-explanation+.workspace .inspector{top:var(--walkthrough-height,132px);height:calc(100dvh - 64px - var(--walkthrough-height,132px))}
+@media(max-width:660px){
+  .walk-player{padding:8px 16px 6px;flex-wrap:wrap;gap:5px}
+  .walk-player .tracktitle{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;flex-basis:100%}
+  .walk-player .tracktitle b{font-size:13px}
+  .walk-player .tracktitle span{font-size:11px}
+  .walk-player .playtools{width:100%;justify-content:flex-end}
+  .walk-player .walk-mode{margin-right:auto}
+  .walk-play,.walk-next-step{min-height:34px;font-size:12px;padding-inline:9px}
+  .walk-explanation{padding:0 16px 8px}
+  .walk-purpose{font-size:12.5px;line-height:1.5}
+  .walk-purpose>b{font-size:11.5px}
+  #walk-explanation>summary{min-height:30px}
+  .walk-notice{font-size:12px}
+  .transport.with-explanation+.workspace .inspector{top:auto;height:auto}
+}
 </style></head>
 <body>
 <a href="#main" class="skip">Skip to feedback</a>
@@ -2481,7 +2522,90 @@
     return [{...source,case:next,title,description:"",personaId:"publisher",handoff:undefined,
       index,total:index+1,interactive:true,done:next.stage==="published"}];
   }
-  const api = {list, frames, start, next, canReview, decide, from, canOpenOwner,releaseSteps,suggestChange:engine.suggestChange,
+  // The narration describes the displayed case, including a frozen earlier
+  // version. It never selects a fixture or advances the walkthrough.
+  function explain(source,suppliedView) {
+    const c=source.case;
+    const delivered=["review","release","authorized","published"].includes(c.stage);
+    const view=delivered?engine.derive(c):(suppliedView||engine.derive(c));
+    const revision=c.receipt?.rev??c.authorization?.rev??c.accepted?.rev??c.rev;
+    const version="V"+revision;
+    const actor=c.owner==="Reviewer"&&list.some(role=>role.id===source.personaId)?"Requester":c.owner;
+    const result=(purpose,notice,next)=>({purpose,notice,next,actor});
+    let items=view.proposal?.items||[];
+    if(view.proposal&&!items.length){
+      const blocks=view.candidate.trim().split(/\n\s*\n/);
+      const count=view.proposal.branch==="paths"?2:1;
+      if(blocks.length===count)items=blocks.map(block=>({label:block.split("\n")[0]}));
+    }
+    let notice;
+    if(view.proposal?.branch==="paths"){
+      const pair=items.length===2?"“"+items[0].label+"” and “"+items[1].label+"”":"The two entry controls";
+      notice=pair+" belong together in one homepage proposal, "+version+". The review checks which entry fits a standard or custom job.";
+    }else if(view.proposal?.branch==="sending"){
+      const control=items[0]?.label?"“"+items[0].label+"”":"The button";
+      notice=version+" pairs "+control+" with an explanation of what opens and whether a quote is sent to the customer.";
+    }else if(view.kind==="button"&&view.candidate){
+      notice="“"+view.candidate+"” is the proposed homepage button label in "+version+". The reviewer checks whether it communicates the intended action.";
+    }else if(view.kind==="entry"){
+      notice=view.limit!==null?"The "+view.limit+"-word limit is checked alongside the guidance for starting standard and custom quotes.":
+        "The proposed instructions explain how to start a standard or custom quote.";
+    }else{
+      notice="The original feedback stays with the proposed copy and its acceptance checks.";
+    }
+    switch(c.stage){
+      case "draft":
+        if(view.question?.type==="hesitation")return result("Capture the confusion before the team proposes wording.",
+          "The requester can explain what feels unclear about “Create”. The website team owns the proposed copy.",
+          "Submit the feedback to begin.");
+        return result("Give the website team a concrete request to work from.",
+          view.question?"The missing detail will be clarified after submission.":view.blocked?view.reason:notice,
+          "Submit the feedback to the website team.");
+      case "clarify":
+        if(view.question?.type==="hesitation")return result("Understand why the requester hesitates.",
+          "Their answer determines whether the proposal explains sending behavior or helps them choose a starting point.",
+          "Describe the concern so the team can propose wording.");
+        if(view.question?.type==="wording-retry")return result("Confirm what the earlier reply means before turning it into copy.",
+          "The saved reply is context. The requester can ask the team to propose wording.",
+          "Ask the team to suggest wording, or confirm an exact label.");
+        return result("Resolve the missing detail before the team prepares a proposal.",
+          view.question?.reason||view.question?.prompt||view.reason,
+          "Answer the question so the website team can continue.");
+      case "processing":
+        return result(c.adjustment?"Show how the revision responds to the latest change request.":
+          view.proposal?.branch==="paths"?"Show both homepage entry controls as one proposal so the requester can judge the choice.":
+          "Show the actual proposed homepage copy before asking for a decision.",
+          notice,"Check "+version+" against the feedback, then send it for review.");
+      case "blocked": {
+        const previous=c.versions.at(-1);
+        const history=previous?"V"+previous.rev+" remains the last delivered version. ":"";
+        return result(view.manual?"Resolve the scope before promising a deliverable.":
+          "Keep unfinished changes with the team until they are ready for review.",
+          history+view.reason,view.manual?"Confirm the scope and agree the next step with the requester.":
+          "Resolve the outstanding check before sending "+version+".");
+      }
+      case "review":
+        return result(c.adjustment?"Check the revision against the requested change and the original concern.":
+          "Let the "+(actor==="Requester"?"requester":"reviewer")+" judge whether the delivered copy resolves the reported concern.",
+          notice,"Accept "+version+" or request another change.");
+      case "release":
+        return result("Keep content acceptance and release approval as separate decisions.",
+          "The site owner checks the accepted "+version+" and the WinQuote homepage target before authorizing a simulated release.",
+          "Review the accepted copy and decide whether to approve simulated release of "+version+".");
+      case "authorized":
+        return result("Make the handoff from approval to execution visible.",
+          version+" is authorized for simulated release to "+c.authorization.target+". The team executes that approved version.",
+          "Execute the simulated release of "+version+".");
+      case "published":
+        return result("Resolve which version completed the simulated release.",
+          "The receipt ties "+version+" to its acceptance, owner approval and "+c.receipt.target+" target.",
+          "No further action is needed.");
+      default:
+        return result("Inspect the recorded change and its current responsibility.",notice,
+          "Review the current record.");
+    }
+  }
+  const api = {list, frames, start, next, canReview, decide, from, canOpenOwner,releaseSteps,explain,suggestChange:engine.suggestChange,
     teamStart,teamDraft,teamSteps};
   root.CasePersonas = api;
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -2881,7 +3005,7 @@ function reviewSource(c,v){
     esc(sourceLabel)+'</span>'+alternateAnswer(c,v)+'</div><blockquote>'+esc(answer)+'</blockquote>'+
     (change?'<p class="proposal-change"><b>Requested change to V'+(c.rev-1)+'</b> '+esc(change)+'</p>':'')+'</div>';
 }
-function proposalHTML(c,v){
+function proposalHTML(c,v,shownRevision=c.rev){
   const p=v.proposal;
   let items=p.items;
   if(p.edited&&!items.length){
@@ -2895,7 +3019,8 @@ function proposalHTML(c,v){
   const reviewQuestion=revisionQuestion?.value||p.reviewQuestion;
   const source=reviewSource(c,v);
   return '<div class="proof team-proof'+(source?' review-proof':'')+'" data-proposal-branch="'+esc(p.branch)+'">'+source+
-    '<div class="proposal-preview"><div class="proof-label">'+(p.branch==='paths'?'Homepage · Quote entry points':'Homepage · Quote button')+'</div><div class="proposal-options">'+
+    '<div class="proposal-preview"><div class="proof-label">Proposed homepage copy · V'+shownRevision+'</div>'+
+    (items.length>1?'<p class="proposal-scope">Both entry points are part of this proposal.</p>':'')+'<div class="proposal-options">'+
     (items.length?items.map(item=>'<div class="proposal-option"><span class="candidate-text button-proof">'+esc(item.label)+I('send',14)+'</span><p>'+esc(item.detail)+'</p></div>').join(''):'<p class="edited-proposal">'+esc(v.candidate)+'</p>')+'</div></div>'+
     '<div class="review-prompt"><div>'+I('verify',14)+'Review question</div><p id="review-question">'+esc(reviewQuestion)+'</p></div></div>';
 }
@@ -2957,9 +3082,9 @@ const isButton=v.kind==='button';
 if(!tour&&['processing','blocked'].includes(c.stage)&&!v.manual) head=head.replace('</div>',btn('edit-proof','Edit draft','edit','plainbtn')+'</div>');
 if(v.proposal){
   const showBlockReason=v.blocked&&v.reason&&tour?.type!=='customer';
-  return head+proposalHTML(c,v)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
+  return head+proposalHTML(c,v,shownRevision)+(showBlockReason?'<p class="empty-copy">'+esc(v.reason)+'</p>':'');
 }
-return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">'+(isButton?'Homepage · Quote button':'Homepage · Quote instructions')+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
+return head+'<div class="proof '+(isButton?'proof-button':'')+'"><div class="proof-label">Proposed homepage copy · V'+shownRevision+'</div><div class="candidate-text '+(isButton?'button-proof':'')+'" lang="en">'+(isButton?'<span>'+esc(v.candidate)+'</span>'+I('send',15):candidateLines(v))+'</div></div>';
 }
 function alternateAnswer(c,v){
   if(isHandsOn()&&['release','authorized','published'].includes(c.stage))return '';
@@ -3025,6 +3150,15 @@ function footer(c,v){
   const buttons=actions(c,v);
   return buttons?'<div class="action-strip"><div class="action-btns" id="actions">'+buttons+'</div></div>':'';
 }
+function walkExplanation(frame){
+  if(isHandsOn())return '';
+  const explanation=P.explain(frame);
+  return '<section class="walk-explanation" aria-label="About this walkthrough step">'+
+    '<p class="walk-purpose"><b>Why this step</b> '+esc(explanation.purpose)+'</p>'+
+    '<details id="walk-explanation"'+(tour.explanationOpen?' open':'')+'><summary>What to notice'+I('down',12)+'</summary>'+
+    '<div class="walk-notes"><p class="walk-notice">'+esc(explanation.notice)+'</p>'+
+    '<p class="walk-next"><b>'+esc(explanation.actor)+'</b><span>'+esc(explanation.next)+'</span></p></div></details></section>';
+}
 function transport(){
   if(!tour)return '';
   if(isTeamPractice()||(isHandsOn()&&['release','authorized','published'].includes(here().stage))){
@@ -3039,14 +3173,18 @@ function transport(){
       '<div class="playtools">'+historyTools+'</div></div>';
   }
   const last=tour.index===tour.frames.length-1;
+  const watching=!isHandsOn();
   const waiting=last&&E.derive(here()).question?.type==='wording-retry';
   const playback=waiting?'Waiting for your answer':tour.playing?'Playing':last?(tour.frames[tour.index].handoff&&here().stage!=='published'?'Handoff complete':'Finished'):'Paused';
   const name=tour.type==='create'?'The “Create” walkthrough':tour.type==='mine'?'Your feedback walkthrough':
     P.list.find(item=>item.id===tour.type).label+' walkthrough';
   const history=inPracticeHistory();
   const gate=decisionPoint();
-  const toggle=history||gate||(isPractice()&&last)?'':iconbtn('toggle',tour.playing?'pause':last?'replay':'play',tour.playing?'Pause':last?'Replay':'Resume');
-  const next=history||(!last&&!gate)?iconbtn('walknext','next','Next step'):'';
+  const toggleLabel=tour.playing?'Pause':last?'Replay':'Resume';
+  const toggle=history||gate||(isPractice()&&last)?'':watching?
+    btn('toggle',toggleLabel,tour.playing?'pause':last?'replay':'play','walk-play'):
+    iconbtn('toggle',tour.playing?'pause':last?'replay':'play',toggleLabel);
+  const next=history||(!last&&!gate)?(watching?btn('walknext','Next','next','walk-next-step'):iconbtn('walknext','next','Next step')):'';
   const modeSwitch=history?btn('walkcurrent','Return to current step',null,'walk-current'):
     tour.type==='customer'?btn(isPractice()?'reset-example':'take-control',isPractice()?'Restart example':'Try it yourself',null,'walk-mode'):
     tour.type==='team'?btn('team-practice','Try it yourself',null,'walk-mode'):'';
@@ -3054,10 +3192,12 @@ function transport(){
   const status=history?'Earlier step · Read only':isPractice()?(gate?'Your turn':last?playback:tour.playing?'Team working':'Paused'):
     sample?(tour.fromPractice?'Your practice':'Watching example')+' · '+playback:playback;
   const frame=tour.frames[tour.index];
-  return '<div class="transport'+(history?' is-history':'')+'" role="group" aria-label="Walkthrough player"><span class="trackmark">'+I(history?'history':'play',14)+'</span>'+
-    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+esc(status)+'</span><span class="sr">'+
+  const player='<span class="trackmark">'+I(history?'history':'play',14)+'</span>'+
+    '<div class="tracktitle"><b>'+esc(name)+'</b><span>'+esc(status)+(watching?' · '+(tour.index+1)+' of '+tour.frames.length:'')+'</span><span class="sr">'+
     'Frame '+(tour.index+1)+' of '+tour.frames.length+' · '+esc(frame.title)+'</span></div>'+
-    '<div class="playtools">'+modeSwitch+toggle+next+'</div></div>';
+    '<div class="playtools">'+modeSwitch+toggle+next+'</div>';
+  return '<div class="transport'+(watching?' with-explanation':'')+(history?' is-history':'')+'" role="group" aria-label="Walkthrough player">'+
+    (watching?'<div class="walk-player">'+player+'</div>'+walkExplanation(frame):player)+'</div>';
 }
 
 const phases=['Request','Proposal','Review','Release'];
@@ -3305,6 +3445,10 @@ function inspectorContent(c,v){
 }
 function updateAside(c,v){const inner=$('sideinner');if(!inner)return;inner.innerHTML=inspectorContent(c,v);const b=$('mobaside');if(b){b.innerHTML=mobileSummary(v);b.classList.toggle('warn',v.checks.some(x=>x.status==='fail'));}}
 function displayedView(c){return isEditingTeamDraft(c)?teamDraftState().view:E.derive(c);}
+function syncWalkthroughHeight(){
+  const height=document.querySelector('.transport')?.offsetHeight||0;
+  $('main').style.setProperty('--walkthrough-height',height+'px');
+}
 function caseMain(){
   const c=here(),v=displayedView(c),checks=usesChecks(c);
   if(panelStage!==c.stage){
@@ -3320,6 +3464,7 @@ function caseMain(){
     '<button class="mobile-close iconbtn" data-go="mobileaside" aria-label="Close details">'+I('cross')+'</button></div>'+
     '<div id="sideinner"></div></aside>';
   $('main').innerHTML=transport()+'<div class="workspace">'+doc(c,v)+inspector+'</div>';
+  syncWalkthroughHeight();
   if($('quick'))$('quick').innerHTML=quick(v);
   updateAside(c,v);
   if(priorOwner&&priorOwner!==c.owner)document.querySelector('.stage-eyebrow>.avatar')?.classList.add('handed');
@@ -3441,12 +3586,13 @@ function updateTeamDraft(){
 }
 function setPlay(on){
   if(!tour)return;
+  if(on&&!isHandsOn())tour.explanationOpen=false;
   if(isTeamPractice()||inOwnerView()){stop();tour.playing=false;saveTour();schedulePracticeEvent(tour);return;}
   tour.playing=Boolean(on&&!inPracticeHistory()&&!decisionPoint()&&tour.index<tour.frames.length-1);stop();
   if(tour.playing){
     const choosing=here().stage==='clarify'&&E.derive(here()).question?.type==='hesitation';
     const exampleReview=tour.type==='customer'&&here().stage==='review';
-    timer=setTimeout(auto,choosing?14000:exampleReview?9000:4000);
+    timer=setTimeout(auto,choosing?14000:exampleReview?9000:isHandsOn()?4000:8000);
   }
   saveTour();
 }
@@ -3750,7 +3896,22 @@ document.addEventListener('focusin',ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.matches('[data-team-field]'))updateTeamDraft();if(ev.target.id==='tourans'&&tour&&!$('dialog').open&&!inPracticeHistory()){tour.answerDraft=ev.target.value;saveTour();}if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
 document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('toggle',event=>{
+  const details=event.target;
+  if(details.id!=='walk-explanation'||!tour||isHandsOn())return;
+  if(Boolean(tour.explanationOpen)===details.open)return;
+  tour.explanationOpen=details.open;
+  if(details.open){
+    setPlay(false);
+    render();
+    $('walk-explanation')?.querySelector('summary')?.focus({preventScroll:true});
+  }else{
+    saveTour();
+    syncWalkthroughHeight();
+  }
+},true);
+window.addEventListener('resize',syncWalkthroughHeight);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');

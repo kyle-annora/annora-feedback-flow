@@ -333,7 +333,90 @@
     return [{...source,case:next,title,description:"",personaId:"publisher",handoff:undefined,
       index,total:index+1,interactive:true,done:next.stage==="published"}];
   }
-  const api = {list, frames, start, next, canReview, decide, from, canOpenOwner,releaseSteps,suggestChange:engine.suggestChange,
+  // The narration describes the displayed case, including a frozen earlier
+  // version. It never selects a fixture or advances the walkthrough.
+  function explain(source,suppliedView) {
+    const c=source.case;
+    const delivered=["review","release","authorized","published"].includes(c.stage);
+    const view=delivered?engine.derive(c):(suppliedView||engine.derive(c));
+    const revision=c.receipt?.rev??c.authorization?.rev??c.accepted?.rev??c.rev;
+    const version="V"+revision;
+    const actor=c.owner==="Reviewer"&&list.some(role=>role.id===source.personaId)?"Requester":c.owner;
+    const result=(purpose,notice,next)=>({purpose,notice,next,actor});
+    let items=view.proposal?.items||[];
+    if(view.proposal&&!items.length){
+      const blocks=view.candidate.trim().split(/\n\s*\n/);
+      const count=view.proposal.branch==="paths"?2:1;
+      if(blocks.length===count)items=blocks.map(block=>({label:block.split("\n")[0]}));
+    }
+    let notice;
+    if(view.proposal?.branch==="paths"){
+      const pair=items.length===2?"“"+items[0].label+"” and “"+items[1].label+"”":"The two entry controls";
+      notice=pair+" belong together in one homepage proposal, "+version+". The review checks which entry fits a standard or custom job.";
+    }else if(view.proposal?.branch==="sending"){
+      const control=items[0]?.label?"“"+items[0].label+"”":"The button";
+      notice=version+" pairs "+control+" with an explanation of what opens and whether a quote is sent to the customer.";
+    }else if(view.kind==="button"&&view.candidate){
+      notice="“"+view.candidate+"” is the proposed homepage button label in "+version+". The reviewer checks whether it communicates the intended action.";
+    }else if(view.kind==="entry"){
+      notice=view.limit!==null?"The "+view.limit+"-word limit is checked alongside the guidance for starting standard and custom quotes.":
+        "The proposed instructions explain how to start a standard or custom quote.";
+    }else{
+      notice="The original feedback stays with the proposed copy and its acceptance checks.";
+    }
+    switch(c.stage){
+      case "draft":
+        if(view.question?.type==="hesitation")return result("Capture the confusion before the team proposes wording.",
+          "The requester can explain what feels unclear about “Create”. The website team owns the proposed copy.",
+          "Submit the feedback to begin.");
+        return result("Give the website team a concrete request to work from.",
+          view.question?"The missing detail will be clarified after submission.":view.blocked?view.reason:notice,
+          "Submit the feedback to the website team.");
+      case "clarify":
+        if(view.question?.type==="hesitation")return result("Understand why the requester hesitates.",
+          "Their answer determines whether the proposal explains sending behavior or helps them choose a starting point.",
+          "Describe the concern so the team can propose wording.");
+        if(view.question?.type==="wording-retry")return result("Confirm what the earlier reply means before turning it into copy.",
+          "The saved reply is context. The requester can ask the team to propose wording.",
+          "Ask the team to suggest wording, or confirm an exact label.");
+        return result("Resolve the missing detail before the team prepares a proposal.",
+          view.question?.reason||view.question?.prompt||view.reason,
+          "Answer the question so the website team can continue.");
+      case "processing":
+        return result(c.adjustment?"Show how the revision responds to the latest change request.":
+          view.proposal?.branch==="paths"?"Show both homepage entry controls as one proposal so the requester can judge the choice.":
+          "Show the actual proposed homepage copy before asking for a decision.",
+          notice,"Check "+version+" against the feedback, then send it for review.");
+      case "blocked": {
+        const previous=c.versions.at(-1);
+        const history=previous?"V"+previous.rev+" remains the last delivered version. ":"";
+        return result(view.manual?"Resolve the scope before promising a deliverable.":
+          "Keep unfinished changes with the team until they are ready for review.",
+          history+view.reason,view.manual?"Confirm the scope and agree the next step with the requester.":
+          "Resolve the outstanding check before sending "+version+".");
+      }
+      case "review":
+        return result(c.adjustment?"Check the revision against the requested change and the original concern.":
+          "Let the "+(actor==="Requester"?"requester":"reviewer")+" judge whether the delivered copy resolves the reported concern.",
+          notice,"Accept "+version+" or request another change.");
+      case "release":
+        return result("Keep content acceptance and release approval as separate decisions.",
+          "The site owner checks the accepted "+version+" and the WinQuote homepage target before authorizing a simulated release.",
+          "Review the accepted copy and decide whether to approve simulated release of "+version+".");
+      case "authorized":
+        return result("Make the handoff from approval to execution visible.",
+          version+" is authorized for simulated release to "+c.authorization.target+". The team executes that approved version.",
+          "Execute the simulated release of "+version+".");
+      case "published":
+        return result("Resolve which version completed the simulated release.",
+          "The receipt ties "+version+" to its acceptance, owner approval and "+c.receipt.target+" target.",
+          "No further action is needed.");
+      default:
+        return result("Inspect the recorded change and its current responsibility.",notice,
+          "Review the current record.");
+    }
+  }
+  const api = {list, frames, start, next, canReview, decide, from, canOpenOwner,releaseSteps,explain,suggestChange:engine.suggestChange,
     teamStart,teamDraft,teamSteps};
   root.CasePersonas = api;
   if (typeof module === "object" && module.exports) module.exports = api;

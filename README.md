@@ -24,6 +24,8 @@ Use **Back** to revisit the previous step, or to return to the inbox from the fi
 
 The role player labels its automatic route **Watching example**. Select **Try it yourself** or answer the clarification to take part. The other roles follow the reached practice record in the same tab. **Restart example** returns to the scripted route. Practice is separate from saved feedback.
 
+Each example step explains why that screen appears. Expand its explanation to see what to look for and who takes the next action. Opening the explanation pauses the example so you can read it, and the player can resume when you are ready. The notes follow the current concern, proposal and version.
+
 AI, backend actions and publication are simulated. Records stay in the visitor's browser.
 
 ## Local development
