@@ -159,4 +159,21 @@ The sidebar uses the official lowercase `annora` wordmark from [annora.ai](https
 
 ## WinQuote presentation brand · customer correction
 
-The customer explicitly replaced the Annora display branding with WinQuote. The sidebar, capture surface and sample quote now reuse the unchanged Old Man Winter mark from the actual winter-cpq repository, paired with WinQuote as in the approved homepage V2. The browser title is “WinQuote · Feedback”; its favicon uses the same mark. This supersedes the Annora display-brand section above. Provenance is in `assets/brand/winquote-sources.json`. The underlying Annora prototype repository, workflow, existing evidence and Wesley's separate homepage deliverable retain their existing scope.
+The customer explicitly replaced the Annora display branding with WinQuote. The sidebar, capture surface and sample quote now reuse the unchanged Old Man Winter mark from the actual winter-cpq repository, paired with WinQuote as in the approved homepage V2. The browser title is “WinQuote · Feedback”; its favicon uses the same mark. This supersedes the Annora display-brand section above. Provenance is in `assets/brand/winquote-sources.json`. The underlying Annora prototype repository, workflow, existing evidence and separate homepage deliverable retain their existing scope.
+
+## Curated customer PDF demonstration
+
+The default entry presents one PDF journey. Explore workspace retains the full inbox, old PDF routes, Create paths and role walkthroughs. The presentation advances the existing CaseEngine, stores its record in the same workspace, and preserves exact version snapshots. A guided role change is a presentation control; it does not grant a real customer's permission or execute a backend action.
+
+Reference lock: [Attio's two-column onboarding](https://refero.design/pages/eb21b4a5-a1da-4aa3-9b2c-62765f5aac5f) supplies the current-decision / visible-outcome composition; its monochrome style reference `9f0c028b-6b11-415e-ab92-f32e4597cbe2` supplies fine borders and type hierarchy. [Cycle's AI verification](https://refero.design/pages/c1c2e9c3-86b5-4689-b61d-bec0da43a0e9) supplies the explicit team gate on AI drafts. Keep the already approved Source Serif Pro / Inter pairing and WinQuote navy. Do not import Cycle's dark palette or replace established fonts.
+
+| Decision | Reference / requirement | Application |
+| --- | --- | --- |
+| One current action | Attio onboarding; customer demo quality goal | Focused task column, outcome column, persistent action footer; no role dropdown in the primary path. |
+| Human screening | Cycle verification; agreed AI/team ownership | An editable private question and internal-only decisions precede explicit send. Zero questions remains possible. |
+| Visible causality | User's adaptive UI goal | Selecting the next task updates suggested behavior and matching checks together. Team confirmation remains separate. |
+| Return to the same work | Agreed customer return journey | A clearly labelled simulated notification returns to the same WQ ID. No real email, delivery service or cross-browser messaging is claimed. |
+| Exact-version decision | Existing workflow contract | Accept, request adjustment and release authorization name the submitted version; V2 requires a real edit and new preview. |
+| Calm motion | Current decision focus | Brief scene reveal and affected-content emphasis, disabled with reduced motion. |
+
+The quote document is an illustrative sample. The walkthrough can demonstrate intended behavior and decisions; it is not proof of real PDF generation, customer comprehension, business benefit or customer sign-off. Historical scope allows a zero-question route; the curated Ask branch makes the proposed customer touchpoint visible without claiming the historical ticket necessarily requires it.

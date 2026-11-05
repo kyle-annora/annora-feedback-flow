@@ -6,6 +6,12 @@ Annora follows feedback from the original request through team review, clarifica
 
 The reviewed workflow runs inside the original Feedback Flow workspace and CaseEngine records. Existing saved feedback, original wording, delivered versions and earlier decisions remain available. Starting a walkthrough creates a separate exercise rather than replacing the feedback you were working on.
 
+## Customer presentation
+
+The main URL opens a curated PDF demonstration. Each screen pairs the current owner and action with the question, proposal or exact version being reviewed. Choose either customer intention to see the proposed behavior and review checks change together; the team still reviews and confirms the plan. After a requested adjustment, edit the proposal or checks before sending V2. Customer acceptance, site-owner authorization and simulated release remain separate decisions.
+
+**Minimize** returns to the sample WinQuote page. The compact entry shows who owns the next step and returns to the current record. **Back** shows earlier steps read-only. **Explore workspace** retains the original inbox and walkthroughs below. The reminder scene is a delivery preview only; no notification is sent. The interface illustration is not a working PDF implementation.
+
 ## Try the PDF case
 
 [Watch the PDF walkthrough](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf), or [try it yourself](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf&mode=practice).

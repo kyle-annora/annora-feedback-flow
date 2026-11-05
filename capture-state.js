@@ -12,6 +12,8 @@ function updates(items,seen={}){return items.flatMap(({id,c,captureSubmission})=
  let event,title,next,label,owner;
  if(f.phase==='awaiting-answer'){event=f.sentBundle.id;title=f.sentBundle.round==='detailed'?'One detail needs your input':'The team has a question';next=f.sentBundle.round==='detailed'?'Answer the detailed questions':'Answer the initial questions';label=f.sentBundle.round==='detailed'?'Answer detailed questions':'Answer initial questions';owner='You · Requester';}
  else if(f.phase==='review'){event='V'+c.rev;title='V'+c.rev+' is ready for review';next='Check the proposal against your feedback';label='Review V'+c.rev;owner='You · Requester';}
+ else if(f.phase==='accepted'){event='accepted-V'+c.rev;title='V'+c.rev+' accepted · awaiting approval';next='No action needed from you. The site owner decides on release.';label='View accepted version';owner='Site owner';}
+ else if(f.phase==='authorized'){event='authorized-V'+c.rev;title='V'+c.rev+' approved · with the team';next='No action needed from you. The team will run the simulated release.';label='View approved version';owner='Website team';}
  else if(f.phase==='published'){event='receipt-V'+c.rev;title='V'+c.rev+' release simulated';next='No further action needed';label='View receipt';owner='Complete';}
  else if(f.sharedUnderstanding&&!f.sharedUnderstanding.needsRevision&&['spec-review','question-draft','answer-review','candidate','checking','ready'].includes(f.phase)){event=f.sharedUnderstanding.id;title='The team shared its understanding';next='Read it, or keep working while the team prepares the change';label='Read understanding';owner='Website team';}
  else return [];
