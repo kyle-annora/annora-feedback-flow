@@ -136,7 +136,7 @@ function renderNav(){
     return '<button class="navrow '+(filter===id?'selected':'')+'" data-go="filter:'+id+'">'+
       I(icon)+'<span>'+title+'</span><small>'+count+'</small></button>';
   }).join('');
-  nav.innerHTML='<div class="brand" role="img" aria-label="Annora"><span class="annora-wordmark" aria-hidden="true">annora<span class="annora-wordmark-square"></span></span></div>'+
+  nav.innerHTML='<div class="brand" role="img" aria-label="WinQuote"><span class="winquote-symbol" aria-hidden="true"></span><span class="winquote-wordmark" aria-hidden="true">WinQuote</span></div>'+
     '<div class="navgroup topnav">'+
       btn('find','Search feedback','search','navrow')+
       btn('filter:all','Feedback inbox','inbox','navrow '+(filter==='all'?'selected':''))+

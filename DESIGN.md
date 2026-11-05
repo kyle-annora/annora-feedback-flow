@@ -156,3 +156,7 @@ Only actual local capture submissions create these update entries. Walkthrough e
 ## Annora workspace brand
 
 The sidebar uses the official lowercase `annora` wordmark from [annora.ai](https://annora.ai/): Archivo 900, −0.04em tracking and a small brass square. The former invented wavy FlowMark is removed. The official Annora favicon identifies the browser tab, titled “Annora · Feedback Flow”. Brand styling is confined to the wordmark; existing serif headings, neutral sans body, workflow and WinQuote sample identity remain intact. Source URLs and asset hashes are recorded in `assets/brand/sources.json`; Archivo retains its OFL license. The font and favicon are bundled locally so the standalone artifact does not depend on a third-party request.
+
+## WinQuote presentation brand · customer correction
+
+The customer explicitly replaced the Annora display branding with WinQuote. The sidebar, capture surface and sample quote now reuse the unchanged Old Man Winter mark from the actual winter-cpq repository, paired with WinQuote as in the approved homepage V2. The browser title is “WinQuote · Feedback”; its favicon uses the same mark. This supersedes the Annora display-brand section above. Provenance is in `assets/brand/winquote-sources.json`. The underlying Annora prototype repository, workflow, existing evidence and Wesley's separate homepage deliverable retain their existing scope.

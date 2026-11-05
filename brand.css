@@ -1,4 +1,5 @@
-/* Official annora.ai header wordmark; confined to the workspace brand. */
-@font-face{font-family:'Annora Archivo';font-style:normal;font-weight:400 900;font-display:swap;src:url('assets/brand/archivo-latin-400-900-normal.woff2') format('woff2')}
-.annora-wordmark{display:inline-block;font-family:'Annora Archivo',sans-serif;font-size:26px;line-height:1;font-weight:900;letter-spacing:-.04em;color:#1a2024}
-.annora-wordmark-square{display:inline-block;width:6px;height:6px;margin-left:3px;background:#cf9a36;vertical-align:baseline}
+/* Approved WinQuote / Mr. Winter brand, reused from the actual product assets. */
+.winquote-symbol{display:inline-block;flex:none;width:31px;height:31px;background:url('assets/brand/winter-logo.png') center/contain no-repeat}
+.winquote-wordmark{font-family:var(--sans);font-size:20px;line-height:1.15;font-weight:650;letter-spacing:-.04em;color:#0d314b}
+.capture-app-name .winquote-symbol{width:28px;height:28px}
+.capture-paper-brand .winquote-symbol{width:24px;height:24px}
