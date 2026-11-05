@@ -140,10 +140,11 @@ function renderNav(){
     '<div class="navgroup topnav">'+
       btn('find','Search feedback','search','navrow')+
       btn('filter:all','Feedback inbox','inbox','navrow '+(filter==='all'?'selected':''))+
-      btn('new','New feedback','plus','navrow newlink')+'</div>'+
+      btn('site','Report from WinQuote','plus','navrow newlink')+btn('new','Other feedback',null,'navrow')+'</div>'+
     '<div class="navgroup"><span class="navlabel">Queues</span>'+queueLinks+'</div>'+
     '<div class="navgroup project-group"><span class="navlabel">Projects</span><button class="navrow" data-go="project">'+fileTag()+'<span>WinQuote</span></button></div>'+
     '<div class="rail-end"><span class="navlabel">Walkthroughs</span>'+
+      '<button class="navrow" data-go="r-journey-watch">'+I('branch',16)+'PDF · full journey</button>'+
       '<button class="navrow" data-go="r-pdf-watch">'+I('file',16)+'PDF · team review</button>'+
       '<button class="navrow" data-go="r-pdf-ask">'+I('ask',16)+'PDF · ask the customer</button>'+
       '<button class="navrow" data-go="create-tour">'+I('branch',16)+'Explore “Create”</button>'+
@@ -168,6 +169,7 @@ function renderBar(){
   else if(isCase&&c.stage!=='published')tool=btn('walk','Play walkthrough','play','outline',c.text.trim()?'':'disabled');
   if(isCase&&c.reviewFlow&&!tour){tool=btn('r-back','Previous step','back','subtle',reviewState().history?.length?'':'disabled')+tool;}
   else if(isCase&&!tour&&['clarify','processing','blocked'].includes(c.stage))tool=btn('r-opt-in','Review with team','people','outline')+tool;
+  if(isCase&&c.reviewFlow?.context?.origin==='business-page-demo')tool=btn('site','Back to WinQuote','back','outline')+tool;
   $('topbar').innerHTML='<div class="crumb">'+iconbtn('nav','menu','Open navigation')+
     navigation+crumb+'</div><div class="tools">'+tool+'</div>';
 }
@@ -690,7 +692,7 @@ function caseMain(){
 function inbox(){
 const rows=data.items.filter(x=>matches(x.c,filter)&&(!search.trim()||(x.id+label(x.c)+x.c.text).toLowerCase().includes(search.trim().toLowerCase())));
 const nm=navRows.find(x=>x[0]===filter)?.[2]||'Feedback inbox';
-$('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>'+esc(nm)+'</h1><p>WinQuote <span>/</span> '+rows.length+' '+(rows.length===1?'feedback item':'feedback items')+'</p></div>'+btn('new','New feedback','plus','primary')+'</div><div class="listtools"><span>'+I('feedback')+'Feedback</span><label>'+I('search',15)+'<input id="searchbox" aria-label="Search feedback" placeholder="Search feedback…" value="'+esc(search)+'"></label></div><div class="listrows">'+(rows.length?rows.map(x=>'<button class="listitem" data-go="case:'+x.id+'"><span class="list-id">'+esc(x.id)+'</span><div><strong>'+esc(label(x.c))+'</strong><span>'+esc(x.c.text||'Empty draft')+'</span></div>'+badge(x.c)+I('next',15)+'</button>').join(''):'<div class="listempty">'+I('inbox',24)+'<p>No feedback here yet.</p>'+btn('filter:all','Back to inbox','','outline')+'</div>')+'</div></div>';
+$('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>'+esc(nm)+'</h1><p>WinQuote <span>/</span> '+rows.length+' '+(rows.length===1?'feedback item':'feedback items')+'</p></div>'+btn('site','New feedback','plus','primary')+'</div><div class="listtools"><span>'+I('feedback')+'Feedback</span><label>'+I('search',15)+'<input id="searchbox" aria-label="Search feedback" placeholder="Search feedback…" value="'+esc(search)+'"></label></div><div class="listrows">'+(rows.length?rows.map(x=>'<button class="listitem" data-go="case:'+x.id+'"><span class="list-id">'+esc(x.id)+'</span><div><strong>'+esc(label(x.c))+'</strong><span>'+esc(x.c.text||'Empty draft')+'</span></div>'+badge(x.c)+I('next',15)+'</button>').join(''):'<div class="listempty">'+I('inbox',24)+'<p>No feedback here yet.</p>'+btn('filter:all','Back to inbox','','outline')+'</div>')+'</div></div>';
 }
 function dockStatus(current){
   if(!current)return selected().c.reviewFlow?R.status(selected().c):['Requester','Try the requester role'];
@@ -746,7 +748,7 @@ function renderDock(){
   dock.querySelector('.walk-dock-owner').textContent=owner;
   dock.querySelector('.walk-dock-action').textContent=action;
 }
-function render(){if(tour?.reviewed){tour.frontier=Math.max(tour.frontier||0,tour.index);const current=tour.inputMode==='practice'?tour.frames.at(-1):tour.frames[tour.frontier];const record=data.items.find(x=>x.id===tour.record);if(record&&record.c!==current.case){record.c=current.case;save();}saveTour();}renderNav();renderBar();page==='case'?caseMain():inbox();renderDock();}
+function render(){if(tour?.reviewed){tour.frontier=Math.max(tour.frontier||0,tour.index);const current=tour.inputMode==='practice'?tour.frames.at(-1):tour.frames[tour.frontier];const record=data.items.find(x=>x.id===tour.record);if(record&&record.c!==current.case){record.c=current.case;save();}saveTour();}document.body.classList.toggle('capture-mode',page==='site');if(page==='site'){renderCapture();return;}captureState.onSite=false;saveCapture();$('nav').hidden=false;$('topbar').hidden=false;renderNav();renderBar();page==='case'?caseMain():inbox();renderDock();}
 function refreshDlgProof(){
 const f=$('candidateedit');if(!f)return;const c=E.editCandidate(here(),f.value),v=E.derive(c),q=$('edit-status');
 q.textContent=v.blocked?v.reason:(v.limit!==null?v.wordCount+' / '+v.limit+' words · ':'')+'Ready for team review.';
@@ -1044,7 +1046,7 @@ const R=window.ReviewUI;
 function reviewState(){const host=tour?.reviewed?tour:selected();host.reviewUI||={role:here().owner==='Reviewer'?'Requester':here().owner,history:[],drafts:{}};const s=host.reviewUI;if(tour?.reviewed&&tour.inputMode==='watch')s.role=here().owner==='Reviewer'?'Requester':here().owner==='Complete'?'Requester':here().owner;return s;}
 function reviewHistory(){const s=reviewState();return Number.isInteger(s.historyIndex)||(tour?.reviewed&&tour.inputMode==='practice'&&tour.index<tour.frames.length-1);}
 function reviewCase(){const s=reviewState();return Number.isInteger(s.historyIndex)?s.history[s.historyIndex]:here();}
-function reviewCapture(){if(!here()?.reviewFlow||reviewHistory())return;const s=reviewState();const a=$('r-approach'),checks=$('r-checks');if(a&&checks){const which=['triage','answer-review'].includes(here().reviewFlow.phase)?'scope':'candidate';s.drafts||={};s.drafts[which]={approach:a.value,checks:checks.value};}if(document.querySelector('[data-question]'))s.questionDraft=reviewReadQuestions();const inputs=[...document.querySelectorAll('[data-answer-id]')];if(inputs.length){s.answers={};for(const el of inputs)if(el.type!=='radio'||el.checked)s.answers[el.dataset.answerId]=el.value;}save();saveTour();}
+function reviewCapture(){if(!here()?.reviewFlow||reviewHistory())return;const s=reviewState();const a=$('r-approach'),checks=$('r-checks');if(a&&checks){const which=['triage','answer-review'].includes(here().reviewFlow.phase)?'scope':'candidate';s.drafts||={};s.drafts[which]={approach:a.value,checks:checks.value,...($('r-understanding')?{understanding:$('r-understanding').value}:{})};}if(document.querySelector('[data-question]'))s.questionDraft=reviewReadQuestions();const inputs=[...document.querySelectorAll('[data-answer-id]')];if(inputs.length){s.answers={};for(const el of inputs)if(el.type!=='radio'||el.checked)s.answers[el.dataset.answerId]=el.value;}save();saveTour();}
 function reviewReadQuestions(){const old=reviewState().questionDraft||here().reviewFlow.questionDraft;return [...document.querySelectorAll('[data-question]')].map(row=>{const q=old.find(q=>q.id===row.dataset.question);return {...q,text:row.querySelector('[data-q=text]').value,type:row.querySelector('[data-q=type]').value,options:row.querySelector('[data-q=options]').value.split('\n').map(x=>x.trim()).filter(Boolean),disposition:row.querySelector('[data-q=disposition]').value,required:row.querySelector('[data-q=required]').checked,screened:row.querySelector('[data-q=screened]').checked};});}
 function reviewError(error){let el=$('r-error');if(!el){el=document.createElement('p');el.id='r-error';el.className='review-private-note';el.setAttribute('role','alert');el.tabIndex=-1;($('dialog').open?$('dialog-body'):document.querySelector('.stage-task')).prepend(el);}el.textContent=error.message||error;el.focus();}
 function reviewCommit(action,value){if(reviewHistory())throw Error('Return to the current step before making a change.');const previous=here(),next=E.review(previous,action,value),s=reviewState();if(tour?.reviewed){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);tour.frames.push({case:next,title:next.trail.at(-1).text,why:'This is your action on the same feedback record. The owner and next step update with it.',role:next.owner});tour.index++;}else{s.history||=[];s.history.push(clone(previous));}selected().c=next;s.drafts={};s.questionDraft=null;s.answers={};s.historyIndex=null;s.previewScreen='pdf';save();saveTour();close();render();focusTask();announce(next.trail.at(-1).text);return next;}
@@ -1055,6 +1057,7 @@ let index=options.role==='Requester'?frames.findIndex(f=>['clarify','review'].in
 tour={record:record.id,type:'reviewed',reviewed:true,title:kind==='pdf'?'PDF feedback walkthrough':kind==='create'?'The “Create” walkthrough':'Your feedback walkthrough',frames,index,playing:false,inputMode:options.practice?'practice':'watch',reviewUI:{role:options.role||'Website team',history:[],drafts:{}},scenario:{kind,...options}};parkedTour=null;page='case';filter='all';save();saveTour();render();focusTask();}
 function reviewIntake(){reviewCapture();dialog('<p class="dlgdesc">Describe the problem in your own words. The team will review it before asking you any questions.</p><form id="r-intake-form"><label class="review-field">Feedback<textarea id="r-new-text" required maxlength="2000" placeholder="For example: I don’t understand what Create will do."></textarea></label><label class="review-field">Page<select id="r-new-target"><option>WinQuote homepage</option><option>WinQuote · Make PDF</option></select></label><label class="review-field">When did it happen? · optional<input id="r-new-time" maxlength="120" placeholder="For example: this morning"></label><p class="review-note">This demo records the page you select. It does not collect live logs or browser activity.</p><div class="dlgfoot"><button class="control primary">Submit feedback</button></div></form>','New feedback');}
 function reviewAction(action){const [k,arg]=action.split(':');try{
+if(k==='journey-watch'){beginReviewed('pdf',{journey:true,detailed:true,ask:true});return;}
 if(['pdf-watch','pdf-ask','create-watch','create-send','pdf-practice'].includes(k)){beginReviewed(k.startsWith('pdf')?'pdf':'create',{ask:k==='pdf-ask'?true:undefined,answer:k==='create-send'?E.hesitationAnswers[0]:undefined,practice:k==='pdf-practice'});return;}
 if(k==='new'){reviewIntake();return;}
 if(k==='opt-in'){selected().c=E.beginTeamReview(here());selected().reviewUI={role:'Website team',history:[],drafts:{}};save();render();return;}
@@ -1068,10 +1071,13 @@ if(k==='back'){if(tour){viewWalkStep(tour.index-1,'walkback');return;}if(s.histo
 if(k==='current'){s.historyIndex=null;if(tour?.reviewed)tour.index=tour.frames.length-1;render();return;}
 if(k==='version'){const v=c.versions.find(v=>v.rev===+arg);dialog('<p class="dlgdesc">Submitted version · read only</p><p class="reviewed-copy">'+esc(v.candidate)+'</p><h3>Acceptance checks</h3><ul>'+v.checks.map(x=>'<li>'+esc(x.value||x.label)+'</li>').join('')+'</ul>','V'+arg+' · Version history');return;}
 if(k==='preview-workflow'||k==='preview-back'){if(!E.reviewPreview(c).interactive)return;s.previewScreen=k==='preview-workflow'?'workflow':'pdf';render();return;}
-if(k==='open-pdf'){if(!E.reviewPreview(c).interactive)throw Error('This edited candidate has no matching interactive preview. Review the actual proposal and checks.');const v=E.derive(c);const w=window.open('','_blank');if(!w)throw Error('Allow the preview tab to open, then try again.');w.opener=null;w.document.write('<!doctype html><html lang="en"><title>Simulated PDF preview · V'+c.rev+'</title><meta name="viewport" content="width=device-width"><style>body{margin:40px auto;padding:24px;max-width:680px;color:#262626;background:#f4f4f4;font:16px/1.6 system-ui}article{background:white;padding:40px;border:1px solid #ddd}h1{font-family:Georgia,serif;font-weight:400}small{color:#666}p{white-space:pre-wrap}</style><article><small>ANNORA · SIMULATED PDF PREVIEW · V'+c.rev+'</small><h1>Walk-in cooler</h1><p>Quote DEMO-102</p><hr><p>This is a sample document surface. No customer PDF was generated.</p><p>'+esc(v.candidate)+'</p><small>Return to the original tab. Make PDF stays open; Workflow is a separate action.</small></article></html>');w.document.close();announce('The simulated PDF preview opened in a new tab. This quote remains on Make PDF.');return;}
+if(k==='open-pdf'){if(!E.reviewPreview(c).interactive)throw Error('This edited candidate has no matching interactive preview. Review the actual proposal and checks.');const v=E.derive(c);const w=window.open('','_blank');if(!w)throw Error('Allow the preview tab to open, then try again.');w.opener=null;w.document.write('<!doctype html><html lang="en"><title>Simulated PDF preview · V'+c.rev+'</title><meta name="viewport" content="width=device-width"><style>body{margin:40px auto;padding:24px;max-width:680px;color:#262626;background:#f4f4f4;font:16px/1.6 system-ui}article{background:white;padding:40px;border:1px solid #ddd}h1{font-family:Georgia,serif;font-weight:400}small{color:#666}p{white-space:pre-wrap}</style><article><small>ANNORA · SIMULATED PDF PREVIEW · V'+c.rev+'</small><h1>Walk-in cooler</h1><p>Quote '+esc((['review','release','authorized','published'].includes(c.stage)?c.versions.at(-1)?.reviewFlow?.context:c.reviewFlow.context)?.quote||'DEMO-102')+'</p><hr><p>This is a sample document surface. No customer PDF was generated.</p><p>'+esc(v.candidate)+'</p><small>Return to the original tab. Make PDF stays open; Workflow is a separate action.</small></article></html>');w.document.close();announce('The simulated PDF preview opened in a new tab. This quote remains on Make PDF.');return;}
 if(k==='take-control'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());save();saveTour();render();return;}
 if(reviewHistory())throw Error('Return to the current step before making a change.');
+if(k==='correct-understanding'){if(s.role!=='Requester')throw Error('Switch to Requester to correct the summary.');dialog('<form id="r-correction-form"><label class="review-field">What did we misunderstand?<textarea id="r-correction" rows="4" required maxlength="2000"></textarea></label><p class="review-note">Your original feedback stays unchanged. The team will review this correction before continuing.</p><div class="dlgfoot"><button class="control primary">Send correction to the team</button></div></form>','Correct our understanding');return;}
 const actor=R.status(c)[0];if(s.role!==actor)throw Error('This action belongs to '+actor+'. Switch the demo view to continue.');
+if(k==='edit-understanding'){dialog('<form id="r-understanding-form"><label class="review-field">Customer-visible summary<textarea id="r-summary-edit" rows="4" required maxlength="2000">'+esc(c.reviewFlow.sharedUnderstanding.text)+'</textarea></label><div class="dlgfoot"><button class="control primary">Share updated summary</button></div></form>','Edit shared understanding');return;}
+if(['begin-detailed-questions','finish-spec'].includes(k)){reviewCommit(k);return;}
 if(k==='draft-questions'&&s.drafts.scope){const savedScope={...s.drafts.scope};reviewCommit('edit-scope',savedScope);reviewCommit('draft-questions');return;}
 if(k==='preview-questions'){reviewCommit('save-questions',s.questionDraft||c.reviewFlow.questionDraft);reviewCommit('preview-questions');const qs=here().reviewFlow.questionPreview.questions;dialog('<p class="dlgdesc">Customer preview · not sent</p><div>'+R.questions(qs).replace(/<fieldset /g,'<fieldset disabled ')+'</div><div class="dlgfoot">'+R.button('edit-questions','Back to editing')+R.button('send-questions','Send these questions',true)+'</div>','What the customer will see');return;}
 if(k==='edit-questions'){close();return;}
@@ -1086,7 +1092,8 @@ document.addEventListener('change',event=>{if(event.target.id==='r-role'){review
 document.addEventListener('input',event=>{if(event.target.matches('[data-review-draft],[data-q],[data-answer-id]')){if(tour?.reviewed&&tour.inputMode==='watch'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());const player=document.querySelector('.transport');if(player)player.outerHTML=reviewTransport();}reviewCapture();}});
 document.addEventListener('submit',event=>{if(!event.target.id.startsWith('r-'))return;event.preventDefault();try{
 if(event.target.id==='r-intake-form'){const text=$('r-new-text').value.trim(),target=$('r-new-target').value,time=$('r-new-time').value;const c=E.createReviewedCase(text,{target});c.reviewFlow.context={occurredAt:time};parkActive();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;close();page='case';save();render();focusTask();return;}
-reviewCapture();const s=reviewState();if(reviewHistory())throw Error('Return to the current step before making a change.');if(s.role!==R.status(here())[0])throw Error('Switch to the responsible role to continue.');
+reviewCapture();const s=reviewState();if(reviewHistory())throw Error('Return to the current step before making a change.');if(event.target.id==='r-correction-form'){if(s.role!=='Requester')throw Error('Switch to Requester to continue.');reviewCommit('correct-understanding',{text:$('r-correction').value});return;}if(s.role!==R.status(here())[0])throw Error('Switch to the responsible role to continue.');
+if(event.target.id==='r-understanding-form'){reviewCommit('edit-understanding',{text:$('r-summary-edit').value});return;}
 if(event.target.id==='r-scope-form')reviewCommit('confirm-scope',s.drafts.scope);
 if(event.target.id==='r-questions-form')reviewCommit('save-questions',s.questionDraft);
 if(event.target.id==='r-answer-form')reviewCommit('answer',s.answers);
@@ -1095,6 +1102,7 @@ if(event.target.id==='r-adjust-form')reviewCommit('adjust',{rev:here().rev,reaso
 }catch(error){reviewError(error);}});
 
 function doAction(g){
+if(g==='site'){openCaptureSite();return;}
 if(g.startsWith('r-')){reviewAction(g.slice(2));return;}
 if(here()?.reviewFlow)reviewCapture();
 if(g==='new'){reviewIntake();return;}
@@ -1181,7 +1189,7 @@ document.addEventListener('focusin',ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.matches('[data-team-field]'))updateTeamDraft();if(ev.target.id==='tourans'&&tour&&!$('dialog').open&&!inPracticeHistory()){tour.answerDraft=ev.target.value;saveTour();}if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
 document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(here()?.reviewFlow&&reviewState().details){reviewState().details=false;render();document.querySelector('.role-switch [data-go="r-details"]')?.focus();return;}if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('keydown',ev=>{if(page==='site')return;if(ev.key==='Escape'){if($('dialog').open)return;if(here()?.reviewFlow&&reviewState().details){reviewState().details=false;render();document.querySelector('.role-switch [data-go="r-details"]')?.focus();return;}if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
 document.addEventListener('toggle',event=>{
   const details=event.target;
   if(details.id!=='walk-explanation'||!tour||isHandsOn())return;
@@ -1198,9 +1206,41 @@ document.addEventListener('toggle',event=>{
 },true);
 window.addEventListener('resize',()=>{syncWalkthroughHeight();$('nav').inert=window.innerWidth<=820&&!navOpen;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
+// In-context reporting and local asynchronous updates share the existing feedback records.
+const captureKey='feedbackflow:capture:v1',CS=window.FlowCaptureState;
+let captureState={open:false,generated:false,text:'',when:'',includePreview:false,receipt:null,updatesOpen:false,seen:{},onSite:false};
+try{const stored=JSON.parse(localStorage.getItem(captureKey));if(stored&&typeof stored==='object')captureState={...captureState,...stored};}catch{}
+function saveCapture(){try{localStorage.setItem(captureKey,JSON.stringify(captureState));}catch{}}
+function captureInputs(){const field=$('capture-text');if(field){captureState.text=field.value;captureState.when=$('capture-when').value;captureState.includePreview=$('capture-preview').checked;}saveCapture();}
+function renderCapture(){captureState.onSite=true;saveCapture();$('nav').hidden=true;$('nav').inert=true;$('topbar').hidden=true;$('shade').hidden=true;$('walkthrough-dock').hidden=true;const updates=CS.updates(data.items,captureState.seen);$('main').innerHTML=window.FlowCaptureUI.render({...captureState,updates,updatesCount:updates.filter(u=>!u.read).length});captureAccessibility();}
+function openCaptureSite(){reviewCapture();parkActive();close();page='site';navOpen=false;render();$('main').focus({preventScroll:true});}
+function openCapturedRecord(id,role='Requester'){captureInputs();parkActive();const record=data.items.find(x=>x.id===id);if(!record)return;data.current=id;record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;captureState.updatesOpen=false;captureState.open=false;page='case';save();saveCapture();render();focusTask();}
+function captureAction(action,key){captureInputs();switch(action){
+case 'generate':captureState.generated=true;break;
+case 'open':captureState.open=true;captureState.updatesOpen=false;break;
+case 'close':captureState.open=false;break;
+case 'example':captureState.text=E.pdfFeedback;break;
+case 'keep-working':captureState.open=false;break;
+case 'workspace':captureState.onSite=false;page='list';saveCapture();render();return;
+case 'view-feedback':if(captureState.receipt)openCapturedRecord(captureState.receipt.id);return;
+case 'new-feedback':captureState.receipt=null;captureState.text='';captureState.when='';captureState.includePreview=false;captureState.open=true;break;
+case 'updates':captureState.updatesOpen=!captureState.updatesOpen;captureState.open=false;break;
+case 'open-update':{const update=CS.updates(data.items,captureState.seen).find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id);return;}break;}
+}
+saveCapture();render();if(action==='open'||action==='example'||action==='new-feedback')($('capture-text')||document.querySelector('[data-capture="keep-working"]'))?.focus();else if(action==='generate'){document.querySelector('[data-capture="generate"]')?.focus();announce('Sample PDF ready. No file was created.');}else if(action==='close'||action==='keep-working')document.querySelector('[data-capture="open"]')?.focus();else if(action==='updates')document.querySelector(captureState.updatesOpen?'[data-capture="open-update"], #capture-updates button':'[data-capture="updates"]')?.focus();}
+document.addEventListener('click',event=>{const el=event.target.closest('[data-capture]');if(el){event.preventDefault();captureAction(el.dataset.capture,el.dataset.key);}});
+document.addEventListener('input',event=>{if(event.target.closest('#capture-form'))captureInputs();});
+document.addEventListener('change',event=>{if(event.target.closest('#capture-form')){captureInputs();if(event.target.id==='capture-preview'){const scroll=$('capture-drawer').scrollTop;render();$('capture-preview').closest('details').open=true;$('capture-drawer').scrollTop=scroll;$('capture-preview').focus({preventScroll:true});}}});
+function captureAccessibility(){if(page!=='site')return;const modal=captureState.open&&window.innerWidth<=760;$('capture-drawer')?.setAttribute('aria-modal',String(modal));for(const el of document.querySelectorAll('.capture-toolbar,.capture-business'))el.inert=modal;}
+window.addEventListener('resize',captureAccessibility);
+document.addEventListener('keydown',event=>{if(page!=='site')return;if(event.key==='Escape'){const updates=captureState.updatesOpen;captureState.open=false;captureState.updatesOpen=false;saveCapture();render();document.querySelector(updates?'[data-capture="updates"]':'[data-capture="open"]')?.focus();}else if(event.key==='Tab'&&captureState.open&&window.innerWidth<=760){const all=[...$('capture-drawer').querySelectorAll('button,input,textarea,select,summary')].filter(el=>!el.disabled&&el.getClientRects().length);const first=all[0],last=all.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}});
+document.addEventListener('submit',event=>{if(event.target.id!=='capture-form')return;event.preventDefault();try{captureInputs();const c=CS.createCase(E,captureState);const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,captureSubmission:true,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;captureState.receipt={id,raw:c.text};save();saveCapture();render();document.querySelector('[data-capture="keep-working"]')?.focus();announce('Feedback saved in this demo. The website team owns the next step.');}catch(error){const form=$('capture-form');let el=$('capture-error');if(!el){el=document.createElement('p');el.id='capture-error';el.setAttribute('role','alert');form.prepend(el);}el.textContent=error.message;}});
+
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
-if(requestedWalkthrough==='pdf'){const ask=launchURL.searchParams.get('branch')==='ask',practiceMode=launchURL.searchParams.get('mode')==='practice';for(const param of ['walkthrough','branch','mode'])launchURL.searchParams.delete(param);history.replaceState(history.state,'',launchURL.href);beginReviewed('pdf',{ask,practice:practiceMode});}
+if(launchURL.searchParams.get('capture')==='pdf'){launchURL.searchParams.delete('capture');history.replaceState(history.state,'',launchURL.href);openCaptureSite();}
+else if(requestedWalkthrough==='journey'){launchURL.searchParams.delete('walkthrough');history.replaceState(history.state,'',launchURL.href);beginReviewed('pdf',{journey:true,detailed:true,ask:true});}
+else if(requestedWalkthrough==='pdf'){const ask=launchURL.searchParams.get('branch')==='ask',practiceMode=launchURL.searchParams.get('mode')==='practice';for(const param of ['walkthrough','branch','mode'])launchURL.searchParams.delete(param);history.replaceState(history.state,'',launchURL.href);beginReviewed('pdf',{ask,practice:practiceMode});}
 else if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthrough)){
   const startPractice=['team','customer','publisher'].includes(requestedWalkthrough)&&launchURL.searchParams.get('mode')==='practice';
   if(startPractice)launchURL.searchParams.delete('mode');
@@ -1218,6 +1258,7 @@ else if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWa
   }
   if(startPractice&&requestedWalkthrough==='customer'&&!tour?.reviewed&&!isPractice())takeControl();
 }else{
+  if(captureState.onSite)page='site';
   if(tour&&(isPractice()||isTeamPractice()))setPlay(!decisionPoint());
   if(parkedTour)scheduleParkedStep();
   render();

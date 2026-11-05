@@ -13,6 +13,10 @@
     {id:"record-scope",text:"Does the August 5 navigation decision apply to this request?",type:"text",options:[],required:false,disposition:"records",reason:"Verify the existing decision before asking the customer."},
     {id:"implementation",text:"Can the saved PDF open in a new tab while Make PDF remains open?",type:"text",options:[],required:false,disposition:"team",reason:"Technical feasibility remains with the website team."},
   ];
+  const pdfDetailedQuestions = [{id:"workflow-placement",text:"Where would you expect to find Go to Workflow after opening the PDF?",type:"single",
+    options:["Beside the PDF result","At the page footer","I'm not sure"],required:true,disposition:"ask",
+    reason:"Resolve the optional action’s placement as a business decision. Opening the PDF still keeps Make PDF open."}];
+  const hasJourney = f => f.journey?.enabled === true;
   function text(value,name,required=true) {
     if (typeof value !== "string" || (required && !value.trim())) fail(name + " must contain text.");
     if (value.length > 16000) fail(name + " is too long.");
@@ -55,6 +59,11 @@
         history:clone(options.sourceHistory || (isPDF ? [{date:"2026-07-16",decision:"Open the saved PDF and navigate to Workflow."},{date:"2026-08-05",decision:"Keep Make PDF open; navigate to Workflow only through an explicit action."}] : []))},
       scope:isPDF ? clone(pdfScope) : fromView(view),confirmedScope:null,questionDraft:questions,questionPreview:null,
       sentBundle:null,answers:{},suggestedScope:null,candidateDraft:null,result:null,teamCheck:null};
+    if (options.journey === true) Object.assign(flow,{
+      journey:{enabled:true,scopeCycle:1,activeRound:"initial",detailedSentCycles:[]},
+      initialQuestionDraft:clone(questions),initialAnswerText:base.answer || "",detailedAnswerText:"",sharedUnderstanding:null,
+      understandingHistory:[],understandingCorrections:[],questionRounds:[],
+    });
     return log(stage({...base,reviewFlow:flow},"processing","triage"),"submit","Requester","Submitted feedback for the website team to review before asking any customer questions.");
   }
   function begin(base,options,legacy) {
@@ -79,6 +88,32 @@
     }
     return result;
   }
+  function detailedSuggestion(c,answers) {
+    const f = c.reviewFlow;
+    const result = {...clone(f.scope),reason:"The detailed answer needs a team decision before the shared understanding changes.",conflict:null,decisionRequired:true};
+    if (f.source.id !== "fb_2026-07-11_002") return result;
+    const raw = Object.values(answers).filter(Boolean).join("\n");
+    const answer = raw.trim().toLowerCase();
+    const beside = answer === "beside the pdf result", footer = answer === "at the page footer";
+    if (beside || footer) {
+      const location = beside ? "beside the saved PDF result" : "at the page footer";
+      result.approach = "Open the saved customer’s PDF in a new browser tab.\nKeep the same quote on Make PDF.\nShow a separate Go to Workflow action " + location + ".";
+      result.checks = "The saved customer’s PDF opens in a new tab.\nThe original tab stays on Make PDF with the same quote.\nGo to Workflow is visible " + (beside ? "beside the result" : "at the page footer") + " and navigates only when selected.";
+      result.reason = "The customer expects the optional Workflow action " + location + ". The team must confirm this placement while preserving the existing navigation constraint.";
+      result.decisionRequired = false;
+    } else if (/auto|immediat|redirect|自动|立即|直接/i.test(raw)) {
+      result.conflict = "An automatic redirect conflicts with staying on Make PDF. The team must resolve the detailed answer without silently replacing that recorded constraint.";
+    }
+    return result;
+  }
+  function shareUnderstanding(c,value) {
+    const f = c.reviewFlow;
+    const item = {id:"U" + (f.understandingHistory.length + 1),text:text(value,"Shared understanding"),
+      approach:f.confirmedScope.approach,checks:f.confirmedScope.checks,scopeCycle:f.journey.scopeCycle,
+      sourceAnswer:c.answer,questionRoundIds:f.questionRounds.filter(round=>round.scopeCycle === f.journey.scopeCycle).map(round=>round.id)};
+    f.sharedUnderstanding = item;
+    f.understandingHistory = [...f.understandingHistory,clone(item)];
+  }
   function questions(value,previous) {
     if (!Array.isArray(value) || value.length > 30) fail("Questions must be an array of at most 30 items.");
     const ids = new Set();
@@ -93,7 +128,8 @@
         reason:text(q.reason || "","Question reason",false),...(q.screened === true ? {screened:true} : {})};
     });
   }
-  const binding = c => JSON.stringify([c.rev,c.reviewFlow.candidateDraft,c.answer,c.adjustment,c.reviewFlow.confirmedScope]);
+  const binding = c => JSON.stringify([c.rev,c.reviewFlow.candidateDraft,c.answer,c.adjustment,c.reviewFlow.confirmedScope,
+    ...(hasJourney(c.reviewFlow) ? [c.reviewFlow.sharedUnderstanding,c.reviewFlow.understandingCorrections,c.reviewFlow.questionRounds] : [])]);
   const normalized = value => String(value || "").trim().replace(/[‘’]/g,"'").replace(/\s+/g," ").toLowerCase();
   function preview(input) {
     const unavailable = reason => ({interactive:false,reason});
@@ -113,13 +149,14 @@
     if (approach !== r.approach) return unavailable("The result does not match the candidate. Prepare the result again.");
     if (kind !== "behavior" || sourceId !== "fb_2026-07-11_002") return unavailable("This candidate has no authored interactive PDF model. Review its actual proposal and checks.");
     const placement = "Open the saved customer’s PDF in a new browser tab.\nKeep the same quote on Make PDF.\nShow a separate Go to Workflow action beside the saved PDF result.";
-    const approaches = [pdfScope.approach,pdfSuggestion("Keep editing this quote").approach,pdfSuggestion("Move on to next workflow step").approach,placement];
+    const footerPlacement = placement.replace("beside the saved PDF result","at the page footer");
+    const approaches = [pdfScope.approach,pdfSuggestion("Keep editing this quote").approach,pdfSuggestion("Move on to next workflow step").approach,placement,footerPlacement];
     if (!approaches.some(copy=>normalized(copy) === normalized(approach))) return unavailable("This edited behavior is outside the authored interaction model. Review the actual proposed steps; the fixed PDF interaction would not demonstrate this candidate.");
     const supportedChecks = [...lines(pdfScope.checks),...lines(pdfSuggestion("Keep editing this quote").checks),...lines(pdfSuggestion("Move on to next workflow step").checks),
-      "The original tab stays on Make PDF with the same quote.","Go to Workflow is visible beside the result and navigates only when selected."];
+      "The original tab stays on Make PDF with the same quote.","Go to Workflow is visible beside the result and navigates only when selected.","Go to Workflow is visible at the page footer and navigates only when selected."];
     if (!lines(r.checks).length || lines(r.checks).some(check=>!supportedChecks.some(known=>normalized(known) === normalized(check)))) return unavailable("This candidate includes checks beyond the authored PDF interaction. Review the actual checks with the team; the fixed interaction cannot demonstrate all of them.");
     return {interactive:true,type:"pdf-workflow",opens:"sample-pdf-new-tab",retains:"make-pdf",workflow:"explicit",
-      placement:normalized(approach) === normalized(placement) ? "beside-result" : "separate-action",
+      placement:normalized(approach) === normalized(placement) ? "beside-result" : normalized(approach) === normalized(footerPlacement) ? "page-footer" : "separate-action",
       reason:"This authored interaction demonstrates the proposed navigation in simulation. It does not verify a real PDF implementation."};
   }
   function derive(c,legacy) {
@@ -139,8 +176,9 @@
       else built.manual = true;
     }
     const requested = c.adjustment;
-    const source = requested || c.answer || c.text;
-    const sourceLabel = requested ? "V" + (c.rev - 1) + " revision request" : c.answer ? "Requester’s answer" : "Team-confirmed scope";
+    const correction = hasJourney(f) && f.understandingCorrections.at(-1)?.text;
+    const source = requested || correction || c.answer || c.text;
+    const sourceLabel = requested ? "V" + (c.rev - 1) + " revision request" : correction ? "Understanding correction" : c.answer ? "Requester’s answer" : "Team-confirmed scope";
     const reviewedChecks = lines(draft.checks).map((value,index)=>({id:"team-check-" + index,label:value,value,status:"manual",source,sourceLabel,candidate:draft.approach}));
     built.checks = [...(built.checks || []),...reviewedChecks];
     if (!draft.approach.trim() || !reviewedChecks.length) {
@@ -159,27 +197,54 @@
     switch (action) {
       case "submit": return input;
       case "edit-scope":
-        requirePhase(c,["triage","question-draft","answer-review"],action);
+        requirePhase(c,hasJourney(f) ? ["triage","question-draft","answer-review","spec-review"] : ["triage","question-draft","answer-review"],action);
         for (const key of ["approach","checks"]) if (value?.[key] !== undefined) f.scope[key] = text(value[key],"Scope " + key,false);
         return done("Saved a private scope draft. No customer question was sent.");
       case "draft-questions":
-        requirePhase(c,["triage"],action); c = stage(c,"processing","question-draft");
+        requirePhase(c,["triage"],action);
+        if (hasJourney(f)) f.journey.activeRound = "initial";
+        c = stage(c,"processing","question-draft");
         return done("Drafting questions privately. Customer tasks have not changed.");
+      case "begin-detailed-questions": {
+        if (!hasJourney(f)) fail("Enable the reviewed journey before starting a distinct detailed question round.");
+        requirePhase(c,["spec-review"],action);
+        if (f.journey.detailedSentCycles.includes(f.journey.scopeCycle)) fail("The detailed question batch for this scope cycle has already been sent. Review its answer or finish the specification.");
+        if (f.journey.activeRound !== "detailed" || f.journey.detailedDraftCycle !== f.journey.scopeCycle) {
+          f.questionDraft = f.source.id === "fb_2026-07-11_002" ? clone(pdfDetailedQuestions) : [{id:"spec-detail",text:"What specific business decision remains unresolved in this specification?",type:"text",options:[],required:true,disposition:"team",
+            reason:"The team must write a specific unresolved business question before asking the customer."}];
+        }
+        f.journey.activeRound = "detailed"; f.journey.detailedDraftCycle = f.journey.scopeCycle;
+        f.questionPreview = null; c = stage(c,"processing","question-draft");
+        return done("Drafting a distinct detailed question batch after the shared understanding. Nothing has been sent.");
+      }
       case "save-questions":case "edit-questions":
         requirePhase(c,["question-draft"],action); f.questionDraft = questions(value,f.questionDraft); f.questionPreview = null;
         return done("Saved the private question draft. Nothing was sent.");
       case "close-questions":
-        requirePhase(c,["question-draft"],action); c = stage(c,"processing","triage");
+        requirePhase(c,["question-draft"],action);
+        c = stage(c,"processing",hasJourney(f) && f.journey.activeRound === "detailed" ? "spec-review" : "triage");
         return done("Returned to scope review without sending questions.");
       case "preview-questions": {
         requirePhase(c,["question-draft"],action); const selected = questions(f.questionDraft,f.questionDraft).filter(q=>q.disposition === "ask");
         if (!selected.length) fail("Select at least one customer question, or confirm scope without asking.");
-        f.questionPreview = {questions:clone(selected),simulated:true,sent:false}; return done("Previewed the selected customer questions. This is not a send.");
+        f.questionPreview = {questions:clone(selected),simulated:true,sent:false,...(hasJourney(f)?{round:f.journey.activeRound,scopeCycle:f.journey.scopeCycle}:{})}; return done("Previewed the selected customer questions. This is not a send.");
       }
       case "send-questions": {
         requirePhase(c,["question-draft"],action); const selected = questions(f.questionDraft,f.questionDraft).filter(q=>q.disposition === "ask");
         if (!selected.length) fail("Select at least one customer question, or confirm scope without asking.");
-        f.sentBundle = {id:"Q1",rev:c.rev,questions:clone(selected),scope:clone(f.scope),simulated:true};
+        let id = "Q1";
+        if (hasJourney(f)) {
+          const detailed = f.journey.activeRound === "detailed";
+          if (detailed && f.journey.detailedSentCycles.includes(f.journey.scopeCycle)) fail("This detailed question batch has already been sent for this scope cycle.");
+          const nextId = Math.max(0,...f.questionRounds.map(round=>Number(round.id.slice(1)))) + 1;
+          id = "Q" + (detailed ? Math.max(2,nextId) : nextId);
+        }
+        f.sentBundle = {id,rev:c.rev,questions:clone(selected),scope:clone(f.scope),simulated:true,
+          ...(hasJourney(f)?{round:f.journey.activeRound,scopeCycle:f.journey.scopeCycle}:{})};
+        if (hasJourney(f)) {
+          f.questionRounds = [...f.questionRounds,{...clone(f.sentBundle),answered:false,answers:null,answerText:""}];
+          if (f.journey.activeRound === "detailed") f.journey.detailedSentCycles = [...f.journey.detailedSentCycles,f.journey.scopeCycle];
+        }
         c = stage(c,"clarify","awaiting-answer"); return done("Sent only the reviewed customer questions in this simulation.","Website team",true);
       }
       case "answer": {
@@ -188,22 +253,68 @@
         const supplied = typeof value === "string" ? {[qs[0].id]:value} : value?.answers || value;
         if (!supplied || typeof supplied !== "object" || Array.isArray(supplied)) fail("Answers must identify the sent questions.");
         if (Object.keys(supplied).some(id=>!qs.some(q=>q.id === id))) fail("Do not answer a private question that was not sent.");
-        f.answers = {};
+        const currentAnswers = {};
         for (const q of qs) {
           const answer = text(supplied[q.id] ?? "","Answer to “" + q.text + "”",q.required);
           if (answer && q.type === "single" && !q.options.includes(answer)) fail("Choose a sent answer option or ask the team to revise the question.");
-          f.answers[q.id] = answer;
+          currentAnswers[q.id] = answer;
         }
-        c.answer = qs.map(q=>f.answers[q.id]).filter(Boolean).join("\n"); c.answerSimulated = false;
-        f.suggestedScope = f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
+        const answerText = qs.map(q=>currentAnswers[q.id]).filter(Boolean).join("\n");
+        f.answers = hasJourney(f) ? {...f.answers,...currentAnswers} : currentAnswers;
+        if (hasJourney(f)) {
+          const round = f.questionRounds.find(item=>item.id === f.sentBundle.id);
+          if (!round || round.answered || round.scopeCycle !== f.journey.scopeCycle || round.round !== f.journey.activeRound) fail("Answer only the current sent question batch once.");
+          f.questionRounds = f.questionRounds.map(item=>item.id === round.id ? {...item,answered:true,answers:clone(currentAnswers),answerText,answerSimulated:false} : item);
+          if (round.round === "detailed") f.detailedAnswerText = answerText;
+          else { f.initialAnswerText = answerText; c.answer = answerText; c.answerSimulated = false; }
+          f.suggestedScope = round.round === "detailed" ? detailedSuggestion(c,currentAnswers) :
+            f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
+        } else {
+          c.answer = answerText; c.answerSimulated = false;
+          f.suggestedScope = f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
+        }
         c = stage(c,"processing","answer-review"); return done("The requester answered. The team must review the suggested scope before preparing a candidate.","Requester");
       }
       case "confirm-scope": {
-        requirePhase(c,["triage","answer-review"],action);
-        f.scope = scope(value,"Explicit team-selected scope"); f.confirmedScope = clone(f.scope); f.candidateDraft = clone(f.scope);
-        f.result = null; f.teamCheck = null; c = stage(c,"processing","candidate");
+        requirePhase(c,hasJourney(f) ? ["triage","answer-review","spec-review"] : ["triage","answer-review"],action);
+        f.scope = scope(value,"Explicit team-selected scope"); f.confirmedScope = clone(f.scope);
+        f.result = null; f.teamCheck = null;
+        if (hasJourney(f)) {
+          shareUnderstanding(c,value?.understanding ?? f.scope.approach);
+          f.candidateDraft = null; c = stage(c,"processing","spec-review");
+          return done("Shared the team-authored understanding and scope. The customer may correct it before the specification proceeds.");
+        }
+        f.candidateDraft = clone(f.scope); c = stage(c,"processing","candidate");
         return done("Confirmed the scope and checks. A suggestion alone did not approve them.");
       }
+      case "edit-understanding":
+        if (!hasJourney(f)) fail("This case does not use a shared-understanding step.");
+        requirePhase(c,["spec-review"],action);
+        shareUnderstanding(c,value?.text);
+        return done("Explicitly updated the understanding shared with the customer. Private scope drafts were not substituted for it.");
+      case "correct-understanding": {
+        if (!hasJourney(f)) fail("This case does not use a shared-understanding step.");
+        requirePhase(c,["spec-review","candidate","checking","ready"],action);
+        if (!f.sharedUnderstanding) fail("The team must share an understanding before it can be corrected.");
+        const correction = {id:"C" + (f.understandingCorrections.length + 1),text:text(value?.text,"Understanding correction"),scopeCycle:f.journey.scopeCycle,understanding:clone(f.sharedUnderstanding)};
+        f.understandingCorrections = [...f.understandingCorrections,correction];
+        f.sharedUnderstanding = {...f.sharedUnderstanding,needsRevision:true};
+        f.journey.scopeCycle += 1; f.journey.activeRound = "initial";
+        f.scope = {approach:f.sharedUnderstanding.approach,checks:f.sharedUnderstanding.checks}; f.confirmedScope = null;
+        f.questionDraft = clone(f.initialQuestionDraft); f.questionPreview = null; f.sentBundle = null; f.suggestedScope = null;
+        f.candidateDraft = null; f.result = null; f.teamCheck = null;
+        c.candidateOverride = null; c.accepted = null; c.authorization = null; c.receipt = null;
+        c = stage(c,"processing","triage");
+        return done("The requester corrected the shared understanding. The original feedback is preserved; the team must revise and share the scope again.","Requester");
+      }
+      case "finish-spec":
+        if (!hasJourney(f)) fail("This case does not use a separate specification review.");
+        requirePhase(c,["spec-review"],action);
+        if (!f.sharedUnderstanding || f.sharedUnderstanding.needsRevision || f.sharedUnderstanding.scopeCycle !== f.journey.scopeCycle) fail("Share the corrected understanding for the current scope cycle before proceeding.");
+        f.candidateDraft = scope(f.sharedUnderstanding,"Shared scope");
+        f.confirmedScope = clone(f.candidateDraft); f.result = null; f.teamCheck = null;
+        c = stage(c,"processing","candidate");
+        return done("Finished the specification using the explicitly shared understanding. No additional customer questions were required.");
       case "edit-candidate":
         requirePhase(c,["candidate","checking","ready"],action);
         if (typeof value === "string") value = {approach:value};

@@ -142,3 +142,13 @@ Use 6px controls, 8px bounded editors and proof panels, and small circles for ow
 This styling unit changes `studio.css`, this design record and local font assets only. Existing IDs, route contracts, state machines, draft ownership, exact-version review rules and walkthrough controls remain implementation-owned. The copied fonts must be included or embedded by the release bundle; reading the editable page alone is not proof the generated standalone output includes them.
 
 Visual verification should include the current task, question editor, candidate review, open context pane, collapsed/resumed guide and PDF preview at 1440px and 390px. Confirm text contrast, long labels, keyboard focus, wrapped actions and closed navigation. Automated workflow tests remain separate evidence from the rendered design review.
+
+## Reporting and asynchronous return · November 5 iteration
+
+Reference lock: preserve the approved Cycle workspace, Attio progressive task presentation and serif headings / neutral sans body. Intercom's in-context reporting pattern is evidenced by the Slite Contact Support flow ([Refero flow 1707](https://refero.design/flows/1707)): business page → local feedback panel → acknowledgement → return to the conversation. Borrow its contextual placement and clear receipt; do not borrow email-delivery promises.
+
+The reporting surface is a deliberately limited Make PDF sample inside this artifact, not Wesley's independent homepage design. A narrow feedback drawer collects the customer's words and an optional rough time. Page and sample quote context are attached automatically. Optional sample-page preview is labelled simulated. Actual screenshot capture, telemetry policy and notification channel remain undecided.
+
+Submitted feedback stays on the business page. Demo Updates opens the original submitted record at its current actionable version. Shared understanding, screened initial questions, a distinct optional detailed question batch, and V1/V2 review use the same records. History stays in the context pane; private drafts never become customer questions until explicitly sent. No mandatory extra customer approval is added to the understanding step.
+
+Only actual local capture submissions create these update entries. Walkthrough exercises do not create customer notifications. Keep existing legacy entry points and saved records intact. Mobile reporting uses a fullscreen drawer with background inertness, a focus loop, and focus restoration; desktop retains the nonmodal side panel.

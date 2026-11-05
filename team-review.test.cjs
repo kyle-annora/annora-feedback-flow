@@ -323,3 +323,228 @@ test("reviewed Create questions preserve suggested concerns and allow a differen
   assert.equal(unknown.reviewFlow.suggestedScope.approach,"");
   assert.equal(pdf().reviewFlow.questionDraft[0].type,"single");
 });
+
+const journeyPDF = () => E.createReviewedCase(E.pdfFeedback,{journey:true});
+function sharedJourney(c = journeyPDF(),understanding = "Open the saved PDF while retaining the quote, with an optional Workflow action.") {
+  return act(c,"confirm-scope",{...c.reviewFlow.scope,understanding});
+}
+function detailedJourney(answer = "Beside the PDF result",initial = true) {
+  let c = journeyPDF();
+  if (initial) {
+    c = act(act(c,"draft-questions"),"send-questions");
+    c = act(c,"answer","Keep editing this quote");
+    c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Open the PDF and retain the same quote for editing."});
+  } else c = sharedJourney(c);
+  c = act(c,"begin-detailed-questions");
+  c = act(c,"send-questions");
+  return act(c,"answer",answer);
+}
+
+test("the journey shares a separate understanding before any candidate and private edits cannot silently rewrite it", () => {
+  const initial = journeyPDF(), text = initial.text;
+  let c = sharedJourney(initial), shared = clone(c.reviewFlow.sharedUnderstanding);
+  assert.equal(c.stage,"processing");
+  assert.equal(c.owner,"Website team");
+  assert.equal(c.reviewFlow.phase,"spec-review");
+  assert.equal(c.reviewFlow.candidateDraft,null);
+  assert.equal(c.reviewFlow.questionRounds.length,0);
+  assert.equal(shared.text,"Open the saved PDF while retaining the quote, with an optional Workflow action.");
+  assert.equal(shared.scopeCycle,1);
+  assert.equal(shared.questionDraft,undefined);
+  assert.equal(shared.sentBundle,undefined);
+  assert.equal(shared.scope,undefined,"The public understanding does not contain the private question scope or draft.");
+  c = act(c,"edit-scope",{approach:"Private team draft not yet shared.",checks:"Private unresolved investigation."});
+  assert.deepEqual(c.reviewFlow.sharedUnderstanding,shared);
+  c = act(c,"edit-understanding",{text:"The saved PDF opens separately; the quote stays available."});
+  assert.equal(c.reviewFlow.sharedUnderstanding.text,"The saved PDF opens separately; the quote stays available.");
+  assert.equal(c.reviewFlow.sharedUnderstanding.approach,shared.approach);
+  assert.equal(c.reviewFlow.understandingHistory.length,2);
+  const candidate = act(c,"finish-spec");
+  assert.equal(candidate.reviewFlow.phase,"candidate");
+  assert.equal(candidate.reviewFlow.candidateDraft.approach,shared.approach,"Finish only from the shared scope, never an unshared private edit.");
+  assert.equal(candidate.text,text);
+  assert.equal(candidate.reviewFlow.questionRounds.length,0,"Questions are optional; there is no fabricated acknowledgement.");
+  assert.equal(pdf().reviewFlow.journey,undefined);
+  assert.equal(ready().reviewFlow.phase,"ready","The legacy reviewed path still bypasses the opt-in spec step.");
+});
+
+test("customer understanding corrections preserve the raw request and old understanding and reopen team triage", () => {
+  const original = sharedJourney(), before = JSON.stringify(original), shared = clone(original.reviewFlow.sharedUnderstanding);
+  assert.throws(()=>act(original,"correct-understanding",{text:" "}),/must contain text/);
+  let corrected = act(frozen(original),"correct-understanding",{text:"I need to keep editing the same quote, not move on yet."});
+  assert.equal(JSON.stringify(original),before);
+  assert.equal(corrected.text,E.pdfFeedback);
+  assert.equal(corrected.reviewFlow.phase,"triage");
+  assert.equal(corrected.owner,"Website team");
+  assert.equal(corrected.reviewFlow.journey.scopeCycle,2);
+  assert.equal(corrected.reviewFlow.sharedUnderstanding.needsRevision,true);
+  assert.deepEqual(corrected.reviewFlow.understandingCorrections[0].understanding,shared);
+  assert.equal(corrected.reviewFlow.understandingCorrections[0].text,"I need to keep editing the same quote, not move on yet.");
+  assert.deepEqual(corrected.reviewFlow.understandingHistory[0],shared);
+  assert.equal(corrected.reviewFlow.sentBundle,null);
+  assert.equal(corrected.reviewFlow.candidateDraft,null);
+  assert.equal(corrected.accepted,null);
+  assert.throws(()=>act(corrected,"finish-spec"),/unavailable/);
+  corrected = act(corrected,"confirm-scope",{...corrected.reviewFlow.scope,understanding:"Retain this same quote for editing while the PDF opens in a new tab."});
+  assert.equal(corrected.reviewFlow.sharedUnderstanding.scopeCycle,2);
+  assert.equal(corrected.reviewFlow.sharedUnderstanding.needsRevision,undefined);
+  assert.equal(corrected.reviewFlow.understandingHistory.length,2);
+  assert.equal(corrected.text,E.pdfFeedback);
+  assert.equal(act(corrected,"finish-spec").reviewFlow.phase,"candidate");
+});
+
+test("asynchronous understanding corrections remain available until the candidate is sent and invalidate pending drafts or previews", () => {
+  const shared = sharedJourney();
+  const candidate = act(shared,"finish-spec"), checking = act(candidate,"begin-check"), readyState = act(checking,"prepare-result");
+  for (const source of [candidate,checking,readyState]) {
+    const before = JSON.stringify(source), correction = act(frozen(source),"correct-understanding",{text:"I need the same quote available for editing after the PDF opens."});
+    assert.equal(JSON.stringify(source),before);
+    assert.equal(correction.text,E.pdfFeedback);
+    assert.equal(correction.reviewFlow.phase,"triage");
+    assert.equal(correction.owner,"Website team");
+    assert.equal(correction.reviewFlow.sharedUnderstanding.needsRevision,true);
+    assert.equal(correction.reviewFlow.journey.scopeCycle,2);
+    assert.equal(correction.reviewFlow.candidateDraft,null);
+    assert.equal(correction.reviewFlow.result,null);
+    assert.equal(correction.reviewFlow.teamCheck,null);
+    assert.equal(correction.candidateOverride,null);
+    assert.equal(correction.accepted,null);
+    assert.equal(correction.authorization,null);
+    assert.throws(()=>act(correction,"deliver"),/unavailable/);
+  }
+  const sent = act(readyState,"deliver");
+  assert.throws(()=>act(sent,"correct-understanding",{text:"Change the sent version silently"}),/unavailable/);
+  assert.equal(act(sent,"adjust",{rev:1,reason:"The quote must remain available for editing."}).reviewFlow.phase,"candidate");
+});
+
+test("initial clarification and detailed specification questions are distinct immutable batches with explicit asynchronous handoffs", () => {
+  let c = journeyPDF();
+  assert.throws(()=>act(c,"begin-detailed-questions"),/unavailable/);
+  c = act(act(c,"draft-questions"),"send-questions");
+  assert.equal(c.reviewFlow.sentBundle.id,"Q1");
+  assert.equal(c.reviewFlow.sentBundle.round,"initial");
+  assert.equal(c.owner,"Requester");
+  c = act(c,"answer","Keep editing this quote");
+  const firstRound = clone(c.reviewFlow.questionRounds[0]);
+  assert.equal(c.owner,"Website team");
+  c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Keep this quote available for editing."});
+  c = act(c,"begin-detailed-questions");
+  assert.equal(c.reviewFlow.questionDraft[0].id,"workflow-placement");
+  const preview = act(c,"preview-questions");
+  assert.equal(preview.reviewFlow.questionPreview.round,"detailed");
+  assert.equal(preview.reviewFlow.questionRounds.length,1,"A private preview creates no sent round.");
+  assert.equal(act(preview,"close-questions").reviewFlow.phase,"spec-review");
+  c = act(preview,"send-questions");
+  assert.equal(c.reviewFlow.sentBundle.id,"Q2");
+  assert.equal(c.reviewFlow.sentBundle.round,"detailed");
+  assert.equal(c.owner,"Requester");
+  assert.throws(()=>act(c,"finish-spec"),/unavailable/);
+  assert.throws(()=>act(c,"answer",{"next-step":"Keep editing this quote"}),/private question/);
+  c = act(c,"answer","At the page footer");
+  assert.deepEqual(c.reviewFlow.questionRounds[0],firstRound);
+  assert.equal(c.reviewFlow.questionRounds[1].answers["workflow-placement"],"At the page footer");
+  assert.equal(c.reviewFlow.questionRounds[1].answered,true);
+  assert.equal(c.answer,"Keep editing this quote","The detailed answer does not erase initial clarification needed by the original adaptive parser.");
+  assert.equal(c.reviewFlow.answers["next-step"],"Keep editing this quote");
+  assert.equal(c.reviewFlow.detailedAnswerText,"At the page footer");
+  c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Keep editing and place Workflow at the footer."});
+  assert.throws(()=>act(c,"begin-detailed-questions"),/already been sent/);
+  const noInitial = detailedJourney("Beside the PDF result",false);
+  assert.equal(noInitial.reviewFlow.questionRounds[0].id,"Q2","The detailed batch keeps a distinct identity even if initial questions were unnecessary.");
+});
+
+test("different detailed answers update exact placement and checks while the previously shared understanding stays unchanged until the team shares again", () => {
+  const beside = detailedJourney("Beside the PDF result"), footer = detailedJourney("At the page footer");
+  assert.notEqual(beside.reviewFlow.suggestedScope.approach,footer.reviewFlow.suggestedScope.approach);
+  assert.notEqual(beside.reviewFlow.suggestedScope.checks,footer.reviewFlow.suggestedScope.checks);
+  assert.match(beside.reviewFlow.suggestedScope.approach,/beside the saved PDF result/);
+  assert.match(footer.reviewFlow.suggestedScope.approach,/at the page footer/);
+  assert.doesNotMatch(footer.reviewFlow.sharedUnderstanding.text,/footer/);
+  assert.match(footer.reviewFlow.suggestedScope.checks,/stays on Make PDF/);
+  for (let c of [beside,footer]) {
+    const expected = /at the page footer/.test(c.reviewFlow.suggestedScope.approach) ? "page-footer" : "beside-result";
+    c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Use the customer’s explicitly chosen placement."});
+    c = act(act(c,"finish-spec"),"prepare-result");
+    assert.equal(E.reviewPreview(c).interactive,true);
+    assert.equal(E.reviewPreview(c).placement,expected);
+  }
+  const unsure = detailedJourney("I'm not sure");
+  assert.equal(unsure.reviewFlow.suggestedScope.decisionRequired,true);
+  let typed = act(sharedJourney(),"begin-detailed-questions");
+  const qs = clone(typed.reviewFlow.questionDraft); qs[0].type = "text"; qs[0].options = [];
+  typed = act(act(typed,"save-questions",qs),"send-questions");
+  typed = act(typed,"answer","Automatically redirect to Workflow instead.");
+  assert.match(typed.reviewFlow.suggestedScope.conflict,/conflicts/);
+  assert.match(typed.reviewFlow.suggestedScope.approach,/Keep the original quote on Make PDF/);
+});
+
+test("a corrected scope cycle can send its own detailed batch without resending an earlier cycle or losing its answers", () => {
+  let c = detailedJourney("Beside the PDF result");
+  c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Place Workflow beside the result."});
+  const rounds = clone(c.reviewFlow.questionRounds);
+  c = act(c,"correct-understanding",{text:"The location should be the footer instead."});
+  c = act(c,"confirm-scope",{...c.reviewFlow.scope,understanding:"Keep the same quote and reconsider the optional action’s location."});
+  c = act(c,"begin-detailed-questions");
+  c = act(c,"send-questions");
+  assert.equal(c.reviewFlow.sentBundle.id,"Q3");
+  assert.equal(c.reviewFlow.sentBundle.scopeCycle,2);
+  c = act(c,"answer","At the page footer");
+  assert.deepEqual(c.reviewFlow.questionRounds.slice(0,2),rounds);
+  assert.equal(c.reviewFlow.questionRounds[1].answers["workflow-placement"],"Beside the PDF result");
+  assert.equal(c.reviewFlow.questionRounds[2].answers["workflow-placement"],"At the page footer");
+  assert.deepEqual(c.reviewFlow.journey.detailedSentCycles,[1,2]);
+});
+
+test("delivered journey versions freeze understanding, corrections and all answer rounds and old approvals remain exact", () => {
+  let c = detailedJourney("Beside the PDF result");
+  c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Keep Make PDF and put Workflow beside the saved result."});
+  c = act(act(c,"finish-spec"),"prepare-result");
+  const changedSource = clone(c); changedSource.reviewFlow.questionRounds[0].answers["next-step"] = "Changed after preparation";
+  assert.throws(()=>act(changedSource,"deliver"),/current simulated result/);
+  c = act(c,"deliver");
+  const v1 = clone(c.versions[0]);
+  assert.equal(v1.reviewFlow.sharedUnderstanding.text,"Keep Make PDF and put Workflow beside the saved result.");
+  assert.equal(v1.reviewFlow.questionRounds.length,2);
+  assert.equal(v1.reviewFlow.questionRounds[0].answers["next-step"],"Keep editing this quote");
+  c = act(c,"adjust",{rev:1,reason:"Place the action at the footer instead."});
+  c = act(c,"edit-candidate",{approach:v1.candidate.replace("beside the saved PDF result","at the page footer"),checks:v1.reviewFlow.candidateDraft.checks.replace("beside the result","at the page footer")});
+  c = act(act(c,"prepare-result"),"deliver");
+  assert.deepEqual(c.versions[0],v1);
+  assert.equal(c.versions[1].reviewFlow.questionRounds.length,2);
+  assert.match(c.versions[1].candidate,/page footer/);
+  assert.throws(()=>act(c,"accept",{rev:1}),/exact current submitted/);
+  c = act(c,"accept",{rev:2}); c = act(c,"authorize",{rev:2}); c = act(c,"publish",{rev:2});
+  assert.equal(c.receipt.rev,2);
+  assert.equal(c.receipt.verified,false);
+  assert.deepEqual(c.versions[0],v1);
+  assert.deepEqual(E.derive(JSON.parse(JSON.stringify(c))),E.derive(c));
+});
+
+test("opt-in walkthroughs include public understanding and optional detailed decisions while old routes remain unchanged", () => {
+  const Story = require("./review-story.js");
+  const zero = Story.build({kind:"pdf",journey:true});
+  assert.ok(zero.some(frame=>frame.case.reviewFlow.phase === "spec-review"));
+  assert.equal(zero.at(-1).case.stage,"published");
+  assert.equal(zero.at(-1).case.reviewFlow.questionRounds.length,0);
+  for (const detailedAnswer of ["Beside the PDF result","At the page footer"]) {
+    const frames = Story.build({kind:"pdf",journey:true,ask:true,answer:"Keep editing this quote",detailed:true,detailedAnswer});
+    const end = frames.at(-1).case;
+    assert.equal(end.stage,"published");
+    assert.equal(end.reviewFlow.questionRounds.length,2);
+    assert.equal(end.reviewFlow.questionRounds[0].answerSimulated,false);
+    assert.equal(end.reviewFlow.questionRounds[1].answerSimulated,false);
+    assert.equal(end.answer,"Keep editing this quote");
+    assert.equal(end.versions.length,2);
+    assert.notEqual(end.versions[0].candidate,end.versions[1].candidate);
+    assert.ok(frames.some(frame=>frame.case.reviewFlow.phase === "spec-review" && frame.case.reviewFlow.questionRounds.length === 2));
+  }
+  const unsure = Story.build({kind:"pdf",journey:true,detailed:true,detailedAnswer:"I'm not sure"});
+  assert.equal(unsure.at(-1).case.reviewFlow.phase,"answer-review");
+  assert.equal(unsure.at(-1).case.versions.length,0);
+  const create = Story.build({kind:"create",journey:true});
+  assert.equal(create.at(-1).case.stage,"published");
+  assert.equal(create.at(-1).case.versions[0].view.proposal.branch,"paths");
+  const legacy = Story.build({kind:"pdf"});
+  assert.ok(legacy.every(frame=>frame.case.reviewFlow.journey === undefined));
+  assert.ok(!legacy.some(frame=>frame.case.reviewFlow.phase === "spec-review"));
+});

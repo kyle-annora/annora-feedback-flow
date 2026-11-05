@@ -39,3 +39,11 @@ The walkthrough shows the current owner, next action and why each step exists. P
 With Node.js installed, run `npm start` and open the local address printed in the terminal. Run `npm test` for workflow and packaging checks. Run `npm run bundle` to regenerate the identical self-contained entry points under `docs/`; GitHub Pages serves that directory from `main`.
 
 Inter and Source Serif Pro are bundled locally, with sources and licenses in `assets/`. The standalone HTML embeds the fonts, styles and scripts for offline use. The [single-file demo](https://kyle-annora.github.io/annora-feedback-flow/Feedback-Flow.html) can be saved and opened without a server.
+
+### In-context reporting and customer return
+
+Choose **Report from WinQuote**, or open `?capture=pdf`, to report from the simulated Make PDF page. Submit → Keep working preserves the quote surface. **View feedback** opens that same record; the Demo view control lets you operate Website team, Requester, and Site owner explicitly. Team actions generate local **Updates** on the business page. No email, screenshot capture, telemetry or real message delivery is performed.
+
+The team may share its understanding without asking an initial question, or screen/send initial clarification first. The customer can correct the understanding before a version is sent. A separate optional detailed question batch resolves remaining business decisions. Its answer updates the proposal and acceptance checks only after team confirmation. **PDF · full journey** (or `?walkthrough=journey`) demonstrates both question rounds; old PDF/Create/role routes remain available.
+
+New submissions, drafts and read markers persist in this browser. Updates return to the same current record and exclude walkthrough copies. V1/V2 acceptance and separate release authorization remain exact-version simulations.
