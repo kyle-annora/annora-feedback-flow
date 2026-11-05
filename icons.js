@@ -1,5 +1,6 @@
 (() => {
 const paths={
+ bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
  menu:'M3 6h18M3 12h18M3 18h18',sidebar:'M3 5h18v14H3zM9 5v14', inbox:'M4 5h16l2 10v4H2v-4zM2 14h6l2 3h4l2-3h6', feedback:'M4 4h16v12h-9l-5 4v-4H4zM8 8h8m-8 4h5',
  search:'M16 16l4.5 4.5M10.5 4a6.5 6.5 0 1 0 .01 0z',plus:'M12 5v14M5 12h14',edit:'m14.5 5.5 4 4M4 20l4.8-1.1L20 7.7c.5-.5.5-1.2 0-1.7L18 4c-.5-.5-1.2-.5-1.7 0L5 15.2z',
  play:'M8 5.5 18.5 12 8 18.5z',pause:'M8.5 5v14m7-14v14',next:'m9 5 7 7-7 7',back:'m15 5-7 7 7 7',down:'m7 10 5 5 5-5',send:'M4 12h15m-6-6 6 6-6 6',cross:'m6 6 12 12M18 6 6 18',check:'m5 12 4.5 4.5L19 7',checks:'m2 12 4 4L16 6m-4 8 2 2 8-8',

@@ -8,7 +8,7 @@ function createCase(engine,draft){
  return c;
 }
 function updates(items,seen={}){return items.flatMap(({id,c,captureSubmission})=>{
- const f=c.reviewFlow;if(!captureSubmission||f?.context?.origin!=='business-page-demo')return [];
+ const f=c.reviewFlow;if(!captureSubmission||!f)return [];
  let event,title,next,label,owner;
  if(f.phase==='awaiting-answer'){event=f.sentBundle.id;title=f.sentBundle.round==='detailed'?'One detail needs your input':'The team has a question';next=f.sentBundle.round==='detailed'?'Answer the detailed questions':'Answer the initial questions';label=f.sentBundle.round==='detailed'?'Answer detailed questions':'Answer initial questions';owner='You · Requester';}
  else if(f.phase==='review'){event='V'+c.rev;title='V'+c.rev+' is ready for review';next='Check the proposal against your feedback';label='Review V'+c.rev;owner='You · Requester';}

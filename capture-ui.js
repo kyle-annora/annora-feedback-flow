@@ -61,7 +61,7 @@ function feedbackForm(state){
 }
 
 function receipt(state){
-  return `<div class="capture-receipt"><span class="capture-receipt-check">${icon('check')}</span><span class="capture-receipt-id">${e(state.receipt.id||'Feedback submitted')}</span><h3>Website team reviews it next</h3><p>You can keep working.</p><p class="capture-help">Look for demo updates here in this browser.</p><div class="capture-receipt-actions">${action('keep-working','Keep working','primary')}${action('view-feedback','View feedback')}</div><div class="capture-receipt-actions">${action('new-feedback','Report something else')}</div></div>`;
+  return `<div class="capture-receipt"><span class="capture-receipt-check">${icon('check')}</span><span class="capture-receipt-id">${e(state.receipt.id||'Feedback submitted')}</span><h3>${state.receiptStatus?e(state.receiptStatus[0]):'Website team reviews it next'}</h3><p>${state.receiptStatus?e(state.receiptStatus[1]):'You can keep working.'}</p><p class="capture-help">Look for demo updates here in this browser.</p><div class="capture-receipt-actions">${action('keep-working','Keep working','primary')}${action('view-feedback','View feedback')}</div><div class="capture-receipt-actions">${action('new-feedback','Report something else')}</div></div>`;
 }
 
 function drawer(state){

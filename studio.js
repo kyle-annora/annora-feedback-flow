@@ -6,6 +6,7 @@ const stages={draft:'Draft',clarify:'Needs your input',processing:'In progress',
 const actorModes={'Requester':['customer','lilac','Requester'],'Website team':['people','mint','Website team'],'Reviewer':['verify','amber','Reviewer'],'Site owner':['flag','rose','Site owner'],'Complete':['checks','mint','Complete']};
 const examples=[['Homepage quote instructions',E.initialFeedback],['Specify a button label','Change the WinQuote homepage button label from “Create” to “Start a quote”.'],['Clarify a button label','New employees find the homepage quote button label confusing.'],['Pricing rule change','Change the homepage discount rules so staff can edit quote prices.']];
 const navRows=[['clarify','ask','Needs your input'],['processing','clock','In progress'],['review','verify','Ready for review'],['release','release','Release approvals']];
+const WS=window.WorkspaceState, clientId='winquote';
 const key='feedbackflow:casework:v2.1', viewKey='feedbackflow:walk:v2.1';
 const createViewKey='feedbackflow:walk:create:v1';
 const dockKey='feedbackflow:walkthrough-resume:v1';
@@ -58,7 +59,7 @@ function savedTour(storageKey){
     const stored=(durable?localStorage:sessionStorage).getItem(storageKey)||
       (storageKey===teamPracticeKey?localStorage.getItem(teamPracticeKey):null);
     const cached=JSON.parse(stored);
-    if(cached?.frames?.[cached.index]?.case&&data.items.some(item=>item.id===cached.record)){
+    if(cached?.frames?.[cached.index]?.case&&WS.canResume(cached.record,clientId,data.items)){
       const validated=cached.type==='create'?cached:window.CaseUpgrade.walkthrough(cached);
       // A new tab starts in the workspace. Its saved walkthrough stays one click away.
       if(durable)validated.minimized=true;
@@ -89,8 +90,16 @@ function savedTour(storageKey){
   return null;
 }
 const previousTour=savedTour(createViewKey)||savedTour(viewKey)||savedTour(dockKey);
-let tour=previousTour?.minimized?null:previousTour;
-let parkedTour=previousTour?.minimized?previousTour:null;
+data=WS.migrate(data,{exampleIds:[savedTour(createViewKey),savedTour(viewKey),savedTour(dockKey),savedTour(teamPracticeKey)].filter(Boolean).map(t=>t.record)});
+if(!WS.canResume(data.current,clientId,data.items)){let fallback=data.items.find(x=>WS.canResume(x.id,clientId,data.items));if(!fallback){fallback={...init().items[0],id:'WQ-'+String(++data.serial).padStart(3,'0'),clientId,demoOnly:true,submissionOrigin:'example'};data.items.push(fallback);}data.current=fallback.id;}
+let walkthroughExpanded=false;
+try{walkthroughExpanded=localStorage.getItem('feedbackflow:walkthrough-expanded:v1')==='true';}catch{}
+const customerItems=()=>WS.items(data.items,clientId);
+const customerUpdates=()=>CS.updates(customerItems(),captureState.seen);
+
+let tour=previousTour&&!previousTour.minimized&&previousTour.record===data.current?previousTour:null;
+let parkedTour=tour?null:previousTour;
+if(tour){const frontier=tour.inputMode==='practice'?tour.frames.length-1:(tour.frontier??tour.index);const live=data.items.find(x=>x.id===tour.record);if(JSON.stringify(tour.frames[frontier]?.case)!==JSON.stringify(live?.c)){parkedTour=tour;tour=null;}}
 if(previousTour&&!practice)rememberPractice(true,previousTour);
 let page=parkedTour?'list':'case',filter='all',tab='checks',search='',navOpen=false,asideOpen=false,activeSource=-1,timer=null,notifyTimer=null,priorOwner=null,panelStage=null;
 const selected=()=>data.items.find(x=>x.id===data.current);
@@ -129,44 +138,48 @@ function matches(c,filter){
 }
 
 function announce(s){clearTimeout(notifyTimer);$('live').textContent=s;notifyTimer=setTimeout(()=>{$('live').textContent=''},2400);}
+function customerStatus(c){
+  if(c.reviewFlow){
+    const [owner,next]=R.status(c,'Requester');
+    if(owner==='Requester')return ['You',next];
+    if(owner==='Complete')return ['Complete','View the release receipt'];
+    if(owner==='Site owner')return [owner,'No action needed · awaiting release approval'];
+    return [owner,c.reviewFlow.sharedUnderstanding&&!c.reviewFlow.sharedUnderstanding.needsRevision?'Read the shared plan while the team works':'No action needed · the team will update you'];
+  }
+  return c.stage==='review'?['You','Review V'+c.rev]:c.stage==='clarify'?['You','Answer the question']:c.stage==='draft'?['You','Finish your feedback']:c.stage==='published'?['Complete','View the release receipt']:[c.owner||'Website team','No action needed from you'];
+}
+function guideStatus(item){const [owner,next]=customerStatus(item.c);return [owner==='You'?'Requester':owner,next];}
+function currentContext(){const item=selected();return item&&WS.canResume(item.id,clientId,data.items)?item:null;}
 function renderNav(){
-  const nav=$('nav');
-  const queueLinks=navRows.map(([id,icon,title])=>{
-    const count=data.items.filter(item=>matches(item.c,id)).length;
-    return '<button class="navrow '+(filter===id?'selected':'')+'" data-go="filter:'+id+'">'+
-      I(icon)+'<span>'+title+'</span><small>'+count+'</small></button>';
-  }).join('');
+  const nav=$('nav'),items=customerItems(),unread=customerUpdates().filter(u=>!u.read).length,current=currentContext();
+  const status=current?guideStatus(current):null;
+  const resume=current?'<button class="walkthrough-summary" data-go="continue-current"><span class="walkthrough-record">'+esc(current.id)+(current.demoOnly?' · Example':'')+'</span><strong>'+esc(status[0])+'</strong><span>'+esc(status[1])+'</span></button>':'<p class="walkthrough-summary">Choose an example to explore the flow.</p>';
   nav.innerHTML='<div class="brand" role="img" aria-label="WinQuote"><span class="winquote-symbol" aria-hidden="true"></span><span class="winquote-wordmark" aria-hidden="true">WinQuote</span></div>'+
-    '<div class="navgroup topnav">'+btn('showcase','PDF customer demo','play','navrow newlink')+
-      btn('find','Search feedback','search','navrow')+
-      btn('filter:all','Feedback inbox','inbox','navrow '+(filter==='all'?'selected':''))+
-      btn('site','Report from WinQuote','plus','navrow newlink')+btn('new','Other feedback',null,'navrow')+'</div>'+
-    '<div class="navgroup"><span class="navlabel">Queues</span>'+queueLinks+'</div>'+
-    '<div class="navgroup project-group"><span class="navlabel">Projects</span><button class="navrow" data-go="project">'+fileTag()+'<span>WinQuote</span></button></div>'+
-    '<div class="rail-end"><span class="navlabel">Walkthroughs</span>'+
-      '<button class="navrow" data-go="r-journey-watch">'+I('branch',16)+'PDF · full journey</button>'+
-      '<button class="navrow" data-go="r-pdf-watch">'+I('file',16)+'PDF · team review</button>'+
-      '<button class="navrow" data-go="r-pdf-ask">'+I('ask',16)+'PDF · ask the customer</button>'+
-      '<button class="navrow" data-go="create-tour">'+I('branch',16)+'Explore “Create”</button>'+
-      '<button class="navrow" data-go="personas">'+I('play',15)+'Role walkthroughs</button>'+
-      '<div class="local"><span class="local-dot"></span>Local demo workspace</div></div>';
-  nav.classList.toggle('show',navOpen);
-  nav.inert=window.innerWidth<=820&&!navOpen;
-  $('shade').hidden=!navOpen;
+    '<div class="navgroup workspace-nav"><span class="navlabel">Feedback</span>'+
+    '<button class="navrow '+(page!=='updates'?'selected':'')+'" data-go="filter:all">'+I('inbox')+'<span>My feedback</span><small>'+items.length+'</small></button>'+
+    '<button class="navrow '+(page==='updates'?'selected':'')+'" data-go="updates">'+I('bell')+'<span>Updates</span>'+(unread?'<small>'+unread+'</small>':'')+'</button></div>'+
+    '<div class="rail-end"><button class="navrow walkthrough-toggle" data-go="toggle-walkthrough" aria-expanded="'+walkthroughExpanded+'" aria-controls="walkthrough-links">'+I('play',16)+'<span>Walkthrough</span>'+I(walkthroughExpanded?'down':'next',14)+'</button>'+resume+
+    '<div class="walkthrough-links" id="walkthrough-links" '+(walkthroughExpanded?'':'hidden')+'>'+
+    (current?'<span class="navlabel">Current feedback</span>'+btn('continue-current','Continue '+current.id,'next','navrow')+btn('personas','Change demo perspective','people','navrow'):'')+
+    '<span class="navlabel">Start another example</span>'+btn('new-showcase','PDF customer demo','file','navrow')+
+    btn('r-journey-watch','PDF · full journey','branch','navrow')+btn('r-pdf-watch','PDF · team review','file','navrow')+btn('r-pdf-ask','PDF · ask the customer','ask','navrow')+
+    btn('create-tour','Explore “Create”','branch','navrow')+btn('role-examples','Role walkthroughs','people','navrow')+(data.items.some(x=>x.legacyUnassigned&&WS.canResume(x.id,clientId,data.items))?btn('earlier-examples','Earlier demo records','history','navrow'):'')+'</div>'+
+    '<div class="local">WinQuote · Customer preview</div></div>';
+  nav.classList.toggle('show',navOpen);nav.inert=window.innerWidth<=820&&!navOpen;$('shade').hidden=!navOpen;
 }
 function renderBar(){
   const c=here(),isCase=page==='case';
-  const crumb=isCase?'<span class="slash">/</span><span class="crumbid">'+esc(tour?(tour.type==='mine'?tour.record:'Sample feedback'):data.current)+'</span>':'';
-  let navigation='<span class="crumbicon">'+I('inbox',15)+'</span><span>Feedback inbox</span>';
+  const crumb=isCase?'<span class="slash">/</span><span class="crumbid">'+esc(tour?tour.record:data.current)+'</span>':'';
+  let navigation='<span class="crumbicon">'+I('inbox',15)+'</span><span>'+ (page==='updates'?'Updates':'My feedback') +'</span>';
   if(isCase){
     const destination=tour?.index?'Back to the previous step: '+tour.frames[tour.index-1].title:'Back to the feedback inbox';
-    navigation=btn(tour?'walkback':'filter:all',tour?'Back':'Back to inbox','back','workspace-back',
+    navigation=btn(tour?'walkback':'filter:all',tour?'Back':'My feedback','back','workspace-back',
       'title="'+esc(destination)+'" aria-describedby="back-destination"')+
       '<span id="back-destination" class="sr">'+esc(destination)+'</span>';
   }
   let tool='';
   if(isCase&&tour)tool=btn('minimize-tour','Minimize walkthrough','down','subtle walk-minimize','aria-expanded="true" aria-controls="main"');
-  else if(isCase&&c.stage!=='published')tool=btn('walk','Play walkthrough','play','outline',c.text.trim()?'':'disabled');
+
   if(isCase&&c.reviewFlow&&!tour){tool=btn('r-back','Previous step','back','subtle',reviewState().history?.length?'':'disabled')+tool;}
   else if(isCase&&!tour&&['clarify','processing','blocked'].includes(c.stage))tool=btn('r-opt-in','Review with team','people','outline')+tool;
   if(isCase&&c.reviewFlow?.context?.origin==='business-page-demo')tool=btn('site','Back to WinQuote','back','outline')+tool;
@@ -327,7 +340,7 @@ if(isHandsOn()&&c.stage==='release'){
 }
 if(isHandsOn()&&c.stage==='authorized')return '';
 if(isHandsOn()&&c.stage==='published'){
-  return btn('filter:all','Back to inbox','back','record-back')+
+  return btn('filter:all','My feedback','back','record-back')+
     (isTeamPractice()?btn('team-restart','Start a new team practice','replay','subtle'):'');
 }
 if(isTeamPractice()){
@@ -600,7 +613,7 @@ function completion(c){
       releasePacket(c)+footer(c,E.derive(c))+'</section>';
   }
   const back=tour?btn('exit','Finish walkthrough','check','record-back'):
-    btn('filter:all','Back to inbox','back','record-back');
+    btn('filter:all','My feedback','back','record-back');
   return '<section class="stage-task completion-result" data-stage="published" aria-labelledby="task-title">'+
     '<span class="receipt-mark" aria-hidden="true">'+I('check',17)+'</span>'+
     '<h1 class="stage-title" id="task-title">Release simulated</h1>'+
@@ -690,9 +703,14 @@ function caseMain(){
   priorOwner=c.owner;
 }
 function inbox(){
-const rows=data.items.filter(x=>matches(x.c,filter)&&(!search.trim()||(x.id+label(x.c)+x.c.text).toLowerCase().includes(search.trim().toLowerCase())));
-const nm=navRows.find(x=>x[0]===filter)?.[2]||'Feedback inbox';
-$('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>'+esc(nm)+'</h1><p>WinQuote <span>/</span> '+rows.length+' '+(rows.length===1?'feedback item':'feedback items')+'</p></div>'+btn('site','New feedback','plus','primary')+'</div><div class="listtools"><span>'+I('feedback')+'Feedback</span><label>'+I('search',15)+'<input id="searchbox" aria-label="Search feedback" placeholder="Search feedback…" value="'+esc(search)+'"></label></div><div class="listrows">'+(rows.length?rows.map(x=>'<button class="listitem" data-go="case:'+x.id+'"><span class="list-id">'+esc(x.id)+'</span><div><strong>'+esc(label(x.c))+'</strong><span>'+esc(x.c.text||'Empty draft')+'</span></div>'+badge(x.c)+I('next',15)+'</button>').join(''):'<div class="listempty">'+I('inbox',24)+'<p>No feedback here yet.</p>'+btn('filter:all','Back to inbox','','outline')+'</div>')+'</div></div>';
+  const all=customerItems(),belongs=x=>filter==='needs'?customerStatus(x.c)[0]==='You':filter==='progress'?!['You','Complete'].includes(customerStatus(x.c)[0]):filter==='done'?x.c.stage==='published':matches(x.c,filter);
+  const rows=all.filter(x=>belongs(x)&&(!search.trim()||(x.id+label(x.c)+x.c.text).toLowerCase().includes(search.trim().toLowerCase()))).sort((a,b)=>Number(customerStatus(b.c)[0]==='You')-Number(customerStatus(a.c)[0]==='You'));
+  const filters=[['all','All'],['needs','Needs you'],['progress','In progress'],['done','Done']];
+  $('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>My feedback</h1><p>Your WinQuote requests, with the next step in view.</p></div>'+btn('new-capture','New feedback','plus','primary')+'</div><div class="listtools"><div class="feedback-filters">'+filters.map(([id,name])=>'<button data-go="filter:'+id+'" aria-pressed="'+(filter===id)+'">'+name+'</button>').join('')+'</div><label>'+I('search',15)+'<input id="searchbox" aria-label="Search feedback" placeholder="Search feedback…" value="'+esc(search)+'"></label></div><div class="listrows">'+(rows.length?rows.map(x=>{const [owner,next]=customerStatus(x.c);return '<button class="listitem" data-go="case:'+x.id+'"><span class="list-id">'+esc(x.id)+'</span><div><strong class="list-title">'+esc(label(x.c))+'</strong><span class="list-snippet">'+esc(x.c.text||'Empty draft')+'</span><span class="list-next">'+esc(owner)+' · '+esc(next)+'</span></div><span class="list-state">'+(owner==='You'?'Needs you':owner==='Complete'?'Done':'In progress')+'</span>'+I('next',15)+'</button>';}).join(''):'<div class="listempty">'+I('inbox',24)+'<p>'+(all.length?'No feedback matches this view.':'Your feedback will appear here. Walkthrough examples stay separate.')+'</p>'+btn(all.length?'filter:all':'new-capture',all.length?'View all feedback':'Submit your first feedback',null,'outline')+'</div>')+'</div></div>';
+}
+function updatesPage(){
+  const updates=customerUpdates();
+  $('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>Updates</h1><p>Questions and review requests return to the same feedback.</p></div></div><div class="listrows">'+(updates.length?updates.map(u=>'<button class="listitem update-item '+(u.read?'is-read':'is-unread')+'" data-capture="open-update" data-key="'+esc(u.key)+'"><span class="list-id">'+esc(u.id)+'</span><div><strong class="list-title">'+esc(u.title)+'</strong><span class="list-next">'+esc(u.owner)+' · '+esc(u.next)+'</span></div><span class="list-state">'+esc(u.label)+'</span>'+I('next',15)+'</button>').join(''):'<div class="listempty">'+I('bell',24)+'<p>You’re up to date.</p><p>We’ll show the team’s questions and proposals here.</p></div>')+'</div><p class="workspace-simulation">Notifications are simulated in this preview.</p></div>';
 }
 function dockStatus(current){
   if(!current)return selected().c.reviewFlow?R.status(selected().c):['Requester','Try the requester role'];
@@ -731,26 +749,14 @@ function dockStatus(current){
   }
 }
 function renderDock(){
-  const dock=$('walkthrough-dock');
-  if(showcase?.minimized&&showcase.c){const v=SM.view({...showcase,historyIndex:null});const live=data.items.find(x=>x.id===showcase.id)?.c;if(live&&JSON.stringify(live)!==JSON.stringify(showcase.c)){const status=R.status(live);v.owner=status[0];v.next=status[1];}dock.hidden=false;dock.parentElement.classList.add('has-walk-dock');dock.innerHTML='<button class="walk-dock-button" data-demo="resume"><span class="walk-dock-icon">'+I('play',15)+'</span><span class="walk-dock-copy"><strong class="walk-dock-name">PDF demo · '+esc(showcase.id)+'</strong><span class="walk-dock-status">'+esc(v.owner)+' · '+esc(v.next)+'</span></span>'+I('next',14)+'</button>';return;}
-  if(dock.querySelector('[data-demo]'))dock.innerHTML='';
-  const visible=!tour;
-  dock.hidden=!visible;
-  dock.parentElement.classList.toggle('has-walk-dock',visible);
-  dock.parentElement.classList.toggle('has-parked-tour',visible&&Boolean(parkedTour));
-  if(!visible)return;
-  if(!dock.firstElementChild){
-    dock.innerHTML='<button class="walk-dock-button" data-go="open-walkthrough" type="button" aria-controls="main" aria-expanded="false">'+
-      '<span class="walk-dock-icon">'+I('play',15)+'</span><span class="walk-dock-copy"><strong class="walk-dock-name">Walkthrough</strong>'+
-      '<span class="walk-dock-status"><span class="walk-dock-owner"></span> <span class="walk-dock-separator" aria-hidden="true">·</span> <span class="walk-dock-action"></span></span></span>'+
-      '<span class="walk-dock-arrow">'+I('next',14)+'</span></button>';
-  }
-  dock.querySelector('.walk-dock-name').textContent=parkedTour?.title||'Walkthrough';
-  const [owner,action]=dockStatus(parkedTour);
-  dock.querySelector('.walk-dock-owner').textContent=owner;
-  dock.querySelector('.walk-dock-action').textContent=action;
+  const dock=$('walkthrough-dock'),current=currentContext();
+  const visible=Boolean(current&&!tour&&(page==='site'||window.innerWidth<=820));
+  dock.hidden=!visible;dock.parentElement.classList.toggle('has-walk-dock',visible);dock.parentElement.classList.remove('has-parked-tour');
+  if(!visible){dock.innerHTML='';return;}
+  const [owner,next]=guideStatus(current);
+  dock.innerHTML='<button class="walk-dock-button" data-go="continue-current" type="button"><span class="walk-dock-icon">'+I('play',15)+'</span><span class="walk-dock-copy"><strong class="walk-dock-name">'+esc(current.id)+(current.demoOnly?' · Example':' · Current feedback')+'</strong><span class="walk-dock-status">'+esc(owner)+' · '+esc(next)+'</span></span>'+I('next',14)+'</button>';
 }
-function render(){document.body.classList.toggle('showcase-active',page==='showcase');if(page==='showcase'){renderShowcase();return;}if(tour?.reviewed){tour.frontier=Math.max(tour.frontier||0,tour.index);const current=tour.inputMode==='practice'?tour.frames.at(-1):tour.frames[tour.frontier];const record=data.items.find(x=>x.id===tour.record);if(record&&record.c!==current.case){record.c=current.case;save();}saveTour();}document.body.classList.toggle('capture-mode',page==='site');if(page==='site'){renderCapture();return;}captureState.onSite=false;saveCapture();$('nav').hidden=false;$('topbar').hidden=false;renderNav();renderBar();page==='case'?caseMain():inbox();renderDock();}
+function render(){document.body.classList.toggle('showcase-active',page==='showcase');if(page==='showcase'){renderShowcase();return;}if(tour?.reviewed){tour.frontier=Math.max(tour.frontier||0,tour.index);const current=tour.inputMode==='practice'?tour.frames.at(-1):tour.frames[tour.frontier];const record=data.items.find(x=>x.id===tour.record);if(record&&record.c!==current.case){record.c=current.case;save();}saveTour();}document.body.classList.toggle('capture-mode',page==='site');if(page==='site'){renderCapture();return;}captureState.onSite=false;saveCapture();$('nav').hidden=false;$('topbar').hidden=false;renderNav();renderBar();page==='case'?caseMain():page==='updates'?updatesPage():inbox();if(page==='case'){const item=currentContext();if(item){const strip=document.createElement('div');strip.className='current-record-strip';strip.textContent=item.id+(item.demoOnly?' · Example':' · Your feedback')+' · '+label(item.c);$('main').prepend(strip);}}renderDock();}
 function refreshDlgProof(){
 const f=$('candidateedit');if(!f)return;const c=E.editCandidate(here(),f.value),v=E.derive(c),q=$('edit-status');
 q.textContent=v.blocked?v.reason:(v.limit!==null?v.wordCount+' / '+v.limit+' words · ':'')+'Ready for team review.';
@@ -776,7 +782,7 @@ function schedulePracticeEvent(current){
   const firstReply=isTeamPractice(current)&&frame.personaId==='team'&&c.stage==='review'&&c.rev===1;
   if(!execution&&!firstReply)return;
   timer=setTimeout(()=>{
-    if(current!==(tour||parkedTour)||frame!==current.frames[current.index])return;
+    if(current!==(tour||parkedTour)||current.record!==data.current||frame!==current.frames[current.index])return;
     const steps=execution?P.releaseSteps(frame,'execute',c.rev):P.teamSteps(frame,'sample-change');
     if(!appendPracticeSteps(current,steps))return;
     if(tour){render();focusTask();}else renderDock();
@@ -842,13 +848,14 @@ function endTour(restore=false){
 }
 function scheduleParkedStep(){
   const current=parkedTour;
+  if(!current||current.record!==data.current||!WS.canResume(current.record,clientId,data.items))return;
   if(isTeamPractice(current)||inOwnerView(current)){schedulePracticeEvent(current);return;}
   if(current?.type!=='customer'||current.inputMode!=='practice')return;
   const c=current.frames[current.index].case;
   if(!['processing','blocked'].includes(c.stage)||current.index>=current.frames.length-1)return;
   stop();
   timer=setTimeout(()=>{
-    if(parkedTour!==current)return;
+    if(parkedTour!==current||current.record!==data.current)return;
     current.index++;
     rememberPractice(false,current);saveTour();renderDock();
     if(current.frames[current.index].case.stage==='review')announce('The website team sent V'+current.frames[current.index].case.rev+' for your review. Open Walkthrough to review it.');
@@ -869,13 +876,19 @@ function minimizeWalkthrough(){
   $('walkthrough-dock').firstElementChild?.focus({preventScroll:true});
 }
 function openWalkthrough(){
-  if(!parkedTour&&selected().c.reviewFlow){page='case';render();focusTask();return;}
-  if(!parkedTour){begin('customer',false,true);focusTask();return;}
-  stop();tour=parkedTour;parkedTour=null;
-  if(tour.reviewed&&tour.inputMode==='practice'){tour.index=tour.frames.length-1;tour.reviewUI.historyIndex=null;}
-  page='case';filter='all';tab='checks';activeSource=-1;asideOpen=false;panelStage=null;
-  if(isPractice())rememberPractice(true);
-  setPlay(isPractice()&&!decisionPoint());render();focusTask();
+  const record=currentContext();if(!record)return;
+  reviewCapture();stop();
+  if(WS.canResumeShowcase(showcase,record,data.current,clientId)){openShowcase();return;}
+  if(parkedTour?.record===record.id){
+    tour=parkedTour;parkedTour=null;
+    const frontier=tour.inputMode==='practice'?tour.frames.length-1:(tour.frontier??tour.index);
+    if(JSON.stringify(tour.frames[frontier]?.case)!==JSON.stringify(record.c)){
+      tour={record:record.id,type:'reviewed',reviewed:true,title:'Current feedback · '+record.id,frames:[{case:clone(record.c),title:'Continue the current version',why:'Your answer, proposal and review stay on this feedback record.'}],index:0,inputMode:'practice',reviewUI:record.reviewUI||{role:'Requester',history:[],drafts:{}}};
+    }else tour.index=frontier;
+    if(tour.reviewUI)tour.reviewUI.historyIndex=null;
+    tour.playing=false;page='case';saveTour();render();focusTask();return;
+  }
+  openCapturedRecord(record.id,record.reviewUI?.role||'Requester');
 }
 function appendSteps(frames,c){
   for(let i=0;i<15;i++){
@@ -970,8 +983,8 @@ function chooseReview(choice,note){
   tour.inputMode='practice';tour.frames=frames;tour.index=index+1;
   rememberPractice(true);close();setPlay(tour.index<frames.length-1);render();focusTask();announce(frames[tour.index].title);
 }
-function selectCase(id){if(!data.items.some(x=>x.id===id))return;parkActive();data.current=id;save();page='case';filter='all';tab='checks';activeSource=-1;render();}
-function newItem(text=''){const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c:E.createCase(text)});selectCase(id);if(!text)$('source')?.focus();}
+function selectCase(id){close();if(!WS.canResume(id,clientId,data.items))return;parkActive();data.current=id;const item=selected();if(item.c.reviewFlow&&!item.demoOnly){item.reviewUI||={history:[],drafts:{}};item.reviewUI.role='Requester';item.reviewUI.historyIndex=null;}save();page='case';filter='all';tab='checks';activeSource=-1;render();}
+function newItem(text=''){const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c:E.createCase(text),clientId,demoOnly:false,submissionOrigin:'customer'});selectCase(id);if(!text)$('source')?.focus();}
 function apply(action,val){
 if(tour)return;const item=selected();const next=E.transition(item.c,action,val);
 if(next===item.c){announce('This action is unavailable at the current stage.');return;}item.c=next;save();activeSource=-1;close();render();announce(next.trail.at(-1)?.text||stages[next.stage]);}
@@ -1054,8 +1067,9 @@ function reviewReadQuestions(){const old=reviewState().questionDraft||here().rev
 function reviewError(error){let el=$('r-error');if(!el){el=document.createElement('p');el.id='r-error';el.className='review-private-note';el.setAttribute('role','alert');el.tabIndex=-1;($('dialog').open?$('dialog-body'):document.querySelector('.stage-task')).prepend(el);}el.textContent=error.message||error;el.focus();}
 function reviewCommit(action,value){if(reviewHistory())throw Error('Return to the current step before making a change.');const previous=here(),next=E.review(previous,action,value),s=reviewState();if(tour?.reviewed){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);tour.frames.push({case:next,title:next.trail.at(-1).text,why:'This is your action on the same feedback record. The owner and next step update with it.',role:next.owner});tour.index++;}else{s.history||=[];s.history.push(clone(previous));}selected().c=next;s.drafts={};s.questionDraft=null;s.answers={};s.historyIndex=null;s.previewScreen='pdf';save();saveTour();close();render();focusTask();announce(next.trail.at(-1).text);return next;}
 function reviewTransport(){const frame=tour.frames[tour.index],practice=tour.inputMode==='practice',history=practice&&tour.index<tour.frames.length-1;return '<div class="transport with-explanation"><div class="walk-player"><div class="tracktitle"><b>'+esc(tour.title||'Team-reviewed feedback')+'</b><span>'+esc(history?'Earlier step · read only':practice?'Hands-on · '+R.status(here()).join(' · '):'Example · '+(tour.index+1)+' of '+tour.frames.length)+'</span></div><div class="playtools">'+(practice?(history?R.button('current','Return to current step'):(R.status(here())[0]!=='Complete'&&reviewState().role!==R.status(here())[0]?R.button('role:'+R.status(here())[0],'View current owner'):'')):R.button('take-control','Try this step')+btn('toggle',tour.playing?'Pause':'Play',tour.playing?'pause':'play','walk-play')+btn('walknext','Next','next','walk-next-step',tour.index===tour.frames.length-1?'disabled':''))+'</div></div><div class="walk-explanation"><p class="walk-purpose"><b>Why this step</b> '+esc(frame.why||frame.title)+'</p></div></div>';}
-function beginReviewed(kind='pdf',options={}){yieldShowcaseDock();reviewCapture();stop();close();endTour();let frames=window.ReviewStory.build({kind,...options});let record;
-{const id='WQ-'+String(++data.serial).padStart(3,'0');record={id,c:frames[0].case};data.items.unshift(record);data.current=id;}
+function beginReviewed(kind='pdf',options={}){yieldShowcaseDock();reviewCapture();stop();close();endTour();let frames=options.useCurrent?[{case:clone(selected().c),title:'Continue the current version',why:'Continue this exact feedback record and its current version.'}]:window.ReviewStory.build({kind,...options});let record;
+if(options.useCurrent)record=selected();else{const id='WQ-'+String(++data.serial).padStart(3,'0');record={id,c:frames[0].case,clientId,demoOnly:true,submissionOrigin:'example'};data.items.unshift(record);data.current=id;}
+if(options.useCurrent)options.practice=true;
 let index=options.role==='Requester'?frames.findIndex(f=>['clarify','review'].includes(f.case.stage)):options.role==='Site owner'?frames.findIndex(f=>f.case.stage==='release'):0;if(index<0)index=0;if(options.practice)frames=frames.slice(0,index+1);record.c=frames[index].case;
 tour={record:record.id,type:'reviewed',reviewed:true,title:kind==='pdf'?'PDF feedback walkthrough':kind==='create'?'The “Create” walkthrough':'Your feedback walkthrough',frames,index,playing:false,inputMode:options.practice?'practice':'watch',reviewUI:{role:options.role||'Website team',history:[],drafts:{}},scenario:{kind,...options}};parkedTour=null;page='case';filter='all';save();saveTour();render();focusTask();}
 function reviewIntake(){reviewCapture();dialog('<p class="dlgdesc">Describe the problem in your own words. The team will review it before asking you any questions.</p><form id="r-intake-form"><label class="review-field">Feedback<textarea id="r-new-text" required maxlength="2000" placeholder="For example: I don’t understand what Create will do."></textarea></label><label class="review-field">Page<select id="r-new-target"><option>WinQuote homepage</option><option>WinQuote · Make PDF</option></select></label><label class="review-field">When did it happen? · optional<input id="r-new-time" maxlength="120" placeholder="For example: this morning"></label><p class="review-note">This demo records the page you select. It does not collect live logs or browser activity.</p><div class="dlgfoot"><button class="control primary">Submit feedback</button></div></form>','New feedback');}
@@ -1066,7 +1080,7 @@ if(k==='new'){reviewIntake();return;}
 if(k==='opt-in'){selected().c=E.beginTeamReview(here());selected().reviewUI={role:'Website team',history:[],drafts:{}};save();render();return;}
 if(!here().reviewFlow)return;
 reviewCapture();const c=here(),s=reviewState();
-if(k==='role'){if(arg==='Complete')return;if(tour?.reviewed&&tour.inputMode==='watch'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());}s.role=arg;s.details=false;close();save();saveTour();render();return;}
+if(k==='role'){if(arg==='Complete')return;if(tour?.reviewed&&tour.inputMode==='watch'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());}s.role=arg;s.details=false;page='case';close();save();saveTour();render();return;}
 if(k==='suggest'){const index=Number(action.split(':')[2]),q=c.reviewFlow.sentBundle.questions.find(q=>q.id===arg);if(q&&q.type==='text'){s.answers||={};s.answers[q.id]=q.options[index];save();saveTour();render();}return;}
 if(k==='details'){s.details=!s.details;render();if(!s.details)document.querySelector('.role-switch [data-go="r-details"]')?.focus();return;}
 if(k==='inbox'){doAction('filter:all');return;}
@@ -1094,7 +1108,7 @@ if(['draft-questions','close-questions','send-questions','deliver'].includes(k))
 document.addEventListener('change',event=>{if(event.target.id==='r-role'){reviewAction('role:'+event.target.value);return;}if(event.target.closest('[data-question]')||event.target.matches('[data-answer-id]'))reviewCapture();});
 document.addEventListener('input',event=>{if(event.target.matches('[data-review-draft],[data-q],[data-answer-id]')){if(tour?.reviewed&&tour.inputMode==='watch'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());const player=document.querySelector('.transport');if(player)player.outerHTML=reviewTransport();}reviewCapture();}});
 document.addEventListener('submit',event=>{if(!event.target.id.startsWith('r-'))return;event.preventDefault();try{
-if(event.target.id==='r-intake-form'){const text=$('r-new-text').value.trim(),target=$('r-new-target').value,time=$('r-new-time').value;const c=E.createReviewedCase(text,{target});c.reviewFlow.context={occurredAt:time};parkActive();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;close();page='case';save();render();focusTask();return;}
+if(event.target.id==='r-intake-form'){const text=$('r-new-text').value.trim(),target=$('r-new-target').value,time=$('r-new-time').value;const c=E.createReviewedCase(text,{target});c.reviewFlow.context={occurredAt:time};parkActive();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,clientId,demoOnly:false,submissionOrigin:'customer',captureSubmission:true,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;close();page='case';save();render();focusTask();return;}
 reviewCapture();const s=reviewState();if(reviewHistory())throw Error('Return to the current step before making a change.');if(event.target.id==='r-correction-form'){if(s.role!=='Requester')throw Error('Switch to Requester to continue.');reviewCommit('correct-understanding',{text:$('r-correction').value});return;}if(s.role!==R.status(here())[0])throw Error('Switch to the responsible role to continue.');
 if(event.target.id==='r-understanding-form'){reviewCommit('edit-understanding',{text:$('r-summary-edit').value});return;}
 if(event.target.id==='r-scope-form')reviewCommit('confirm-scope',s.drafts.scope);
@@ -1106,18 +1120,25 @@ if(event.target.id==='r-adjust-form')reviewCommit('adjust',{rev:here().rev,reaso
 
 function doAction(g){
 if(g==='showcase'){openShowcase();return;}
+if(g==='new-showcase'){parkActive();showcase=SM.fresh();openShowcase(true);return;}
 if(g==='site'){openCaptureSite();return;}
+if(g==='new-capture'){captureState.receipt=null;captureState.text='';captureState.when='';captureState.includePreview=false;captureState.open=true;openCaptureSite();return;}
 if(g.startsWith('r-')){reviewAction(g.slice(2));return;}
 if(here()?.reviewFlow)reviewCapture();
 if(g==='new'){reviewIntake();return;}
 if(g==='submit'&&!tour){selected().c=E.beginTeamReview(here());selected().reviewUI={role:'Requester',history:[],drafts:{}};save();render();return;}
-const [k,arg]=g.split(':');if(!['nav','mobileaside'].includes(k)){navOpen=false;$('nav').classList.remove('show');$('shade').hidden=true;}
+const [k,arg]=g.split(':');if(!['nav','mobileaside','toggle-walkthrough'].includes(k)){navOpen=false;$('nav').classList.remove('show');$('shade').hidden=true;}
 if(inPracticeHistory()&&['practice-submit','practice-accept','practice-adjust','team-deliver','team-view-requester','tour-answer','toggle','reset-example','take-control'].includes(k))return;
 if(tour?.playing&&['tab','evidence','mobileaside','location','ver','refine'].includes(k)){setPlay(false);render();}
 switch(k){
 case 'close':close();return;
 case 'nav':navOpen=!navOpen;renderNav();return;
 case 'mobileaside':asideOpen=!asideOpen;$('inspector')?.classList.toggle('aside-open',asideOpen);(asideOpen?document.querySelector('.mobile-close'):$('mobaside'))?.focus({preventScroll:true});return;
+case 'toggle-walkthrough':walkthroughExpanded=!walkthroughExpanded;try{localStorage.setItem('feedbackflow:walkthrough-expanded:v1',String(walkthroughExpanded));}catch{}renderNav();document.querySelector('[data-go="toggle-walkthrough"]')?.focus();return;
+case 'continue-current':openWalkthrough();return;
+case 'earlier-examples':dialog('<p class="dlgdesc">Older local records with no recorded customer origin are kept here. They are not counted as your feedback.</p><div class="dlgrows">'+data.items.filter(x=>x.legacyUnassigned&&WS.canResume(x.id,clientId,data.items)).map(x=>'<button data-go="case:'+esc(x.id)+'"><span><b>'+esc(x.id)+' · '+esc(label(x.c))+'</b><small>'+esc(stages[x.c.stage])+'</small></span></button>').join('')+'</div>','Earlier demo records');return;
+case 'role-examples':dialog('<p class="dlgdesc">Each example starts a separate sample. Your feedback stays unchanged.</p><div class="dlgrows">'+['customer','team','publisher'].map((id,i)=>'<button data-go="persona:'+id+'"><b>'+['Requester','Website team','Site owner'][i]+'</b></button>').join('')+'</div>','Choose a role example');return;
+case 'updates':parkActive();page='updates';render();return;
 case 'project':case 'filter':parkActive();filter=k==='project'?'all':arg;page='list';search='';render();return;
 case 'find':parkActive();filter='all';search='';page='list';render();$('searchbox').focus();return;
 case 'new':newItem();return;case 'case':selectCase(arg);return;case 'walk':begin('mine');return;case 'personas':personaMenu();return;case 'persona':begin(arg);return;
@@ -1208,7 +1229,7 @@ document.addEventListener('toggle',event=>{
     syncWalkthroughHeight();
   }
 },true);
-window.addEventListener('resize',()=>{syncWalkthroughHeight();$('nav').inert=window.innerWidth<=820&&!navOpen;});
+window.addEventListener('resize',()=>{syncWalkthroughHeight();if(page!=='showcase')renderDock();$('nav').inert=window.innerWidth<=820&&!navOpen;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 // In-context reporting and local asynchronous updates share the existing feedback records.
 const captureKey='feedbackflow:capture:v1',CS=window.FlowCaptureState;
@@ -1216,9 +1237,9 @@ let captureState={open:false,generated:false,text:'',when:'',includePreview:fals
 try{const stored=JSON.parse(localStorage.getItem(captureKey));if(stored&&typeof stored==='object')captureState={...captureState,...stored};}catch{}
 function saveCapture(){try{localStorage.setItem(captureKey,JSON.stringify(captureState));}catch{}}
 function captureInputs(){const field=$('capture-text');if(field){captureState.text=field.value;captureState.when=$('capture-when').value;captureState.includePreview=$('capture-preview').checked;}saveCapture();}
-function renderCapture(){captureState.onSite=true;saveCapture();$('nav').hidden=true;$('nav').inert=true;$('topbar').hidden=true;$('shade').hidden=true;$('walkthrough-dock').hidden=true;const updates=CS.updates(data.items,captureState.seen);$('main').innerHTML=window.FlowCaptureUI.render({...captureState,updates,updatesCount:updates.filter(u=>!u.read).length});captureAccessibility();if(showcase?.minimized&&showcase.c)renderDock();}
+function renderCapture(){captureState.onSite=true;saveCapture();$('nav').hidden=true;$('nav').inert=true;$('topbar').hidden=true;$('shade').hidden=true;$('walkthrough-dock').hidden=true;const updates=customerUpdates();const receiptRecord=data.items.find(x=>x.id===captureState.receipt?.id);if(receiptRecord&&receiptRecord.id!==data.current)captureState.receipt=null;const receiptStatus=captureState.receipt&&receiptRecord?guideStatus(receiptRecord):null;$('main').innerHTML=window.FlowCaptureUI.render({...captureState,receiptStatus,updates,updatesCount:updates.filter(u=>!u.read).length});captureAccessibility();renderDock();}
 function openCaptureSite(){reviewCapture();parkActive();close();page='site';navOpen=false;render();$('main').focus({preventScroll:true});}
-function openCapturedRecord(id,role='Requester'){captureInputs();parkActive();const record=data.items.find(x=>x.id===id);if(!record)return;data.current=id;record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;captureState.updatesOpen=false;captureState.open=false;page='case';save();saveCapture();render();focusTask();}
+function openCapturedRecord(id,role='Requester'){captureInputs();parkActive();const record=data.items.find(x=>x.id===id);if(!WS.canResume(id,clientId,data.items))return;data.current=id;record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;captureState.updatesOpen=false;captureState.open=false;page='case';save();saveCapture();render();focusTask();}
 function captureAction(action,key){captureInputs();switch(action){
 case 'generate':captureState.generated=true;break;
 case 'open':captureState.open=true;captureState.updatesOpen=false;break;
@@ -1229,7 +1250,7 @@ case 'workspace':captureState.onSite=false;page='list';saveCapture();render();re
 case 'view-feedback':if(captureState.receipt)openCapturedRecord(captureState.receipt.id);return;
 case 'new-feedback':captureState.receipt=null;captureState.text='';captureState.when='';captureState.includePreview=false;captureState.open=true;break;
 case 'updates':captureState.updatesOpen=!captureState.updatesOpen;captureState.open=false;break;
-case 'open-update':{const update=CS.updates(data.items,captureState.seen).find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id);return;}break;}
+case 'open-update':{const update=customerUpdates().find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id);return;}break;}
 }
 saveCapture();render();if(action==='open'||action==='example'||action==='new-feedback')($('capture-text')||document.querySelector('[data-capture="keep-working"]'))?.focus();else if(action==='generate'){document.querySelector('[data-capture="generate"]')?.focus();announce('Sample PDF ready. No file was created.');}else if(action==='close'||action==='keep-working')document.querySelector('[data-capture="open"]')?.focus();else if(action==='updates')document.querySelector(captureState.updatesOpen?'[data-capture="open-update"], #capture-updates button':'[data-capture="updates"]')?.focus();}
 document.addEventListener('click',event=>{const el=event.target.closest('[data-capture]');if(el){event.preventDefault();captureAction(el.dataset.capture,el.dataset.key);}});
@@ -1238,7 +1259,7 @@ document.addEventListener('change',event=>{if(event.target.closest('#capture-for
 function captureAccessibility(){if(page!=='site')return;const modal=captureState.open&&window.innerWidth<=760;$('capture-drawer')?.setAttribute('aria-modal',String(modal));for(const el of document.querySelectorAll('.capture-toolbar,.capture-business'))el.inert=modal;}
 window.addEventListener('resize',captureAccessibility);
 document.addEventListener('keydown',event=>{if(page!=='site')return;if(event.key==='Escape'){const updates=captureState.updatesOpen;captureState.open=false;captureState.updatesOpen=false;saveCapture();render();document.querySelector(updates?'[data-capture="updates"]':'[data-capture="open"]')?.focus();}else if(event.key==='Tab'&&captureState.open&&window.innerWidth<=760){const all=[...$('capture-drawer').querySelectorAll('button,input,textarea,select,summary')].filter(el=>!el.disabled&&el.getClientRects().length);const first=all[0],last=all.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}});
-document.addEventListener('submit',event=>{if(event.target.id!=='capture-form')return;event.preventDefault();try{captureInputs();const c=CS.createCase(E,captureState);const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,captureSubmission:true,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;captureState.receipt={id,raw:c.text};save();saveCapture();render();document.querySelector('[data-capture="keep-working"]')?.focus();announce('Feedback saved in this demo. The website team owns the next step.');}catch(error){const form=$('capture-form');let el=$('capture-error');if(!el){el=document.createElement('p');el.id='capture-error';el.setAttribute('role','alert');form.prepend(el);}el.textContent=error.message;}});
+document.addEventListener('submit',event=>{if(event.target.id!=='capture-form')return;event.preventDefault();try{captureInputs();const c=CS.createCase(E,captureState);const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,clientId,demoOnly:false,submissionOrigin:'customer',captureSubmission:true,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;captureState.receipt={id,raw:c.text};save();saveCapture();render();document.querySelector('[data-capture="keep-working"]')?.focus();announce('Feedback saved in this demo. The website team owns the next step.');}catch(error){const form=$('capture-form');let el=$('capture-error');if(!el){el=document.createElement('p');el.id='capture-error';el.setAttribute('role','alert');form.prepend(el);}el.textContent=error.message;}});
 
 
 // Curated presentation uses the same case engine and workspace records as the full app.
@@ -1246,9 +1267,42 @@ const SM=window.ShowcaseModel, showcaseKey='feedbackflow:curated-pdf:v1';
 let showcase=SM.fresh();
 try{const stored=JSON.parse(localStorage.getItem(showcaseKey));if(stored?.schema===1&&SM.scenes[stored.scene])showcase=stored;}catch{}
 function yieldShowcaseDock(){showcase.minimized=false;try{localStorage.setItem(showcaseKey,JSON.stringify(showcase));}catch{}}
-function saveShowcase(){try{localStorage.setItem(showcaseKey,JSON.stringify(showcase));}catch{} if(showcase.c&&showcase.id){let record=data.items.find(x=>x.id===showcase.id);if(!record){record={id:showcase.id,c:showcase.c,captureSubmission:true,curatedDemo:true,reviewUI:{history:[],drafts:{}}};data.items.unshift(record);}record.c=clone(showcase.c);record.reviewUI.role=SM.view({...showcase,historyIndex:null}).owner==='Complete'?'Requester':SM.view({...showcase,historyIndex:null}).owner;data.current=record.id;save();}}
+function saveShowcase(create=false){
+  try{localStorage.setItem(showcaseKey,JSON.stringify(showcase));}catch{}
+  if(!showcase.c||!showcase.id)return;
+  let record=data.items.find(x=>x.id===showcase.id);
+  if(!record&&create){record={id:showcase.id,c:showcase.c,clientId,demoOnly:false,submissionOrigin:'customer',captureSubmission:true,curatedDemo:true,reviewUI:{history:[],drafts:{}}};data.items.unshift(record);}
+  if(!record?.curatedDemo||!WS.canResume(record.id,clientId,data.items))return;
+  record.c=clone(showcase.c);record.reviewUI||={history:[],drafts:{}};
+  record.reviewUI.role=SM.view({...showcase,historyIndex:null}).owner==='Complete'?'Requester':SM.view({...showcase,historyIndex:null}).owner;
+  data.current=record.id;save();
+}
 function renderShowcase(){document.body.classList.remove('capture-mode');$('nav').hidden=true;$('nav').inert=true;$('topbar').hidden=true;$('shade').hidden=true;$('walkthrough-dock').hidden=true;document.querySelector('.sheet').classList.remove('has-walk-dock','has-parked-tour');$('main').innerHTML=window.ShowcaseUI.render(SM.view(showcase));}
-function openShowcase(){parkActive();close();const record=data.items.find(x=>x.id===showcase.id);if(record?.c.reviewFlow&&JSON.stringify(record.c)!==JSON.stringify(showcase.c)){showcase.c=clone(record.c);const f=record.c.reviewFlow;showcase.scene=({triage:'submitted','question-draft':'screen','awaiting-answer':'answer','answer-review':'plan','spec-review':'shared',candidate:'revise',checking:'revise',ready:'revise',review:'review',accepted:'release',authorized:'authorized',published:'done'})[f.phase]||showcase.scene;showcase.answer=record.c.answer||'';showcase.feedback=record.c.text;showcase.draftScope=clone(f.phase==='answer-review'?(f.suggestedScope||f.scope):(f.candidateDraft||f.confirmedScope||f.scope));showcase.draftScope.understanding=f.sharedUnderstanding?.text||showcase.draftScope.approach;showcase.draftQuestion=f.questionDraft[0]?.text||'';}if(record?.c.reviewFlow.phase==='awaiting-answer'&&record.c.reviewFlow.sentBundle?.round==='detailed'){showcase.minimized=false;showcase.historyIndex=null;data.current=record.id;record.reviewUI.role='Requester';page='case';saveShowcase();render();focusTask();announce('Continue this detailed question in the full workspace. Your current record is preserved.');return;}showcase.minimized=false;showcase.historyIndex=null;page='showcase';saveShowcase();render();$('main').focus({preventScroll:true});}
+function openShowcase(startFresh=false){
+  reviewCapture();parkActive();close();
+  const record=startFresh?null:currentContext();
+  if(!record?.curatedDemo){showcase=SM.fresh();}
+  else{
+    if(!WS.canResumeShowcase(showcase,record,data.current,clientId))showcase={...SM.fresh(),id:record.id,c:clone(record.c),clientId};
+    const changed=JSON.stringify(record.c)!==JSON.stringify(showcase.c)||showcase.scene==='intro';
+    if(changed){
+      showcase.c=clone(record.c);const f=record.c.reviewFlow;
+      showcase.scene=({triage:'submitted','question-draft':'screen','awaiting-answer':'answer','answer-review':'plan','spec-review':'shared',candidate:'revise',checking:'revise',ready:'revise',review:'review',accepted:'release',authorized:'authorized',published:'done'})[f.phase]||'submitted';
+      showcase.answer=record.c.answer||'';showcase.feedback=record.c.text;
+      showcase.draftScope=clone(f.phase==='answer-review'?(f.suggestedScope||f.scope):(f.candidateDraft||f.confirmedScope||f.scope));
+      showcase.draftScope.understanding=f.sharedUnderstanding?.text||showcase.draftScope.approach;
+      showcase.draftQuestion=f.questionDraft[0]?.text||'';
+    }
+    const f=record.c.reviewFlow,question=f.sentBundle?.questions;
+    // The curated surface cannot represent arbitrary edited question bundles or detailed specs.
+    const unsupported=f.phase==='awaiting-answer'&&(question?.length!==1||f.sentBundle.round==='detailed'||JSON.stringify(question[0]?.options)!==JSON.stringify(SM.options));
+    if(unsupported||(changed&&['question-draft','spec-review','candidate','checking','ready'].includes(f.phase))){
+      showcase.minimized=true;showcase.historyIndex=null;try{localStorage.setItem(showcaseKey,JSON.stringify(showcase));}catch{}
+      openCapturedRecord(record.id,record.reviewUI?.role||'Requester');return;
+    }
+  }
+  showcase.minimized=false;showcase.historyIndex=null;page='showcase';saveShowcase();render();$('main').focus({preventScroll:true});
+}
 function captureShowcase(){if(showcase.historyIndex!==null)return;const field=id=>$(id)?.value;if($('demo-feedback'))showcase.feedback=field('demo-feedback');if($('demo-question'))showcase.draftQuestion=field('demo-question');if($('demo-question-include'))showcase.includeQuestion=$('demo-question-include').checked;if($('demo-adjustment'))showcase.adjustment=field('demo-adjustment');if($('demo-approach'))showcase.draftScope={...(showcase.draftScope||{}),approach:field('demo-approach'),checks:field('demo-checks'),understanding:field('demo-understanding')||showcase.draftScope?.understanding};saveShowcase();}
 function showcaseAction(action,expectedRevision){try{
  if(action==='resume'){openShowcase();return;}
@@ -1266,7 +1320,7 @@ function showcaseAction(action,expectedRevision){try{
   showcase=SM.step(showcase,action,value);
   if(action==='submit')data.serial++;
  }
- showcase.error='';saveShowcase();render();if(!['open-preview','edit-plan'].includes(action)){$('main').focus({preventScroll:true});window.scrollTo(0,0);}announce(SM.view(showcase).owner+' · '+SM.view(showcase).next);
+ showcase.error='';saveShowcase(action==='submit'||action==='try-other');render();if(!['open-preview','edit-plan'].includes(action)){$('main').focus({preventScroll:true});window.scrollTo(0,0);}announce(SM.view(showcase).owner+' · '+SM.view(showcase).next);
  }catch(error){showcase.error=error.message;render();document.querySelector('.showcase [role="alert"]')?.focus();}}
  document.addEventListener('click',event=>{const el=event.target.closest('[data-demo]');if(el){event.preventDefault();showcaseAction(el.dataset.demo,el.dataset.rev);}});
  document.addEventListener('input',event=>{if(page==='showcase'&&event.target.closest('.showcase')&&showcase.historyIndex===null){captureShowcase();const updated=document.createElement('div');updated.innerHTML=window.ShowcaseUI.render(SM.view(showcase));const evidence=document.querySelector('.showcase-evidence');if(evidence)evidence.innerHTML=updated.querySelector('.showcase-evidence').innerHTML;document.querySelector('.showcase-actionbar').outerHTML=updated.querySelector('.showcase-actionbar').outerHTML;}});

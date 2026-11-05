@@ -177,3 +177,12 @@ Reference lock: [Attio's two-column onboarding](https://refero.design/pages/eb21
 | Calm motion | Current decision focus | Brief scene reveal and affected-content emphasis, disabled with reduced motion. |
 
 The quote document is an illustrative sample. The walkthrough can demonstrate intended behavior and decisions; it is not proof of real PDF generation, customer comprehension, business benefit or customer sign-off. Historical scope allows a zero-question route; the curated Ask branch makes the proposed customer touchpoint visible without claiming the historical ticket necessarily requires it.
+
+
+## Customer workspace navigation · November 5 correction
+
+The customer workspace now has only My feedback and Updates as permanent destinations. Walkthrough is a collapsible secondary launcher, informed by the supplied Attio Getting started reference. Its compact summary keeps the current ticket ID, responsible role and next customer step visible; expanded controls distinguish continuing this record, changing the demo perspective, and starting another sample. Existing PDF, Create and role routes remain available.
+
+The approved serif headings / neutral sans text, white canvas, thin borders and WinQuote navy are unchanged. Status filters and search belong inside My feedback. The current ticket identity remains visible at narrow widths. Mobile uses the same record-bound summary in a compact bottom dock. Desktop keeps it in navigation to avoid duplicating the guide.
+
+Counts and updates share the local WinQuote customer scope. Customer submissions (including the curated submitted PDF case) are distinct from example-only records. Legacy records without customer-origin evidence are retained under Earlier demo records, outside customer counts. This is prototype metadata, not authentication or access control. A notification opens its record as Requester at the current version; resuming a guide uses that same live record and cannot revive another ticket's cached completion.
