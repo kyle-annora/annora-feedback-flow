@@ -4386,7 +4386,7 @@ function appendSteps(frames,c){
   return frames;
 }
 function begin(type,reset=false,startPractice=false,watchTeamExample=false){
-  if(['mine','create','customer','team','publisher'].includes(type)){beginReviewed(type==='mine'?(selected().c.reviewFlow?.source.id==='fb_2026-07-11_002'?'pdf':'own'):'create',{text:type==='mine'?selected().c.text:undefined,useCurrent:type==='mine',target:type==='mine'?selected().c.reviewFlow?.target:undefined,context:type==='mine'?selected().c.reviewFlow?.context:undefined,practice:startPractice,role:({customer:'Requester',team:'Website team',publisher:'Site owner'})[type]});return;}
+  if(['mine','create','customer','team','publisher'].includes(type)){beginReviewed(type==='mine'?(selected().c.reviewFlow?.source.id==='fb_2026-07-11_002'?'pdf':'own'):'create',{text:type==='mine'?selected().c.text:undefined,useCurrent:type==='mine',target:type==='mine'?selected().c.reviewFlow?.target:undefined,context:type==='mine'?selected().c.reviewFlow?.context:undefined,answer:type==='mine'&&selected().c.answer?selected().c.answer:undefined,ask:type==='mine'&&selected().c.answer?true:undefined,practice:startPractice,role:({customer:'Requester',team:'Website team',publisher:'Site owner'})[type]});return;}
   if(type==='team'&&startPractice){
     const saved=reset?null:savedTour(teamPracticeKey);
     endTour();close();page='case';filter='all';
