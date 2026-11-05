@@ -152,3 +152,7 @@ The reporting surface is a deliberately limited Make PDF sample inside this arti
 Submitted feedback stays on the business page. Demo Updates opens the original submitted record at its current actionable version. Shared understanding, screened initial questions, a distinct optional detailed question batch, and V1/V2 review use the same records. History stays in the context pane; private drafts never become customer questions until explicitly sent. No mandatory extra customer approval is added to the understanding step.
 
 Only actual local capture submissions create these update entries. Walkthrough exercises do not create customer notifications. Keep existing legacy entry points and saved records intact. Mobile reporting uses a fullscreen drawer with background inertness, a focus loop, and focus restoration; desktop retains the nonmodal side panel.
+
+## Annora workspace brand
+
+The sidebar uses the official lowercase `annora` wordmark from [annora.ai](https://annora.ai/): Archivo 900, −0.04em tracking and a small brass square. The former invented wavy FlowMark is removed. The official Annora favicon identifies the browser tab, titled “Annora · Feedback Flow”. Brand styling is confined to the wordmark; existing serif headings, neutral sans body, workflow and WinQuote sample identity remain intact. Source URLs and asset hashes are recorded in `assets/brand/sources.json`; Archivo retains its OFL license. The font and favicon are bundled locally so the standalone artifact does not depend on a third-party request.

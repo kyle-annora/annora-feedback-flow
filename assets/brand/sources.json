@@ -1,0 +1,21 @@
+{
+  "source": "Official Annora website. Archivo from existing website mirror; current site CSS references the same asset. Live font request returned403; no invented replacement.",
+  "wordmark_reference": "https://annora.ai/",
+  "assets": [
+    {
+      "file": "archivo-latin-400-900-normal.woff2",
+      "url": "https://annora.ai/assets/fonts/archivo/archivo-latin-400-900-normal.woff2",
+      "sha256": "7150c0ec5ad356453013d11affec1fbab95de0dd2dcecb043b4f1cb7f87c4ba4"
+    },
+    {
+      "file": "OFL-Archivo.txt",
+      "url": "https://github.com/google/fonts/blob/main/ofl/archivo/OFL.txt",
+      "sha256": "108b4e57c9c796d3d38d0428ca7ee39de47ad93187302718d9b2d8864b9b716b"
+    },
+    {
+      "file": "annora-favicon.svg",
+      "url": "https://annora.ai/favicon.svg",
+      "sha256": "0665644ff41c840408c550449a3933c522c8c4d430692c4cf348a43e05380f23"
+    }
+  ]
+}
