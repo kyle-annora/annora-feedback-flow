@@ -1,111 +1,84 @@
 ---
-name: "Feedback Flow · WinQuote"
-description: "A light feedback record with editable source text, a versioned candidate and acceptance evidence."
+name: "Feedback Flow · original artifact iteration"
+description: "The existing Annora record, refined with approved neutral serif/sans hierarchy and an editable team review."
 colors:
-  bg: "#f5f5f7"
-  nav: "#f4f4f6"
-  paper: "#fff"
-  type: "#222228"
-  ink2: "#50505a"
-  muted: "#73737d"
-  line: "#e9e9ec"
-  blue: "#5146c9"
-  blue-hover: "#4339b0"
-  lav: "#efedfc"
-  pass: "#39836a"
+  bg: "#ffffff"
+  nav: "#fafafa"
+  paper: "#ffffff"
+  type: "#262626"
+  ink2: "#595959"
+  muted: "#737373"
+  line: "#e6e6e6"
+  line-strong: "#d4d4d4"
+  blue: "#153e5c"
+  blue-hover: "#10334d"
+  lav: "#edf2f6"
+  pass: "#43796b"
   danger: "#a54b31"
-  source-field: "#f8f8fa"
-  proof-panel: "#fcfcfe"
-  proof-text: "#282733"
-  version-wash: "#f0eef9"
-  version-ink: "#655991"
+  source-field: "#fafafa"
+  proof-panel: "#ffffff"
+  proof-text: "#262626"
+  version-wash: "#f0f3f6"
+  version-ink: "#516579"
 typography:
   title:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Inter\", \"Helvetica Neue\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
-    fontSize: "clamp(24px, 2.05vw, 31px)"
-    fontWeight: 660
-    lineHeight: 1.28
-    letterSpacing: "-.035em"
+    fontFamily: "Source Serif Pro, Georgia, serif"
+    fontSize: "clamp(30px, 2.5vw, 36px)"
+    fontWeight: 400
+    lineHeight: 1.15
+    letterSpacing: "-.03em"
+  section:
+    fontFamily: "Source Serif Pro, Georgia, serif"
+    fontSize: "22px–27px"
+    fontWeight: 400
+    lineHeight: 1.2
   candidate:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Inter\", \"Helvetica Neue\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
+    fontFamily: "Inter, system sans-serif"
     fontSize: "clamp(19px, 1.65vw, 24px)"
     fontWeight: 490
     lineHeight: 1.43
-    letterSpacing: "-.022em"
   body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Inter\", \"Helvetica Neue\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
+    fontFamily: "Inter, system sans-serif"
     fontSize: "14px"
-    lineHeight: 1.5
+    lineHeight: 1.75
   control:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Inter\", \"Helvetica Neue\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
-    fontSize: "12px"
+    fontFamily: "Inter, system sans-serif"
+    fontSize: "12px–14px"
     fontWeight: 520
     lineHeight: 1.4
   version:
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
     fontSize: "10px"
     fontWeight: 560
-    lineHeight: "17px"
 rounded:
-  tag: "4px"
+  tag: "4px–5px"
   control: "6px"
-  field: "7px"
+  field: "6px"
   panel: "8px"
-  sheet: "11px"
+  sheet: "0px"
 spacing:
   section-separation: "24px"
-  inspector-gutter: "18px"
-  mobile-gutter: "16px"
-components:
-  button-primary:
-    backgroundColor: "{colors.blue}"
-    textColor: "{colors.paper}"
-    typography: "{typography.control}"
-    rounded: "{rounded.control}"
-    padding: "6px 11px"
-  button-outline:
-    backgroundColor: "{colors.paper}"
-    textColor: "#454550"
-    typography: "{typography.control}"
-    rounded: "{rounded.control}"
-    padding: "6px 11px"
-  button-subtle:
-    backgroundColor: "{colors.paper}"
-    textColor: "#454550"
-    typography: "{typography.control}"
-    rounded: "{rounded.control}"
-    padding: "6px 11px"
-  source-field:
-    backgroundColor: "{colors.source-field}"
-    textColor: "#33333e"
-    rounded: "{rounded.field}"
-    padding: "11px 13px"
-  queue-row:
-    textColor: "#565660"
-    rounded: "{rounded.control}"
-    padding: "6px 10px"
-  version-chip:
-    backgroundColor: "{colors.version-wash}"
-    textColor: "{colors.version-ink}"
-    typography: "{typography.version}"
-    rounded: "{rounded.tag}"
-    padding: "0 5px"
-  candidate-panel:
-    backgroundColor: "{colors.proof-panel}"
-    textColor: "{colors.proof-text}"
-    rounded: "{rounded.panel}"
-    padding: "16px 18px 18px"
+  inspector-gutter: "22px"
+  mobile-gutter: "18px"
+assets:
+  provenance: "assets/font-sources.json"
+  approvedSource: "../../outputs/winquote-feedback-visuals-v2/assets"
 ---
 
-# Feedback Flow · WinQuote feedback workspace
-Primary lock: [Cycle’s light feedback document](https://refero.design/pages/2b8f8897-0054-472f-8cf3-eb5b57582e87). Also inspected [Cycle’s dark feedback + insights layout](https://refero.design/pages/a721db29-4fe5-490c-9dc2-f6eaccdf0d82) and the actual previous build. The light product screenshot, not Cycle marketing or the prior “live paper” motion study, governs the page.
+
+# Feedback Flow · original artifact iteration
+This iteration applies the approved `winquote-feedback-visuals-v2` direction to the original Annora artifact. It preserves the existing record, task, history, player and state structure. It does not replace the application with a new homepage or a gallery of standalone mockups.
+
+Primary composition lock: [Cycle’s light feedback document](https://refero.design/pages/2b8f8897-0054-472f-8cf3-eb5b57582e87). Cycle owns the current-task column and supporting history pane. The previously researched Attio direction owns the compact, resumable walkthrough and precise controls. The user-approved serif/sans role split governs typography: Source Serif Pro for page/task/section headings, Inter for body, fields, navigation and controls. No new visual research direction supersedes that lock.
+
+The approved V2 palette replaces the earlier indigo/lavender reading treatment. Text and broad surfaces are neutral; navy belongs to primary buttons, selected controls and small status marks. Existing green/rust evidence marks remain small and semantic. Font files are copied from the approved candidate; their licenses and original provenance are in `assets/`.
 
 | Decision | Reference → application |
 | --- | --- |
-| Document sheet | Cycle’s quiet left navigation and white document surface frame the record. Keep the object title compact enough for the current task to lead. |
+| Document sheet | Cycle’s quiet left navigation and white document surface frame the record. The sheet meets the rail with a thin rule, without an inset rounded outer card. Keep the object title compact enough for the current task to lead. |
 | Task hierarchy | Four milestones orient the reader. The current step shows the owner, their decision and the action that moves the record forward. The completed view contains one result heading, a subject/version line and one return action. |
 | Secondary pane | Cycle’s tab row and divider. The persistent right panel holds Details and Activity. Details contains the original request, requester answer and immutable submitted versions. Drafting, preparation and review also expose Checks. On phones, Feedback details opens the same panel as a bottom sheet. |
-| Accent + components | Small 16px strokes, compact toolbar, slate tones and an indigo primary action. Semantic colors limited to people, requirement status, and handoffs. No large purple panels. |
+| Accent + components | Small strokes, compact toolbar, 1px neutral dividers and navy primary actions. People and reading copy use neutral grays. Color is confined to actions, selected states and small status marks; no large tinted panels. |
 | Editing | Selected source phrase, updated candidate and measured value share one short pulse. Edited record remains anchored; reduced motion omits the pulse. |
 | Accountability | Woven review packet and agreed user journey: separate the requirement from its result, exact sources, visible owner, recorded snapshots, accepted version separate from publication. |
 | Walkthrough | Use the actual record and a compact player. Watching example labels scripted decisions. Requester practice waits for the person at clarification and review. Show team-owned steps as waiting, label edited drafts as team revisions, and put the version-specific review question next to the candidate. Practice never changes a saved feedback record. |
@@ -122,32 +95,50 @@ A record opens to its current task. Past feedback, answers and delivered version
 
 ## Colors
 
-Use indigo for the walkthrough, forward actions and the active tab underline. The neutral rail frames a white document. Dividers separate reading regions. Use the pale source field for editable words and the near-white proof panel for the candidate. Green check icons identify passing evidence, rust identifies failed evidence, and gray with an explicit Reviewer judgment label identifies checks that need a person.
+The canvas and record are white, the rail and context pane are #fafafa, and 1px #e6e6e6 rules separate regions. Headings use #262626, reading copy #595959 and supporting text #737373. Navy #153e5c is reserved for actions, selection and small status marks. The walkthrough is a neutral guide, not a colored banner. Green check icons identify passing evidence, rust marks failed evidence, and gray with an explicit Reviewer judgment label identifies checks that need a person. Avatar colors do not imply role permissions.
 
 ## Typography
 
-Use the system sans stack for Chinese and English. The current task is the most prominent heading. Candidate copy is larger than the 14px source text and uses a lighter weight. The retained next-step instruction begins on its own line. IDs and version tags use system monospace. Evidence measurements use tabular numerals.
+Use locally bundled Source Serif Pro for complete page, task and section headings. Use locally bundled Inter for body text, labels, candidate copy, navigation, buttons and metadata; system fonts provide glyph fallbacks. The current task is the most prominent heading, at 30–36px. The record identity remains quieter at 24–29px. Main section headings are 22–27px and context headings 19–20px. Body copy is 14px; supporting context is 12–13px. Mobile editable fields use 16px. IDs and version tags remain monospace; measurements use tabular numerals. Do not style isolated words in a different face or accent color.
 
 ## Layout
 
 | Viewport | Navigation and document | Evidence |
 | --- | --- | --- |
-| Above 1120px | 198px rail and 52px top bar. The document body caps at 850px. At 1640px and wider, the document column’s contents cap at 1130px. | Width follows `clamp(267px, 23vw, 342px)`. |
-| 821–1120px | 164px rail and 21px document side padding. | Fixed 248px pane. |
-| 661–820px | 210px off-canvas navigation, 48px top bar and edge-to-edge sheet. | Fixed 240px pane. |
-| 660px and below | Single column with 16px side padding. All four progress labels are visible. | Summary below the candidate opens a bottom sheet capped at the smaller of 77dvh and 640px. |
+| Above 1120px | 220px rail, 64px top bar, white sheet with no outer inset. Task content caps at 52rem. | `clamp(276px, 22vw, 316px)` context pane. |
+| 821–1120px | 190px rail and 26px task gutters. | Fixed 258px pane. |
+| 661–820px | 220px off-canvas navigation, 56px top bar, 23px task gutters. | Fixed 248px pane. |
+| 660px and below | One column with 18px task gutters. All four progress labels remain visible. Main actions are at least 44px high. | Feedback details opens the existing bottom sheet. |
+
+At 820px and below, closed `#nav` uses `visibility:hidden` and `pointer-events:none`; `#nav.show` restores visibility. This prevents hidden offscreen controls from remaining keyboard stops. Script-owned inert state and focus management are separate from this stylesheet.
 
 ## Elevation & Depth
 
-The rail, document and inspector meet along 1px borders. Shadows are reserved for dialogs and the open mobile evidence sheet. Keyboard focus uses a 2px indigo outline on buttons and links.
+The rail, document and inspector meet along 1px borders. Shadows are reserved for dialogs, the open mobile evidence sheet and the simulated PDF paper. Keyboard focus uses a 2px blue-gray outline with an offset, including text fields and selects. The walkthrough dock uses a border rather than a floating shadow.
 
 ## Shapes
 
-Use small rectangles for actions and version tags, softly rounded corners for the source and proof, and circles for owners and status indicators. The desktop sheet has an 11px radius. At 820px and below it fills the viewport with square corners.
+Use 6px controls, 8px bounded editors and proof panels, and small circles for owners/status indicators. The outer workspace is square and edge-aligned. Keep question options as rows inside the editor, rather than adding a separate card for each option.
 
 ## Components
 
-- **Feedback source.** The field grows from 56px to 320px. Its minimum rises to 76px on small screens. Focus changes its background to white and adds a 2px lavender outline.
+- **Feedback source.** The field grows from 56px to 320px. Its minimum rises to 76px on small screens. Focus changes its background to white and adds a 2px blue-gray outline.
 - **Candidate and checks.** A version tag sits beside the candidate section heading. Changed candidate fragments and affected evidence rows briefly highlight. Opening a check reveals its source. A failed word count also shows the excess in words.
 - **Owner and actions.** The current step names the responsible role and gives that person one primary action. Reduced-motion preferences disable animations and transitions.
 - **Review and release.** Separate controls label acceptance, authorization and simulated publication. The receipt keeps acceptance and site-owner authorization distinct. The sidebar keeps older versions and the activity log available at every stage.
+
+
+## Integrated review components
+
+- **Team review.** `.team-review-panel` carries the task; `.review-intro` provides one serif section heading and short neutral explanation. `.context-quote` retains the requester’s words with a quiet left rule. It is evidence, not another primary card.
+- **Fields and questions.** `.review-field` supports a wrapping label or label-plus-control container. `.question-editor` is one bounded editor; `.question-options` contains compact option rows. `.question-disposition` groups the destination decision. Labels, controls and helper text remain sans.
+- **Private preparation.** `.review-private-note` uses a neutral gray inset. `.review-status` is a small badge. Visual styling never substitutes for the underlying draft/sent visibility boundary.
+- **Review and results.** `.result-preview`, `.check-summary`, `.scope-changes` and `.reviewed-history` separate the candidate, checks and earlier snapshots with rules. `.review-actions` gives the current transition a stable action row. `.role-switch` stays visually secondary to the product action.
+- **Reporting context.** `.context-capture` groups the source context in a compact neutral panel. It does not imply a screenshot, log integration or additional evidence was actually captured.
+- **PDF proof.** `.pdf-preview-page`, `.pdf-preview-toolbar`, `.pdf-sheet` and `.pdf-preview-links` provide a clean paper-like preview and explicit return controls. It uses typography and rules, with no invented photography or fabricated customer imagery.
+
+## Implementation and review boundary
+
+This styling unit changes `studio.css`, this design record and local font assets only. Existing IDs, route contracts, state machines, draft ownership, exact-version review rules and walkthrough controls remain implementation-owned. The copied fonts must be included or embedded by the release bundle; reading the editable page alone is not proof the generated standalone output includes them.
+
+Visual verification should include the current task, question editor, candidate review, open context pane, collapsed/resumed guide and PDF preview at 1440px and 390px. Confirm text contrast, long labels, keyboard focus, wrapped actions and closed navigation. Automated workflow tests remain separate evidence from the rendered design review.

@@ -4,6 +4,7 @@
   const Model = common ? require("./model.js") : root.FlowModel;
   const Personal = common ? require("./custom-story.js") : root.FlowCustomStory;
   const Hesitation = common ? require("./hesitation.js") : root.FlowHesitation;
+  const TeamReview = common ? require("./team-review.js") : root.FlowTeamReview;
   const initialFeedback = "Recommend templates first for standard quotes, and start custom quotes from scratch. Keep the reminder to add customer details next. Use no more than 18 words.";
   const ownerByStage = {
     draft: "Requester", clarify: "Requester", processing: "Website team", review: "Reviewer",
@@ -116,7 +117,7 @@
     }
   }
 
-  function derive(c) {
+  function deriveLegacy(c) {
     if (!workStages.includes(c.stage) && c.versions.length) {
       const version = c.versions.at(-1);
       return { ...clone(version.view), question:null };
@@ -171,6 +172,14 @@
     return view;
   }
 
+  const legacy = {createCase,derive:deriveLegacy,transition:(c,action,value)=>apply(c,action,value,false)};
+  function createReviewedCase(text = initialFeedback, options = {}) {
+    return TeamReview.create(createCase(text),options,legacy);
+  }
+  function beginTeamReview(c,options = {}) { return TeamReview.begin(c,options,legacy); }
+  function review(c,action,value) { return TeamReview.transition(c,action,value,legacy); }
+  function derive(c) { return c.reviewFlow ? TeamReview.derive(c,legacy) : deriveLegacy(c); }
+
   const workStage = view => view.question ? "clarify" : view.blocked ? "blocked" : "processing";
   function setStage(c, stage) { return {...c, stage, owner:ownerByStage[stage]}; }
   function log(c, action, actor, text, simulated) {
@@ -180,6 +189,7 @@
   // Old builds sometimes delivered the raw reply as if it were requested
   // copy. Reopen only outstanding work; never regenerate a completed release.
   function resumeWorkingCase(c) {
+    if (c.reviewFlow) return c;
     if (!c.answer || ["draft","published","clarify"].includes(c.stage) || !needsWordingRetry(c)) return c;
     const last = c.versions.at(-1);
     if (!workStages.includes(c.stage)) {
@@ -194,6 +204,7 @@
   function editSource(c,text) {
     const raw = String(text);
     if (raw === c.text) return c;
+    if (c.reviewFlow) return createReviewedCase(raw,{kind:c.reviewFlow.kind,target:c.reviewFlow.target,sourceId:c.reviewFlow.source.id,sourceHistory:c.reviewFlow.source.history});
     if (c.versions.length) return createCase(raw);
     const fresh = {...c,text:raw,intakeVersion:2,candidateOverride:null};
     if (!c.answerKey || askKey(intakeQuestion(fresh)) !== c.answerKey) {
@@ -204,6 +215,7 @@
   }
 
   function editCandidate(c,text) {
+    if (c.reviewFlow) return review(c,"edit-candidate",text);
     if (!["processing","blocked"].includes(c.stage)) return c;
     if (text != null && typeof text !== "string") return c;
     const override = text ?? null;
@@ -220,7 +232,7 @@
     return log(next,"reviseAdjustment","Reviewer",`Updated the revision request for V${c.rev}: ${note}`,false);
   }
 
-  function transition(c,action,value) { return apply(c,action,value,false); }
+  function transition(c,action,value) { return c.reviewFlow ? review(c,action,value) : apply(c,action,value,false); }
   function apply(c,action,value,simulated) {
     c = resumeWorkingCase(c);
     const view = derive(c), note = clean(value);
@@ -286,6 +298,7 @@
   }
 
   function step(c) {
+    if (c.reviewFlow) return c;
     const repaired = resumeWorkingCase(c);
     if (repaired !== c) return repaired;
     const view = derive(c);
@@ -311,7 +324,8 @@
 
   const api = {initialFeedback,hesitationFeedback:Hesitation.feedback,hesitationAnswers:Hesitation.answers,
     createCase,editSource,editCandidate,reviseAdjustment,derive,resumeWorkingCase,transition,step,
-    suggestChange:Hesitation.suggestChange, revisionDraft:Hesitation.revisionDraft};
+    suggestChange:Hesitation.suggestChange, revisionDraft:Hesitation.revisionDraft,
+    createReviewedCase,beginTeamReview,review,reviewPreview:TeamReview.preview,pdfFeedback:TeamReview.pdfFeedback};
   root.CaseEngine = api;
   if (common) module.exports = api;
 })(globalThis);

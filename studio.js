@@ -42,7 +42,7 @@ function savedRoleAnswer(){
 }
 let roleAnswer=savedRoleAnswer();
 const transition=(c,acts)=>acts.reduce((a,x)=>E.transition(a,...x),c);
-function init(){return {current:'WQ-017',serial:17,items:[{id:'WQ-017',c:E.createCase()},{id:'WQ-016',c:transition(E.createCase(examples[2][1]),[['submit']])},{id:'WQ-015',c:transition(E.createCase(examples[1][1]),[['submit'],['deliver']])}]}}
+function init(){return {current:'WQ-018',serial:18,items:[{id:'WQ-018',c:E.createReviewedCase(E.pdfFeedback),reviewUI:{role:'Website team',history:[],drafts:{}}},{id:'WQ-017',c:E.createCase()},{id:'WQ-016',c:transition(E.createCase(examples[2][1]),[['submit']])},{id:'WQ-015',c:transition(E.createCase(examples[1][1]),[['submit'],['deliver']])}]}}
 let data;
 try {
   const stored=JSON.parse(localStorage.getItem(key));
@@ -99,7 +99,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 function save(){try{localStorage.setItem(key,JSON.stringify(data));}catch{}}
 function saveTour(){
   const current=tour||parkedTour;
-  const resumeIndex=inPracticeHistory()?practiceFrontier():current?.index;
+  const resumeIndex=current?.reviewed&&current.inputMode==='practice'?current.frames.length-1:inPracticeHistory()?practiceFrontier():current?.index;
   const snapshot=current?JSON.stringify({...current,index:resumeIndex,minimized:!tour,playing:false}):null;
   try{
     if(snapshot){
@@ -120,7 +120,7 @@ const avatar=(who,s=17)=>{const r=role(who);return '<span class="avatar '+r[1]+'
 const fileTag=()=>'<span class="wmark" aria-hidden="true">W</span>';
 const btn=(action,txt,icon,cls='',extra='')=>'<button type="button" data-go="'+action+'" class="control '+cls+'" '+extra+'>'+(icon?I(icon):'')+esc(txt)+'</button>';
 const iconbtn=(act,icon,label)=>'<button type="button" class="iconbtn" data-go="'+act+'" aria-label="'+esc(label)+'" title="'+esc(label)+'">'+I(icon)+'</button>';
-const label=c=>{if(!c.text.trim())return 'New feedback';const v=E.derive(c);if(['button','hesitation'].includes(v.kind))return 'Homepage quote button';if(v.kind==='entry')return 'Homepage quote instructions';if(/rules?|discounts?|pric(?:e|ing)|规则|折扣|价格/i.test(c.text))return 'Homepage pricing rules';return 'Homepage feedback';};
+const label=c=>{if(c.reviewFlow)return window.ReviewUI.title(c);if(!c.text.trim())return 'New feedback';const v=E.derive(c);if(['button','hesitation'].includes(v.kind))return 'Homepage quote button';if(v.kind==='entry')return 'Homepage quote instructions';if(/rules?|discounts?|pric(?:e|ing)|规则|折扣|价格/i.test(c.text))return 'Homepage pricing rules';return 'Homepage feedback';};
 const badge=c=>'<span class="state '+esc(c.stage)+'"><i></i>'+esc(stages[c.stage])+'</span>';
 function matches(c,filter){
   if(filter==='all')return true;
@@ -144,10 +144,13 @@ function renderNav(){
     '<div class="navgroup"><span class="navlabel">Queues</span>'+queueLinks+'</div>'+
     '<div class="navgroup project-group"><span class="navlabel">Projects</span><button class="navrow" data-go="project">'+fileTag()+'<span>WinQuote</span></button></div>'+
     '<div class="rail-end"><span class="navlabel">Walkthroughs</span>'+
+      '<button class="navrow" data-go="r-pdf-watch">'+I('file',16)+'PDF · team review</button>'+
+      '<button class="navrow" data-go="r-pdf-ask">'+I('ask',16)+'PDF · ask the customer</button>'+
       '<button class="navrow" data-go="create-tour">'+I('branch',16)+'Explore “Create”</button>'+
       '<button class="navrow" data-go="personas">'+I('play',15)+'Role walkthroughs</button>'+
       '<div class="local"><span class="local-dot"></span>Local demo workspace</div></div>';
   nav.classList.toggle('show',navOpen);
+  nav.inert=window.innerWidth<=820&&!navOpen;
   $('shade').hidden=!navOpen;
 }
 function renderBar(){
@@ -163,6 +166,8 @@ function renderBar(){
   let tool='';
   if(isCase&&tour)tool=btn('minimize-tour','Minimize walkthrough','down','subtle walk-minimize','aria-expanded="true" aria-controls="main"');
   else if(isCase&&c.stage!=='published')tool=btn('walk','Play walkthrough','play','outline',c.text.trim()?'':'disabled');
+  if(isCase&&c.reviewFlow&&!tour){tool=btn('r-back','Previous step','back','subtle',reviewState().history?.length?'':'disabled')+tool;}
+  else if(isCase&&!tour&&['clarify','processing','blocked'].includes(c.stage))tool=btn('r-opt-in','Review with team','people','outline')+tool;
   $('topbar').innerHTML='<div class="crumb">'+iconbtn('nav','menu','Open navigation')+
     navigation+crumb+'</div><div class="tools">'+tool+'</div>';
 }
@@ -371,6 +376,7 @@ function walkExplanation(frame){
 }
 function transport(){
   if(!tour)return '';
+  if(tour.reviewed)return reviewTransport();
   if(isTeamPractice()||(isHandsOn()&&['release','authorized','published'].includes(here().stage))){
     const history=inPracticeHistory();
     const status=history?'Earlier step · Read only':inOwnerView()?'Site owner view':
@@ -660,6 +666,7 @@ function syncWalkthroughHeight(){
   $('main').style.setProperty('--walkthrough-height',height+'px');
 }
 function caseMain(){
+  if(here().reviewFlow){const c=reviewCase(),s=reviewState();$('main').innerHTML=transport()+R.render(c,{...s,inTour:Boolean(tour),watching:tour?.inputMode==='watch',history:reviewHistory()});if(s.details&&window.innerWidth<=660){document.querySelector('.team-review-panel').inert=true;document.querySelector('.reviewed-history [data-go="r-details"]')?.focus();}syncWalkthroughHeight();return;}
   const c=here(),v=displayedView(c),checks=usesChecks(c);
   if(panelStage!==c.stage){
     tab=checks?'checks':'context';
@@ -686,7 +693,8 @@ const nm=navRows.find(x=>x[0]===filter)?.[2]||'Feedback inbox';
 $('main').innerHTML='<div class="listpage"><div class="listhead"><div><h1>'+esc(nm)+'</h1><p>WinQuote <span>/</span> '+rows.length+' '+(rows.length===1?'feedback item':'feedback items')+'</p></div>'+btn('new','New feedback','plus','primary')+'</div><div class="listtools"><span>'+I('feedback')+'Feedback</span><label>'+I('search',15)+'<input id="searchbox" aria-label="Search feedback" placeholder="Search feedback…" value="'+esc(search)+'"></label></div><div class="listrows">'+(rows.length?rows.map(x=>'<button class="listitem" data-go="case:'+x.id+'"><span class="list-id">'+esc(x.id)+'</span><div><strong>'+esc(label(x.c))+'</strong><span>'+esc(x.c.text||'Empty draft')+'</span></div>'+badge(x.c)+I('next',15)+'</button>').join(''):'<div class="listempty">'+I('inbox',24)+'<p>No feedback here yet.</p>'+btn('filter:all','Back to inbox','','outline')+'</div>')+'</div></div>';
 }
 function dockStatus(current){
-  if(!current)return ['Requester','Try the requester role'];
+  if(!current)return selected().c.reviewFlow?R.status(selected().c):['Requester','Try the requester role'];
+  if(current.reviewed)return R.status(current.frames[current.index].case,current.reviewUI?.role);
   const c=current.frames[current.index].case;
   const rev='V'+c.rev;
   if(isHandsOn(current)){
@@ -733,11 +741,12 @@ function renderDock(){
       '<span class="walk-dock-status"><span class="walk-dock-owner"></span> <span class="walk-dock-separator" aria-hidden="true">·</span> <span class="walk-dock-action"></span></span></span>'+
       '<span class="walk-dock-arrow">'+I('next',14)+'</span></button>';
   }
+  dock.querySelector('.walk-dock-name').textContent=parkedTour?.title||'Walkthrough';
   const [owner,action]=dockStatus(parkedTour);
   dock.querySelector('.walk-dock-owner').textContent=owner;
   dock.querySelector('.walk-dock-action').textContent=action;
 }
-function render(){renderNav();renderBar();page==='case'?caseMain():inbox();renderDock();}
+function render(){if(tour?.reviewed){tour.frontier=Math.max(tour.frontier||0,tour.index);const current=tour.inputMode==='practice'?tour.frames.at(-1):tour.frames[tour.frontier];const record=data.items.find(x=>x.id===tour.record);if(record&&record.c!==current.case){record.c=current.case;save();}saveTour();}renderNav();renderBar();page==='case'?caseMain():inbox();renderDock();}
 function refreshDlgProof(){
 const f=$('candidateedit');if(!f)return;const c=E.editCandidate(here(),f.value),v=E.derive(c),q=$('edit-status');
 q.textContent=v.blocked?v.reason:(v.limit!==null?v.wordCount+' / '+v.limit+' words · ':'')+'Ready for team review.';
@@ -813,6 +822,7 @@ function focusTask(){
 function auto(){
   if(!tour?.playing)return;
   if(tour.index>=tour.frames.length-1){setPlay(false);render();return;}
+  if(tour.reviewed){tour.reviewUI.drafts={};tour.reviewUI.questionDraft=null;tour.reviewUI.answers={};}
   tour.index++;rememberPractice();setPlay(tour.index<tour.frames.length-1);render();
   if(decisionPoint())focusTask();
   announce(tour.frames[tour.index].title);
@@ -844,7 +854,7 @@ function scheduleParkedStep(){
 function parkActive(){
   if(!tour)return;
   stop();tour.playing=false;
-  if(isPractice()||isTeamPractice())tour.index=practiceFrontier();
+  if(tour.reviewed&&tour.inputMode==='practice')tour.index=tour.frames.length-1;else if(isPractice()||isTeamPractice())tour.index=practiceFrontier();
   parkedTour=tour;tour=null;
   asideOpen=false;tab='checks';activeSource=-1;panelStage=null;priorOwner=null;
   saveTour();scheduleParkedStep();
@@ -855,8 +865,10 @@ function minimizeWalkthrough(){
   $('walkthrough-dock').firstElementChild?.focus({preventScroll:true});
 }
 function openWalkthrough(){
+  if(!parkedTour&&selected().c.reviewFlow){page='case';render();focusTask();return;}
   if(!parkedTour){begin('customer',false,true);focusTask();return;}
   stop();tour=parkedTour;parkedTour=null;
+  if(tour.reviewed&&tour.inputMode==='practice'){tour.index=tour.frames.length-1;tour.reviewUI.historyIndex=null;}
   page='case';filter='all';tab='checks';activeSource=-1;asideOpen=false;panelStage=null;
   if(isPractice())rememberPractice(true);
   setPlay(isPractice()&&!decisionPoint());render();focusTask();
@@ -869,6 +881,7 @@ function appendSteps(frames,c){
   return frames;
 }
 function begin(type,reset=false,startPractice=false,watchTeamExample=false){
+  if(['mine','create','customer','team','publisher'].includes(type)){beginReviewed(type==='mine'?(selected().c.reviewFlow?.source.id==='fb_2026-07-11_002'?'pdf':'own'):'create',{text:type==='mine'?selected().c.text:undefined,useCurrent:type==='mine',target:type==='mine'?selected().c.reviewFlow?.target:undefined,context:type==='mine'?selected().c.reviewFlow?.context:undefined,practice:startPractice,role:({customer:'Requester',team:'Website team',publisher:'Site owner'})[type]});return;}
   if(type==='team'&&startPractice){
     const saved=reset?null:savedTour(teamPracticeKey);
     endTour();close();page='case';filter='all';
@@ -994,6 +1007,7 @@ function syncSource(text){
 }
 function exampleMenu(){dialog('<div class="dlgrows">'+examples.map(([t,s],i)=>'<button data-go="sample:'+i+'">'+I(i===0?'file':i===1?'edit':i===2?'ask':'hold')+'<span><b>'+esc(t)+'</b><small>'+esc(s)+'</small></span>'+I('next',14)+'</button>').join('')+'</div>','Choose a feedback example');}
 function personaMenu(){
+  if(here().reviewFlow){dialog('<p class="dlgdesc">Switch perspectives on this exact record, or start an example.</p><div class="dlgrows">'+['Requester','Website team','Site owner'].map(role=>'<button data-go="r-role:'+role+'"><span><b>View as '+role+'</b><small>Continue with the current version and its history.</small></span></button>').join('')+'</div><div class="dlgfoot">'+R.button('pdf-watch','Watch PDF example')+R.button('create-watch','Watch Create example')+'</div>','Choose your role');return;}
   const roles=['Requester','Website team','Site owner'];
   const reached=practice?.frames[practice.frontier]?.case;
   const descriptions={
@@ -1012,18 +1026,79 @@ function personaMenu(){
 }
 
 function viewWalkStep(index,control){
+  if(here()?.reviewFlow)reviewCapture();
   if(!tour)return;
   if(index<0){minimizeWalkthrough();return;}
   if(index>=tour.frames.length)return;
   const returning=inPracticeHistory()&&index===practiceFrontier();
   if(isPractice()&&index>practice.frontier&&decisionPoint())return;
+  if(tour.reviewed&&tour.inputMode==='watch'){tour.reviewUI.drafts={};tour.reviewUI.questionDraft=null;tour.reviewUI.answers={};}
   tour.index=index;
   if(isPractice()&&index>practice.frontier)rememberPractice();
   setPlay(returning&&!decisionPoint());render();
   const navigation=control&&document.querySelector('[data-go="'+control+'"]');
   if(navigation)navigation.focus({preventScroll:true});else focusTask();
 }
+// Integrated review controls: same records, version history, navigation and player.
+const R=window.ReviewUI;
+function reviewState(){const host=tour?.reviewed?tour:selected();host.reviewUI||={role:here().owner==='Reviewer'?'Requester':here().owner,history:[],drafts:{}};const s=host.reviewUI;if(tour?.reviewed&&tour.inputMode==='watch')s.role=here().owner==='Reviewer'?'Requester':here().owner==='Complete'?'Requester':here().owner;return s;}
+function reviewHistory(){const s=reviewState();return Number.isInteger(s.historyIndex)||(tour?.reviewed&&tour.inputMode==='practice'&&tour.index<tour.frames.length-1);}
+function reviewCase(){const s=reviewState();return Number.isInteger(s.historyIndex)?s.history[s.historyIndex]:here();}
+function reviewCapture(){if(!here()?.reviewFlow||reviewHistory())return;const s=reviewState();const a=$('r-approach'),checks=$('r-checks');if(a&&checks){const which=['triage','answer-review'].includes(here().reviewFlow.phase)?'scope':'candidate';s.drafts||={};s.drafts[which]={approach:a.value,checks:checks.value};}if(document.querySelector('[data-question]'))s.questionDraft=reviewReadQuestions();const inputs=[...document.querySelectorAll('[data-answer-id]')];if(inputs.length){s.answers={};for(const el of inputs)if(el.type!=='radio'||el.checked)s.answers[el.dataset.answerId]=el.value;}save();saveTour();}
+function reviewReadQuestions(){const old=reviewState().questionDraft||here().reviewFlow.questionDraft;return [...document.querySelectorAll('[data-question]')].map(row=>{const q=old.find(q=>q.id===row.dataset.question);return {...q,text:row.querySelector('[data-q=text]').value,type:row.querySelector('[data-q=type]').value,options:row.querySelector('[data-q=options]').value.split('\n').map(x=>x.trim()).filter(Boolean),disposition:row.querySelector('[data-q=disposition]').value,required:row.querySelector('[data-q=required]').checked,screened:row.querySelector('[data-q=screened]').checked};});}
+function reviewError(error){let el=$('r-error');if(!el){el=document.createElement('p');el.id='r-error';el.className='review-private-note';el.setAttribute('role','alert');el.tabIndex=-1;($('dialog').open?$('dialog-body'):document.querySelector('.stage-task')).prepend(el);}el.textContent=error.message||error;el.focus();}
+function reviewCommit(action,value){if(reviewHistory())throw Error('Return to the current step before making a change.');const previous=here(),next=E.review(previous,action,value),s=reviewState();if(tour?.reviewed){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);tour.frames.push({case:next,title:next.trail.at(-1).text,why:'This is your action on the same feedback record. The owner and next step update with it.',role:next.owner});tour.index++;}else{s.history||=[];s.history.push(clone(previous));}selected().c=next;s.drafts={};s.questionDraft=null;s.answers={};s.historyIndex=null;s.previewScreen='pdf';save();saveTour();close();render();focusTask();announce(next.trail.at(-1).text);return next;}
+function reviewTransport(){const frame=tour.frames[tour.index],practice=tour.inputMode==='practice',history=practice&&tour.index<tour.frames.length-1;return '<div class="transport with-explanation"><div class="walk-player"><div class="tracktitle"><b>'+esc(tour.title||'Team-reviewed feedback')+'</b><span>'+esc(history?'Earlier step · read only':practice?'Hands-on · '+R.status(here()).join(' · '):'Example · '+(tour.index+1)+' of '+tour.frames.length)+'</span></div><div class="playtools">'+(practice?(history?R.button('current','Return to current step'):(reviewState().role!==R.status(here())[0]?R.button('role:'+R.status(here())[0],'View current owner'):'')):R.button('take-control','Try this step')+btn('toggle',tour.playing?'Pause':'Play',tour.playing?'pause':'play','walk-play')+btn('walknext','Next','next','walk-next-step',tour.index===tour.frames.length-1?'disabled':''))+'</div></div><div class="walk-explanation"><p class="walk-purpose"><b>Why this step</b> '+esc(frame.why||frame.title)+'</p></div></div>';}
+function beginReviewed(kind='pdf',options={}){reviewCapture();stop();close();endTour();let frames=window.ReviewStory.build({kind,...options});let record;
+{const id='WQ-'+String(++data.serial).padStart(3,'0');record={id,c:frames[0].case};data.items.unshift(record);data.current=id;}
+let index=options.role==='Requester'?frames.findIndex(f=>['clarify','review'].includes(f.case.stage)):options.role==='Site owner'?frames.findIndex(f=>f.case.stage==='release'):0;if(index<0)index=0;if(options.practice)frames=frames.slice(0,index+1);record.c=frames[index].case;
+tour={record:record.id,type:'reviewed',reviewed:true,title:kind==='pdf'?'PDF feedback walkthrough':kind==='create'?'The “Create” walkthrough':'Your feedback walkthrough',frames,index,playing:false,inputMode:options.practice?'practice':'watch',reviewUI:{role:options.role||'Website team',history:[],drafts:{}},scenario:{kind,...options}};parkedTour=null;page='case';filter='all';save();saveTour();render();focusTask();}
+function reviewIntake(){reviewCapture();dialog('<p class="dlgdesc">Describe the problem in your own words. The team will review it before asking you any questions.</p><form id="r-intake-form"><label class="review-field">Feedback<textarea id="r-new-text" required maxlength="2000" placeholder="For example: I don’t understand what Create will do."></textarea></label><label class="review-field">Page<select id="r-new-target"><option>WinQuote homepage</option><option>WinQuote · Make PDF</option></select></label><label class="review-field">When did it happen? · optional<input id="r-new-time" maxlength="120" placeholder="For example: this morning"></label><p class="review-note">This demo records the page you select. It does not collect live logs or browser activity.</p><div class="dlgfoot"><button class="control primary">Submit feedback</button></div></form>','New feedback');}
+function reviewAction(action){const [k,arg]=action.split(':');try{
+if(['pdf-watch','pdf-ask','create-watch','create-send','pdf-practice'].includes(k)){beginReviewed(k.startsWith('pdf')?'pdf':'create',{ask:k==='pdf-ask'?true:undefined,answer:k==='create-send'?E.hesitationAnswers[0]:undefined,practice:k==='pdf-practice'});return;}
+if(k==='new'){reviewIntake();return;}
+if(k==='opt-in'){selected().c=E.beginTeamReview(here());selected().reviewUI={role:'Website team',history:[],drafts:{}};save();render();return;}
+if(!here().reviewFlow)return;
+reviewCapture();const c=here(),s=reviewState();
+if(k==='role'){if(arg==='Complete')return;if(tour?.reviewed&&tour.inputMode==='watch'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());}s.role=arg;s.details=false;close();save();saveTour();render();return;}
+if(k==='suggest'){const index=Number(action.split(':')[2]),q=c.reviewFlow.sentBundle.questions.find(q=>q.id===arg);if(q&&q.type==='text'){s.answers||={};s.answers[q.id]=q.options[index];save();saveTour();render();}return;}
+if(k==='details'){s.details=!s.details;render();if(!s.details)document.querySelector('.role-switch [data-go="r-details"]')?.focus();return;}
+if(k==='inbox'){doAction('filter:all');return;}
+if(k==='back'){if(tour){viewWalkStep(tour.index-1,'walkback');return;}if(s.history?.length)s.historyIndex=Number.isInteger(s.historyIndex)?Math.max(0,s.historyIndex-1):s.history.length-1;render();return;}
+if(k==='current'){s.historyIndex=null;if(tour?.reviewed)tour.index=tour.frames.length-1;render();return;}
+if(k==='version'){const v=c.versions.find(v=>v.rev===+arg);dialog('<p class="dlgdesc">Submitted version · read only</p><p class="reviewed-copy">'+esc(v.candidate)+'</p><h3>Acceptance checks</h3><ul>'+v.checks.map(x=>'<li>'+esc(x.value||x.label)+'</li>').join('')+'</ul>','V'+arg+' · Version history');return;}
+if(k==='preview-workflow'||k==='preview-back'){if(!E.reviewPreview(c).interactive)return;s.previewScreen=k==='preview-workflow'?'workflow':'pdf';render();return;}
+if(k==='open-pdf'){if(!E.reviewPreview(c).interactive)throw Error('This edited candidate has no matching interactive preview. Review the actual proposal and checks.');const v=E.derive(c);const w=window.open('','_blank');if(!w)throw Error('Allow the preview tab to open, then try again.');w.opener=null;w.document.write('<!doctype html><html lang="en"><title>Simulated PDF preview · V'+c.rev+'</title><meta name="viewport" content="width=device-width"><style>body{margin:40px auto;padding:24px;max-width:680px;color:#262626;background:#f4f4f4;font:16px/1.6 system-ui}article{background:white;padding:40px;border:1px solid #ddd}h1{font-family:Georgia,serif;font-weight:400}small{color:#666}p{white-space:pre-wrap}</style><article><small>ANNORA · SIMULATED PDF PREVIEW · V'+c.rev+'</small><h1>Walk-in cooler</h1><p>Quote DEMO-102</p><hr><p>This is a sample document surface. No customer PDF was generated.</p><p>'+esc(v.candidate)+'</p><small>Return to the original tab. Make PDF stays open; Workflow is a separate action.</small></article></html>');w.document.close();announce('The simulated PDF preview opened in a new tab. This quote remains on Make PDF.');return;}
+if(k==='take-control'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());save();saveTour();render();return;}
+if(reviewHistory())throw Error('Return to the current step before making a change.');
+const actor=R.status(c)[0];if(s.role!==actor)throw Error('This action belongs to '+actor+'. Switch the demo view to continue.');
+if(k==='draft-questions'&&s.drafts.scope){const savedScope={...s.drafts.scope};reviewCommit('edit-scope',savedScope);reviewCommit('draft-questions');return;}
+if(k==='preview-questions'){reviewCommit('save-questions',s.questionDraft||c.reviewFlow.questionDraft);reviewCommit('preview-questions');const qs=here().reviewFlow.questionPreview.questions;dialog('<p class="dlgdesc">Customer preview · not sent</p><div>'+R.questions(qs).replace(/<fieldset /g,'<fieldset disabled ')+'</div><div class="dlgfoot">'+R.button('edit-questions','Back to editing')+R.button('send-questions','Send these questions',true)+'</div>','What the customer will see');return;}
+if(k==='edit-questions'){close();return;}
+if(k==='add-question'){s.questionDraft=clone(s.questionDraft||c.reviewFlow.questionDraft);s.questionDraft.push({id:'q-'+Date.now(),text:'',type:'text',options:[],required:true,disposition:'ask',reason:'Team-authored question for missing customer context.'});save();saveTour();render();document.querySelector('.question-editor:last-of-type textarea')?.focus();return;}
+if(k==='save-candidate'){reviewCommit('edit-candidate',s.drafts.candidate);return;}
+if(k==='edit-ready'){reviewCommit('edit-candidate',c.reviewFlow.candidateDraft);return;}
+if(k==='adjust'){dialog('<form id="r-adjust-form"><label class="review-field">What still needs to change?<textarea id="r-adjust" required maxlength="1000" rows="4" placeholder="Describe the remaining problem; the team will revise the proposal."></textarea></label><div class="dlgfoot"><button class="control primary">Request V'+(c.rev+1)+'</button></div></form>','Request changes to V'+c.rev);return;}
+if(['accept','authorize','publish'].includes(k)){reviewCommit(k,{rev:c.rev});return;}
+if(['draft-questions','close-questions','send-questions','deliver'].includes(k)){reviewCommit(k);return;}
+}catch(error){reviewError(error);}}
+document.addEventListener('change',event=>{if(event.target.id==='r-role'){reviewAction('role:'+event.target.value);return;}if(event.target.closest('[data-question]')||event.target.matches('[data-answer-id]'))reviewCapture();});
+document.addEventListener('input',event=>{if(event.target.matches('[data-review-draft],[data-q],[data-answer-id]')){if(tour?.reviewed&&tour.inputMode==='watch'){stop();tour.playing=false;tour.inputMode='practice';tour.frames=tour.frames.slice(0,tour.index+1);selected().c=clone(here());const player=document.querySelector('.transport');if(player)player.outerHTML=reviewTransport();}reviewCapture();}});
+document.addEventListener('submit',event=>{if(!event.target.id.startsWith('r-'))return;event.preventDefault();try{
+if(event.target.id==='r-intake-form'){const text=$('r-new-text').value.trim(),target=$('r-new-target').value,time=$('r-new-time').value;const c=E.createReviewedCase(text,{target});c.reviewFlow.context={occurredAt:time};parkActive();const id='WQ-'+String(++data.serial).padStart(3,'0');data.items.unshift({id,c,reviewUI:{role:'Requester',history:[],drafts:{}}});data.current=id;close();page='case';save();render();focusTask();return;}
+reviewCapture();const s=reviewState();if(reviewHistory())throw Error('Return to the current step before making a change.');if(s.role!==R.status(here())[0])throw Error('Switch to the responsible role to continue.');
+if(event.target.id==='r-scope-form')reviewCommit('confirm-scope',s.drafts.scope);
+if(event.target.id==='r-questions-form')reviewCommit('save-questions',s.questionDraft);
+if(event.target.id==='r-answer-form')reviewCommit('answer',s.answers);
+if(event.target.id==='r-candidate-form'){reviewCommit('edit-candidate',s.drafts.candidate);reviewCommit('prepare-result');}
+if(event.target.id==='r-adjust-form')reviewCommit('adjust',{rev:here().rev,reason:$('r-adjust').value});
+}catch(error){reviewError(error);}});
+
 function doAction(g){
+if(g.startsWith('r-')){reviewAction(g.slice(2));return;}
+if(here()?.reviewFlow)reviewCapture();
+if(g==='new'){reviewIntake();return;}
+if(g==='submit'&&!tour){selected().c=E.beginTeamReview(here());selected().reviewUI={role:'Requester',history:[],drafts:{}};save();render();return;}
 const [k,arg]=g.split(':');if(!['nav','mobileaside'].includes(k)){navOpen=false;$('nav').classList.remove('show');$('shade').hidden=true;}
 if(inPracticeHistory()&&['practice-submit','practice-accept','practice-adjust','team-deliver','team-view-requester','tour-answer','toggle','reset-example','take-control'].includes(k))return;
 if(tour?.playing&&['tab','evidence','mobileaside','location','ver','refine'].includes(k)){setPlay(false);render();}
@@ -1106,7 +1181,7 @@ document.addEventListener('focusin',ev=>{
 });
 document.addEventListener('input',ev=>{if(ev.target.matches('[data-team-field]'))updateTeamDraft();if(ev.target.id==='tourans'&&tour&&!$('dialog').open&&!inPracticeHistory()){tour.answerDraft=ev.target.value;saveTour();}if(ev.target.id==='source')syncSource(ev.target.value);if(ev.target.id==='candidateedit')refreshDlgProof();if(ev.target.id==='searchbox'){search=ev.target.value;inbox();const s=$('searchbox');s.focus();s.setSelectionRange(search.length,search.length);}});
 document.addEventListener('submit',ev=>{if(ev.target.id==='practicechange'){ev.preventDefault();const note=$('adj').value.trim();if(note)chooseReview('adjust',note);else $('adj').focus();return;}if(ev.target.id==='touranswerform'){ev.preventDefault();answerTour($('tourans').value);return;}if(ev.target.id==='proofeditform'||ev.target.id==='revisionform'){ev.preventDefault();if(!tour){selected().c=ev.target.id==='proofeditform'?E.editCandidate(here(),$('candidateedit').value):E.reviseAdjustment(here(),$('revision-note').value);save();close();render();}return;}if(ev.target.id==='answerform'){ev.preventDefault();const val=$('answer').value.trim();if(val)apply('answer',val);else $('answer').focus();}if(ev.target.id==='adjustform'){ev.preventDefault();const s=$('adj').value.trim();if(s)apply('adjust',s);}});
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'){if($('dialog').open)return;if(here()?.reviewFlow&&reviewState().details){reviewState().details=false;render();document.querySelector('.role-switch [data-go="r-details"]')?.focus();return;}if(navOpen){navOpen=false;renderNav();}else if(asideOpen){asideOpen=false;caseMain();}else if(tour){minimizeWalkthrough();}}if(ev.code==='Space'&&tour&&!['INPUT','TEXTAREA','BUTTON','SUMMARY'].includes(document.activeElement.tagName)&&!$('dialog').open){ev.preventDefault();doAction('toggle');}});
 document.addEventListener('toggle',event=>{
   const details=event.target;
   if(details.id!=='walk-explanation'||!tour||isHandsOn())return;
@@ -1121,12 +1196,13 @@ document.addEventListener('toggle',event=>{
     syncWalkthroughHeight();
   }
 },true);
-window.addEventListener('resize',syncWalkthroughHeight);
+window.addEventListener('resize',()=>{syncWalkthroughHeight();$('nav').inert=window.innerWidth<=820&&!navOpen;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&tour?.playing){setPlay(false);render();}});
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
-if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthrough)){
-  const startPractice=['team','customer'].includes(requestedWalkthrough)&&launchURL.searchParams.get('mode')==='practice';
+if(requestedWalkthrough==='pdf'){const ask=launchURL.searchParams.get('branch')==='ask',practiceMode=launchURL.searchParams.get('mode')==='practice';for(const param of ['walkthrough','branch','mode'])launchURL.searchParams.delete(param);history.replaceState(history.state,'',launchURL.href);beginReviewed('pdf',{ask,practice:practiceMode});}
+else if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthrough)){
+  const startPractice=['team','customer','publisher'].includes(requestedWalkthrough)&&launchURL.searchParams.get('mode')==='practice';
   if(startPractice)launchURL.searchParams.delete('mode');
   launchURL.searchParams.delete('walkthrough');
   history.replaceState(history.state,'',launchURL.href);
@@ -1140,7 +1216,7 @@ if(requestedWalkthrough==='create'||P.list.some(role=>role.id===requestedWalkthr
     if(tour.index===tour.frames.length-1)tour.index=0;
     setPlay(true);render();
   }
-  if(startPractice&&requestedWalkthrough==='customer'&&!isPractice())takeControl();
+  if(startPractice&&requestedWalkthrough==='customer'&&!tour?.reviewed&&!isPractice())takeControl();
 }else{
   if(tour&&(isPractice()||isTeamPractice()))setPlay(!decisionPoint());
   if(parkedTour)scheduleParkedStep();

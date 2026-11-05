@@ -1,0 +1,30 @@
+{
+  "approved_source": "Approved WinQuote and feedback visual direction, revision 2",
+  "files": [
+    {
+      "file": "source-serif-pro-latin-400-normal.woff2",
+      "source": "https://cdn.jsdelivr.net/npm/@fontsource/source-serif-pro@5.3.0/files/source-serif-pro-latin-400-normal.woff2",
+      "sha256": "7d04f2cd8792432943d7c73c9b2173b3faee45ecd9334ad6a9812729b88aa69a"
+    },
+    {
+      "file": "source-serif-pro-latin-600-normal.woff2",
+      "source": "https://cdn.jsdelivr.net/npm/@fontsource/source-serif-pro@5.3.0/files/source-serif-pro-latin-600-normal.woff2",
+      "sha256": "cc308be27791dc58e7ce19f0d245ef66b8eb6975b8c7ae22d97c09927c84dc48"
+    },
+    {
+      "file": "source-serif-LICENSE.txt",
+      "source": "https://cdn.jsdelivr.net/npm/@fontsource/source-serif-pro@5.3.0/LICENSE",
+      "sha256": "18aabf190848725e2576eefb5c29ba06aac1029d02132252a7f312eac2e50cf3"
+    },
+    {
+      "file": "inter.ttf",
+      "source": "Previously approved Inter asset; redistribution license included in inter-OFL.txt",
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "file": "inter-OFL.txt",
+      "source": "Previously approved Inter asset; redistribution license included in inter-OFL.txt",
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    }
+  ]
+}
