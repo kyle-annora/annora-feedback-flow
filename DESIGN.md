@@ -186,3 +186,20 @@ The customer workspace now has only My feedback and Updates as permanent destina
 The approved serif headings / neutral sans text, white canvas, thin borders and WinQuote navy are unchanged. Status filters and search belong inside My feedback. The current ticket identity remains visible at narrow widths. Mobile uses the same record-bound summary in a compact bottom dock. Desktop keeps it in navigation to avoid duplicating the guide.
 
 Counts and updates share the local WinQuote customer scope. Customer submissions (including the curated submitted PDF case) are distinct from example-only records. Legacy records without customer-origin evidence are retained under Earlier demo records, outside customer counts. This is prototype metadata, not authentication or access control. A notification opens its record as Requester at the current version; resuming a guide uses that same live record and cannot revive another ticket's cached completion.
+
+## Current three-workflow workspace · November 5 long-task delivery
+
+This section governs the current default entry and supersedes earlier default-PDF, embedded-role-control and in-navigation-player descriptions above. Their legacy routes retain the earlier presentations; they are not the primary navigation.
+
+The reference lock remains Cycle for the task and context hierarchy, Attio for a progressive decision and resumable entry, TidyCal for concise question editing, and Intercom for private preparation versus customer-visible messages. Source Serif Pro headings, Inter body, neutral black/gray copy, restrained navy controls and the real WinQuote mark remain unchanged.
+
+- The left navigation has My feedback, Updates and a secondary Walkthrough launcher. Three business problems form the primary examples; neither persona nor individual scenario branch creates another first-level workflow.
+- One task leads the center. Its owner, next action and time expectation appear together. Details holds current basis, original request, immutable versions and question rounds; Activity is secondary. On phones the same Details becomes a focused drawer.
+- The floating console is presentation-only. Its collapsed entry is bound to the current ticket; Practice does not act for another role. Watch visibly marks scripted decisions. No role dropdown sits inside the product task.
+- Questions have an explicit private editor, customer preview and send boundary. Answer types include yes/no, single choice, multiple choice and text, with required/selection constraints and an Other explanation. Known records do not become compulsory questions.
+- Submitted answers change a team-reviewed proposal and its checks. Each supported authored result is inspectable; arbitrary manual edits need an updated result. A full V1 precedes a meaningful V2 adjustment, never a deliberately incomplete demo version.
+- Real local capture supports images, recordings and selected rendered context. It never claims a DOM snapshot is source code or invents transcription. Media is saved independently of JSON record snapshots and reused through immutable references.
+- Immediate submission, short simulated preparation and hours-later return are distinct. Human decisions are never implied by a timer. Last update, next update, overdue explanation and same-ticket return make waiting explicit.
+- The requester accepts a named version; the site owner authorizes that accepted version; the team runs a separate simulated release. Failures have no success receipt. User comprehension/sign-off and actual feature implementation remain unproven by this demo.
+
+Changed components live in `feedback-view.css` / `capture-composer.css` and are scoped to their own roots. Small motion is optional; reduced motion does not remove information. The current release requires actual browser checks at 1440px and 390px, keyboard drawer/modal checks, source and bundled-route checks, and independent target verification.

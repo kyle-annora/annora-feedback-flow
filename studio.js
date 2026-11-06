@@ -1,5 +1,6 @@
 (() => {
 'use strict';
+if(window.FeedbackWorkspace?.active)return;
 const E=window.CaseEngine, P=window.CasePersonas, I=window.Glyph, $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const stages={draft:'Draft',clarify:'Needs your input',processing:'In progress',blocked:'Needs team input',review:'Ready for review',release:'Awaiting authorization',authorized:'Authorized',published:'Release simulated'};
@@ -1328,7 +1329,10 @@ function showcaseAction(action,expectedRevision){try{
 
 const launchURL=new URL(location.href);
 const requestedWalkthrough=launchURL.searchParams.get('walkthrough');
-if(launchURL.searchParams.get('demo')==='pdf'){openShowcase();}
+const incomingTicket=launchURL.searchParams.get('ticket');
+if(incomingTicket&&WS.canResume(incomingTicket,clientId,data.items)){data.current=incomingTicket;tour=null;parkedTour=null;page='case';render();}
+else if(launchURL.searchParams.get('legacy')==='1'){page='list';render();}
+else if(launchURL.searchParams.get('demo')==='pdf'){openShowcase();}
 else if(launchURL.searchParams.get('capture')==='pdf'){launchURL.searchParams.delete('capture');history.replaceState(history.state,'',launchURL.href);openCaptureSite();}
 else if(requestedWalkthrough==='journey'){launchURL.searchParams.delete('walkthrough');history.replaceState(history.state,'',launchURL.href);beginReviewed('pdf',{journey:true,detailed:true,ask:true});}
 else if(requestedWalkthrough==='pdf'){const ask=launchURL.searchParams.get('branch')==='ask',practiceMode=launchURL.searchParams.get('mode')==='practice';for(const param of ['walkthrough','branch','mode'])launchURL.searchParams.delete(param);history.replaceState(history.state,'',launchURL.href);beginReviewed('pdf',{ask,practice:practiceMode});}

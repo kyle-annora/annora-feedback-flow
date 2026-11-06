@@ -54,6 +54,8 @@ async function stylesheet(root, filename) {
 }
 
 export function assertSelfContained(html) {
+  // Runtime HTML strings (for Blob previews) are script data, not static resources.
+  html = html.replace(/(<script\b[^>]*>)[\s\S]*?<\/script\s*>/gi, '$1</script>');
   if (/<script\b[^>]*\bsrc\s*=/i.test(html)) throw new Error('Unbundled script source remains');
   if (/<link\b[^>]*\brel\s*=\s*["']stylesheet["']/i.test(html)) throw new Error('Unbundled stylesheet remains');
   for (const match of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)) {
@@ -78,16 +80,16 @@ export async function renderStandalone({ projectRoot = defaultRoot, entrypoint =
     if (!href) throw new Error('Stylesheet link has no href');
     return '<style>\n' + await stylesheet(root, href) + '\n</style>';
   });
-  html = await replaceAsync(html, /<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>\s*<\/script\s*>/gi, async match => {
-    const opening = match[0].slice(0, match[0].indexOf('>') + 1).replace(/\s+src\s*=\s*(["']).*?\1/i, '');
-    const script = await readFile(await sourceFile(root, match[2]), 'utf8');
-    return opening + '\n' + safeRawText(script, 'script') + '\n</script>';
-  });
   html = await replaceAsync(html, /<(?:img|source)\b[^>]*>/gi, async match => {
     const src = attribute(match[0], 'src');
     if (!src || embedded(src)) return match[0];
     const data = await assetURL(root, src, root);
     return match[0].replace(/(\bsrc\s*=\s*)(["']).*?\2/i, (_, start) => `${start}"${data}"`);
+  });
+  html = await replaceAsync(html, /<script\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1[^>]*>\s*<\/script\s*>/gi, async match => {
+    const opening = match[0].slice(0, match[0].indexOf('>') + 1).replace(/\s+src\s*=\s*(["']).*?\1/i, '');
+    const script = await readFile(await sourceFile(root, match[2]), 'utf8');
+    return opening + '\n' + safeRawText(script, 'script') + '\n</script>';
   });
   assertSelfContained(html);
   return html;

@@ -101,3 +101,14 @@ test('local server sends the font MIME types used by the editable preview', asyn
     assert.equal(response.headers.get('content-type'), type);
   }
 });
+
+ test('runtime Blob image templates are preserved while static images are embedded', async t => {
+  const root=await fixture(t);
+  await writeFile(path.join(root,'second.js'), `window.image = url => '<img src="' + url + '" alt="Evidence">';`);
+  const {renderStandalone}=await bundle;
+  const html=await renderStandalone({projectRoot:root});
+  const context={window:{}};
+  for(const match of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi))vm.runInNewContext(match[1],context);
+  assert.equal(context.window.image('blob:local-evidence'), '<img src="blob:local-evidence" alt="Evidence">');
+  assert.match(html,/data:image\/svg\+xml;base64,/);
+});

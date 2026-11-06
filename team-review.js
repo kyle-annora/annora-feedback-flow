@@ -1,5 +1,6 @@
 (function (root) {
   "use strict";
+  const Scenarios = typeof module === "object" && module.exports ? require("./scenario-catalog.js") : root.FlowScenarios;
   const clone = value => JSON.parse(JSON.stringify(value));
   const fail = message => { throw new Error("Team review: " + message); };
   const lines = value => String(value || "").split("\n").map(s=>s.trim()).filter(Boolean);
@@ -49,15 +50,23 @@
       ["hesitation-review","revision"].includes(row.id) ? row.value : row.label || row.value).filter(Boolean).join("\n")};
   }
   function create(base,options,legacy) {
-    const isPDF = options.sourceId === "fb_2026-07-11_002" || base.text.trim() === pdfFeedback;
+    const scenario = options.scenarioId ? Scenarios?.get(options.scenarioId) : null;
+    if (options.scenarioId && !scenario) fail("Choose a supported scenario id: pdf, compartment or refrigeration.");
+    if (scenario && options.sourceId && options.sourceId !== scenario.ticketId) fail("The scenario source id must match its documented ticket.");
+    const needsMaterialReview = !!scenario && !Scenarios.matchesFeedback(scenario.id,base.text);
+    const isPDF = scenario?.id === "pdf" || (!scenario && (options.sourceId === "fb_2026-07-11_002" || base.text.trim() === pdfFeedback));
     const view = adaptive(base,legacy,typeof base.candidateOverride === "string" ? base.candidateOverride : undefined);
-    const questions = isPDF ? clone(pdfQuestions) : view.question ? [{id:"clarification",text:view.question.text,type:view.question.type === "hesitation" ? "text" : view.question.options.length > 1 ? "single" : "text",
+    const questions = scenario ? clone(scenario.questions) : isPDF ? clone(pdfQuestions) : view.question ? [{id:"clarification",text:view.question.text,type:view.question.type === "hesitation" ? "text" : view.question.options.length > 1 ? "single" : "text",
       options:clone(view.question.options),required:true,disposition:"ask",reason:view.question.reason || "Ask only for missing customer context."}] : [];
-    const flow = {schema:1,phase:"triage",kind:isPDF ? "behavior" : options.kind || (view.kind === "hesitation" ? "button" : view.kind),
-      target:options.target || (isPDF ? "WinQuote · Make PDF" : "WinQuote homepage"),
-      source:{id:options.sourceId || (isPDF ? "fb_2026-07-11_002" : null),historical:isPDF,
-        history:clone(options.sourceHistory || (isPDF ? [{date:"2026-07-16",decision:"Open the saved PDF and navigate to Workflow."},{date:"2026-08-05",decision:"Keep Make PDF open; navigate to Workflow only through an explicit action."}] : []))},
-      scope:isPDF ? clone(pdfScope) : fromView(view),confirmedScope:null,questionDraft:questions,questionPreview:null,
+    const flow = {schema:1,phase:"triage",kind:scenario?.kind || (isPDF ? "behavior" : options.kind || (view.kind === "hesitation" ? "button" : view.kind)),
+      ...(scenario ? {scenarioId:scenario.id} : {}),
+      ...(needsMaterialReview ? {needsMaterialReview:true,materialReason:"This feedback is not an exact supported scenario input. The team must review the original text and materials and write a specific scope; the sample outcome is not assumed."} : {}),
+      target:options.target || scenario?.target || (isPDF ? "WinQuote · Make PDF" : "WinQuote homepage"),
+      source:{id:needsMaterialReview ? null : scenario?.ticketId || options.sourceId || (isPDF ? "fb_2026-07-11_002" : null),historical:!needsMaterialReview && (!!scenario || isPDF),
+        ...(needsMaterialReview ? {referenceTicketId:scenario.ticketId} : {}),
+        ...(scenario ? {note:scenario.sourceNote,evidence:scenario.feedbackEvidence,revision:scenario.sourceRevision} : {}),
+        history:clone(options.sourceHistory || scenario?.history || (isPDF ? [{date:"2026-07-16",decision:"Open the saved PDF and navigate to Workflow."},{date:"2026-08-05",decision:"Keep Make PDF open; navigate to Workflow only through an explicit action."}] : []))},
+      scope:needsMaterialReview ? {approach:"",checks:""} : scenario ? clone(scenario.scope) : isPDF ? clone(pdfScope) : fromView(view),confirmedScope:null,questionDraft:questions,questionPreview:null,
       sentBundle:null,answers:{},suggestedScope:null,candidateDraft:null,result:null,teamCheck:null};
     if (options.journey === true) Object.assign(flow,{
       journey:{enabled:true,scopeCycle:1,activeRound:"initial",detailedSentCycles:[]},
@@ -90,6 +99,7 @@
   }
   function detailedSuggestion(c,answers) {
     const f = c.reviewFlow;
+    if (f.scenarioId) return Scenarios.suggest(f.scenarioId,answers,{round:"detailed",scope:f.scope});
     const result = {...clone(f.scope),reason:"The detailed answer needs a team decision before the shared understanding changes.",conflict:null,decisionRequired:true};
     if (f.source.id !== "fb_2026-07-11_002") return result;
     const raw = Object.values(answers).filter(Boolean).join("\n");
@@ -108,9 +118,10 @@
   }
   function shareUnderstanding(c,value) {
     const f = c.reviewFlow;
+    const rounds = f.questionRounds.filter(round=>round.scopeCycle === f.journey.scopeCycle);
     const item = {id:"U" + (f.understandingHistory.length + 1),text:text(value,"Shared understanding"),
       approach:f.confirmedScope.approach,checks:f.confirmedScope.checks,scopeCycle:f.journey.scopeCycle,
-      sourceAnswer:c.answer,questionRoundIds:f.questionRounds.filter(round=>round.scopeCycle === f.journey.scopeCycle).map(round=>round.id)};
+      sourceAnswer:c.answer,sourceAnswers:{initial:rounds.filter(round=>round.round === "initial" && round.answered).at(-1)?.answerText || "",detailed:rounds.filter(round=>round.round === "detailed" && round.answered).at(-1)?.answerText || ""},questionRoundIds:rounds.map(round=>round.id)};
     f.sharedUnderstanding = item;
     f.understandingHistory = [...f.understandingHistory,clone(item)];
   }
@@ -120,33 +131,96 @@
     return value.map(q=>{
       if (!q || !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(q.id || "") || ids.has(q.id)) fail("Each question needs a unique valid id.");
       ids.add(q.id);
-      if (!["single","text"].includes(q.type) || !["ask","records","team"].includes(q.disposition) || typeof q.required !== "boolean") fail("Choose a question type, disposition and required setting.");
-      if (!Array.isArray(q.options) || q.options.some(o=>typeof o !== "string" || !o.trim()) || new Set(q.options).size !== q.options.length || (q.type === "single" && q.options.length < 2)) fail("A single-choice question needs at least two distinct options.");
+      if (!["yes_no","single","multi","text"].includes(q.type) || !["ask","records","team","omit"].includes(q.disposition) || typeof q.required !== "boolean") fail("Choose a question type, disposition and required setting.");
+      if (!Array.isArray(q.options) || q.options.some(o=>typeof o !== "string" || !o.trim()) || new Set(q.options).size !== q.options.length || (["yes_no","single","multi"].includes(q.type) && q.options.length < 2)) fail("A choice question needs at least two distinct options.");
+      const optionIds = q.optionIds === undefined ? q.options.map((_,index)=>q.id.slice(0,52) + "-" + (index + 1)) : q.optionIds;
+      if (!Array.isArray(optionIds) || optionIds.length !== q.options.length || optionIds.some(id=>typeof id !== "string" || !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(id)) || new Set(optionIds).size !== optionIds.length) fail("Each answer option needs a distinct stable option id.");
+      if (q.type === "yes_no" && (!["yes","no"].every(value=>q.options.some((label,index)=>new RegExp("^" + value + "(?:\\b|\\s*[—–:-])","i").test(label) || optionIds[index] === value)))) fail("A Yes/No question needs explicit Yes and No options; uncertainty is a separate answer.");
+      const exclusiveOptionIds = q.exclusiveOptionIds || [];
+      if (!Array.isArray(exclusiveOptionIds) || exclusiveOptionIds.some(id=>!optionIds.includes(id))) fail("Exclusive options must identify a current sent option.");
+      const minSelections = q.minSelections ?? (q.required ? 1 : 0), maxSelections = q.maxSelections ?? q.options.length;
+      if (q.type === "multi" && (!Number.isInteger(minSelections) || !Number.isInteger(maxSelections) || minSelections < (q.required ? 1 : 0) || maxSelections < minSelections || maxSelections > q.options.length)) fail("Set valid minimum and maximum multi-select counts.");
       const prior = previous.find(item=>item.id === q.id) || pdfQuestions.find(item=>item.id === q.id);
       if (prior && prior.disposition !== "ask" && q.disposition === "ask" && q.screened !== true) fail("Screen and rewrite internal questions before asking the customer.");
-      return {id:q.id,text:text(q.text,"Question"),type:q.type,options:clone(q.options),required:q.required,disposition:q.disposition,
+      return {id:q.id,text:text(q.text,"Question"),type:q.type,options:clone(q.options),optionIds:clone(optionIds),optionSnapshots:q.options.map((label,index)=>({id:optionIds[index],label})),required:q.required,disposition:q.disposition,
+        ...(q.type === "multi" ? {minSelections,maxSelections,exclusiveOptionIds:clone(exclusiveOptionIds)} : {}),
         reason:text(q.reason || "","Question reason",false),...(q.screened === true ? {screened:true} : {})};
     });
   }
-  const binding = c => JSON.stringify([c.rev,c.reviewFlow.candidateDraft,c.answer,c.adjustment,c.reviewFlow.confirmedScope,
+  function answerValue(q,raw,note) {
+    const options = q.optionSnapshots || q.options.map((label,index)=>({id:q.optionIds?.[index] || q.id.slice(0,52) + "-" + (index + 1),label}));
+    const choice = value => options.find(option=>option.id === value || option.label === value);
+    let extra = note;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) { extra = raw.otherText ?? raw.note ?? note; raw = raw.optionId ?? raw.value; }
+    extra = text(extra ?? "","Answer note",false);
+    if (q.type === "multi") {
+      const values = raw ?? [];
+      if (!Array.isArray(values)) fail("A multi-select answer must be an array of sent options.");
+      const selected = values.map(value=>choice(value));
+      if (selected.some(value=>!value) || new Set(selected.map(value=>value.id)).size !== selected.length) fail("Choose distinct options from the sent multi-select question.");
+      const minimum = q.minSelections ?? (q.required ? 1 : 0), maximum = q.maxSelections ?? options.length;
+      if (selected.length < minimum || selected.length > maximum) fail("Choose between " + minimum + " and " + maximum + " options for this multi-select question.");
+      const exclusive = q.exclusiveOptionIds || [];
+      if (selected.length > 1 && selected.some(option=>exclusive.includes(option.id))) fail("This exclusive answer cannot be combined with another choice.");
+      if (selected.some(option=>/^other(?:\b|\s*\()/i.test(option.label)) && !extra.trim()) fail("Add the actual answer when selecting Other.");
+      return {value:selected.map(option=>option.label),optionIds:selected.map(option=>option.id),note:extra};
+    }
+    const value = text(raw ?? "","Answer to “" + q.text + "”",q.required);
+    const selected = choice(value);
+    if (value && q.type !== "text" && !selected) fail("Choose a sent answer option or ask the team to revise the question.");
+    if (selected && /^other(?:\b|\s*\()/i.test(selected.label) && !extra.trim()) fail("Add the actual answer when selecting Other.");
+    return {value:selected?.label || value,optionIds:selected?.id || null,note:extra};
+  }
+  function answerSummary(qs,answers,notes={}) {
+    return qs.map(q=>{
+      const answer = answers[q.id], value = Array.isArray(answer) ? answer.join("; ") : answer;
+      return [value,notes[q.id]].filter(Boolean).join(": ");
+    }).filter(Boolean).join("\n");
+  }
+  function checkQuestionLimit(f,selected) {
+    const sent = hasJourney(f) ? f.questionRounds.filter(round=>round.scopeCycle === f.journey.scopeCycle).reduce((count,round)=>count + round.questions.length,0) : 0;
+    if (sent + selected.length > 10) fail("This demo allows at most 10 sent customer questions across both rounds of the current scope cycle. Reduce the batch before sending; no question has been discarded.");
+  }
+  function revisionEvidence(value,rev,actor) {
+    if (!value || typeof value !== "object" || !["attachments","context","captureId"].some(key=>Object.prototype.hasOwnProperty.call(value,key))) return null;
+    const attachments = value.attachments ?? [], ids = new Set();
+    if (!Array.isArray(attachments)) fail("Revision attachments must be local attachment manifests.");
+    const manifests = attachments.map(item=>{
+      const id = item?.id || item?.attachmentId;
+      if (!item || typeof item !== "object" || Array.isArray(item) || typeof id !== "string" || !id.trim() || ids.has(id) || !["image","audio"].includes(item.kind)) fail("Each revision attachment needs a unique local id and image or audio kind.");
+      if (item.blob !== undefined || item.data !== undefined || item.dataUrl !== undefined || item.objectUrl !== undefined) fail("Keep binary originals in local media storage; pass only their manifest references.");
+      ids.add(id);return clone(item);
+    });
+    if (value.context !== undefined && (value.context === null || typeof value.context !== "object" || Array.isArray(value.context))) fail("Revision context must be a page-context object.");
+    return {rev,actor,attachments:manifests,
+      ...(value.captureId !== undefined ? {captureId:text(value.captureId,"Revision capture id")} : {}),
+      ...(value.context !== undefined ? {context:clone(value.context)} : {})};
+  }
+  function requireAuthoredResult(f,candidate,checks) {
+    if (!f.scenarioId) return;
+    const model = Scenarios.preview(f.scenarioId,{approach:candidate,checks});
+    if (!model.interactive) fail("The team needs an updated authored result for this exact candidate and its checks before preparing or sending it. The actual draft is preserved. " + model.reason);
+  }
+  const binding = c => JSON.stringify([c.rev,c.reviewFlow.candidateDraft,c.answer,c.adjustment,c.reviewFlow.confirmedScope,c.reviewFlow.context,c.reviewFlow.attachments,c.reviewFlow.evidence,c.reviewFlow.adjustmentEvidence,c.reviewFlow.source,c.reviewFlow.sentBundle,c.reviewFlow.answers,c.reviewFlow.answerOptionIds,c.reviewFlow.answerNotes,
     ...(hasJourney(c.reviewFlow) ? [c.reviewFlow.sharedUnderstanding,c.reviewFlow.understandingCorrections,c.reviewFlow.questionRounds] : [])]);
   const normalized = value => String(value || "").trim().replace(/[‘’]/g,"'").replace(/\s+/g," ").toLowerCase();
   function preview(input) {
     const unavailable = reason => ({interactive:false,reason});
     if (!input || typeof input !== "object") return unavailable("Prepare a current simulated result before opening an interactive preview.");
-    let r, approach, kind, sourceId;
+    let r, approach, kind, sourceId, scenarioId;
     if (input.reviewFlow && Array.isArray(input.versions)) {
       const frozen = ["review","release","authorized","published"].includes(input.stage);
       const v = frozen ? input.versions.at(-1) : null, f = v?.reviewFlow || input.reviewFlow;
-      r = v?.result || f.result; approach = v?.candidate || f.candidateDraft?.approach; kind = f.kind; sourceId = f.source.id;
+      r = v?.result || f.result; approach = v?.candidate || f.candidateDraft?.approach; kind = f.kind; sourceId = f.source.id; scenarioId = f.scenarioId;
       if (!frozen && r && r.binding !== binding(input)) return unavailable("The candidate changed. Prepare a new simulated result before trying its interaction.");
     } else if (input.result) {
-      r = input.result; approach = input.candidate ?? r.approach; kind = input.kind || r.kind; sourceId = r.sourceId;
+      r = input.result; approach = input.candidate ?? r.approach; kind = input.kind || r.kind; sourceId = r.sourceId; scenarioId = input.scenarioId || input.reviewFlow?.scenarioId || r.scenarioId;
     } else {
-      r = input; approach = r.approach; kind = r.kind; sourceId = r.sourceId;
+      r = input; approach = r.approach; kind = r.kind; sourceId = r.sourceId; scenarioId = r.scenarioId;
     }
     if (!r || r.simulated !== true || r.implemented !== false || r.verified !== false) return unavailable("Prepare a current labelled simulation; this preview does not execute a live feature.");
     if (approach !== r.approach) return unavailable("The result does not match the candidate. Prepare the result again.");
+    if (scenarioId) return Scenarios.preview(scenarioId,{approach,checks:r.checks});
     if (kind !== "behavior" || sourceId !== "fb_2026-07-11_002") return unavailable("This candidate has no authored interactive PDF model. Review its actual proposal and checks.");
     const placement = "Open the saved customer’s PDF in a new browser tab.\nKeep the same quote on Make PDF.\nShow a separate Go to Workflow action beside the saved PDF result.";
     const footerPlacement = placement.replace("beside the saved PDF result","at the page footer");
@@ -177,8 +251,9 @@
     }
     const requested = c.adjustment;
     const correction = hasJourney(f) && f.understandingCorrections.at(-1)?.text;
-    const source = requested || correction || c.answer || c.text;
-    const sourceLabel = requested ? "V" + (c.rev - 1) + " revision request" : correction ? "Understanding correction" : c.answer ? "Requester’s answer" : "Team-confirmed scope";
+    const detailedAnswer = hasJourney(f) && f.questionRounds.filter(round=>round.scopeCycle === f.journey.scopeCycle && round.round === "detailed" && round.answered).at(-1)?.answerText;
+    const source = requested || detailedAnswer || correction || c.answer || c.text;
+    const sourceLabel = requested ? "V" + (c.rev - 1) + " revision request" : detailedAnswer ? "Detailed specification answer" : correction ? "Understanding correction" : c.answer ? "Requester’s answer" : "Team-confirmed scope";
     const reviewedChecks = lines(draft.checks).map((value,index)=>({id:"team-check-" + index,label:value,value,status:"manual",source,sourceLabel,candidate:draft.approach}));
     built.checks = [...(built.checks || []),...reviewedChecks];
     if (!draft.approach.trim() || !reviewedChecks.length) {
@@ -210,7 +285,7 @@
         requirePhase(c,["spec-review"],action);
         if (f.journey.detailedSentCycles.includes(f.journey.scopeCycle)) fail("The detailed question batch for this scope cycle has already been sent. Review its answer or finish the specification.");
         if (f.journey.activeRound !== "detailed" || f.journey.detailedDraftCycle !== f.journey.scopeCycle) {
-          f.questionDraft = f.source.id === "fb_2026-07-11_002" ? clone(pdfDetailedQuestions) : [{id:"spec-detail",text:"What specific business decision remains unresolved in this specification?",type:"text",options:[],required:true,disposition:"team",
+          f.questionDraft = f.scenarioId ? clone(Scenarios.get(f.scenarioId).detailedQuestions) : f.source.id === "fb_2026-07-11_002" ? clone(pdfDetailedQuestions) : [{id:"spec-detail",text:"What specific business decision remains unresolved in this specification?",type:"text",options:[],required:true,disposition:"team",
             reason:"The team must write a specific unresolved business question before asking the customer."}];
         }
         f.journey.activeRound = "detailed"; f.journey.detailedDraftCycle = f.journey.scopeCycle;
@@ -227,11 +302,13 @@
       case "preview-questions": {
         requirePhase(c,["question-draft"],action); const selected = questions(f.questionDraft,f.questionDraft).filter(q=>q.disposition === "ask");
         if (!selected.length) fail("Select at least one customer question, or confirm scope without asking.");
+        checkQuestionLimit(f,selected);
         f.questionPreview = {questions:clone(selected),simulated:true,sent:false,...(hasJourney(f)?{round:f.journey.activeRound,scopeCycle:f.journey.scopeCycle}:{})}; return done("Previewed the selected customer questions. This is not a send.");
       }
       case "send-questions": {
         requirePhase(c,["question-draft"],action); const selected = questions(f.questionDraft,f.questionDraft).filter(q=>q.disposition === "ask");
         if (!selected.length) fail("Select at least one customer question, or confirm scope without asking.");
+        checkQuestionLimit(f,selected);
         let id = "Q1";
         if (hasJourney(f)) {
           const detailed = f.journey.activeRound === "detailed";
@@ -250,34 +327,40 @@
       case "answer": {
         requirePhase(c,["awaiting-answer"],action);
         const qs = f.sentBundle.questions;
+        if (value && typeof value === "object" && !Array.isArray(value) && value.bundleId !== undefined && value.bundleId !== f.sentBundle.id) fail("Answer only the current sent question bundle.");
         const supplied = typeof value === "string" ? {[qs[0].id]:value} : value?.answers || value;
         if (!supplied || typeof supplied !== "object" || Array.isArray(supplied)) fail("Answers must identify the sent questions.");
         if (Object.keys(supplied).some(id=>!qs.some(q=>q.id === id))) fail("Do not answer a private question that was not sent.");
-        const currentAnswers = {};
+        const suppliedNotes = value?.answerNotes || value?.notes || {};
+        if (Object.keys(suppliedNotes).some(id=>!qs.some(q=>q.id === id))) fail("Do not add an answer note for a private question that was not sent.");
+        const currentAnswers = {}, currentOptionIds = {}, currentNotes = {};
         for (const q of qs) {
-          const answer = text(supplied[q.id] ?? "","Answer to “" + q.text + "”",q.required);
-          if (answer && q.type === "single" && !q.options.includes(answer)) fail("Choose a sent answer option or ask the team to revise the question.");
-          currentAnswers[q.id] = answer;
+          const answered = answerValue(q,supplied[q.id],suppliedNotes[q.id]);
+          currentAnswers[q.id] = answered.value; currentOptionIds[q.id] = answered.optionIds; currentNotes[q.id] = answered.note;
         }
-        const answerText = qs.map(q=>currentAnswers[q.id]).filter(Boolean).join("\n");
+        const answerText = answerSummary(qs,currentAnswers,currentNotes);
         f.answers = hasJourney(f) ? {...f.answers,...currentAnswers} : currentAnswers;
+        f.answerOptionIds = hasJourney(f) ? {...f.answerOptionIds,...currentOptionIds} : currentOptionIds;
+        f.answerNotes = hasJourney(f) ? {...f.answerNotes,...currentNotes} : currentNotes;
         if (hasJourney(f)) {
           const round = f.questionRounds.find(item=>item.id === f.sentBundle.id);
           if (!round || round.answered || round.scopeCycle !== f.journey.scopeCycle || round.round !== f.journey.activeRound) fail("Answer only the current sent question batch once.");
-          f.questionRounds = f.questionRounds.map(item=>item.id === round.id ? {...item,answered:true,answers:clone(currentAnswers),answerText,answerSimulated:false} : item);
+          f.questionRounds = f.questionRounds.map(item=>item.id === round.id ? {...item,answered:true,answers:clone(currentAnswers),answerOptionIds:clone(currentOptionIds),answerNotes:clone(currentNotes),answerText,answerSimulated:false} : item);
           if (round.round === "detailed") f.detailedAnswerText = answerText;
           else { f.initialAnswerText = answerText; c.answer = answerText; c.answerSimulated = false; }
-          f.suggestedScope = round.round === "detailed" ? detailedSuggestion(c,currentAnswers) :
+          f.suggestedScope = f.scenarioId ? Scenarios.suggest(f.scenarioId,currentAnswers,{round:round.round,scope:f.scope,notes:currentNotes}) : round.round === "detailed" ? detailedSuggestion(c,currentAnswers) :
             f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
         } else {
           c.answer = answerText; c.answerSimulated = false;
-          f.suggestedScope = f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
+          f.suggestedScope = f.scenarioId ? Scenarios.suggest(f.scenarioId,currentAnswers,{round:"initial",scope:f.scope,notes:currentNotes}) : f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
         }
         c = stage(c,"processing","answer-review"); return done("The requester answered. The team must review the suggested scope before preparing a candidate.","Requester");
       }
       case "confirm-scope": {
         requirePhase(c,hasJourney(f) ? ["triage","answer-review","spec-review"] : ["triage","answer-review"],action);
         f.scope = scope(value,"Explicit team-selected scope"); f.confirmedScope = clone(f.scope);
+        if (f.needsMaterialReview) { f.needsMaterialReview = false; f.materialReviewed = true; }
+        if (f.suggestedScope?.conflict) f.scopeDecision = {conflict:f.suggestedScope.conflict,resolvedBy:"Website team",selectedScope:clone(f.scope),sourceAnswer:hasJourney(f) && f.journey.activeRound === "detailed" ? f.detailedAnswerText : c.answer};
         f.result = null; f.teamCheck = null;
         if (hasJourney(f)) {
           shareUnderstanding(c,value?.understanding ?? f.scope.approach);
@@ -327,11 +410,12 @@
       case "prepare-result": {
         requirePhase(c,["candidate","checking","ready"],action); const view = derive(c,legacy);
         if (view.blocked || !view.candidate.trim()) fail(view.reason || "Resolve candidate checks before preparing a result.");
+        requireAuthoredResult(f,view.candidate,f.candidateDraft.checks);
         const prior = c.versions.at(-1);
         const priorChecks = prior?.reviewFlow?.candidateDraft.checks ?? (prior?.checks || []).map(row=>row.value || row.label).join("\n");
         if (prior && prior.candidate.trim() === view.candidate.trim() && priorChecks.trim() === f.candidateDraft.checks.trim()) fail("Revise the actual candidate or acceptance checks before preparing the next version.");
         const key = binding(c);
-        f.result = {rev:c.rev,kind:f.kind,sourceId:f.source.id,title:"Simulated result preview",approach:view.candidate,steps:lines(view.candidate),checks:f.candidateDraft.checks,
+        f.result = {rev:c.rev,kind:f.kind,sourceId:f.source.id,...(f.scenarioId ? {scenarioId:f.scenarioId} : {}),title:"Simulated result preview",approach:view.candidate,steps:lines(view.candidate),checks:f.candidateDraft.checks,
           binding:key,simulated:true,implemented:false,verified:false};
         f.teamCheck = {rev:c.rev,title:"Simulated team check summary",summary:"Review the simulated result against these checks. Real feature behavior has not been executed or verified.",
           checks:clone(view.checks),binding:key,simulated:true,verified:false};
@@ -340,6 +424,7 @@
       case "deliver": {
         requirePhase(c,["ready"],action); const view = derive(c,legacy), key = binding(c);
         if (view.blocked || !f.result || !f.teamCheck || f.result.binding !== key || f.teamCheck.binding !== key) fail("Prepare a current simulated result and team check summary before sending this version.");
+        requireAuthoredResult(f,view.candidate,f.candidateDraft.checks);
         const snapshot = {rev:c.rev,text:view.candidate,candidate:view.candidate,source:c.text,answer:c.answer,answerSimulated:c.answerSimulated,
           adjustment:c.adjustment,checks:clone(view.checks),view:clone(view),reviewFlow:clone(f),result:clone(f.result),teamCheck:clone(f.teamCheck)};
         c.versions.push(snapshot); c = stage(c,"review","review"); return done("Sent V" + c.rev + " and its simulated result for review. This is not evidence of a working live feature.");
@@ -348,7 +433,8 @@
         if (c.stage !== "review") fail("Only a submitted version can receive a revision request.");
         if (typeof value === "object") exact(c,value,action);
         const note = text(typeof value === "string" ? value : value?.reason,"Revision request");
-        c.adjustment = note; c.adjustments.push({rev:c.rev,text:note}); c.rev += 1;
+        const evidence = revisionEvidence(value,c.rev,"Reviewer");
+        c.adjustment = note; c.adjustments.push({rev:c.rev,text:note,...(evidence ? {evidence:clone(evidence)} : {})}); f.adjustmentEvidence = evidence; c.rev += 1;
         c.accepted = null; c.authorization = null; c.receipt = null; c.candidateOverride = c.versions.at(-1).candidate;
         const previous = c.versions.at(-1);
         f.candidateDraft = clone(previous.reviewFlow?.candidateDraft || {approach:previous.candidate,checks:previous.checks.map(row=>row.value || row.label).join("\n")}); f.result = null; f.teamCheck = null;
@@ -362,11 +448,37 @@
         if (c.stage !== "release" || c.accepted?.rev !== c.rev) fail("Authorize only the exact accepted version."); exact(c,value,action);
         c.authorization = {rev:c.rev,actor:"Site owner",target:c.versions.at(-1).reviewFlow.target,simulated:false}; c = stage(c,"authorized","authorized");
         return done("Authorized the simulated release of V" + c.rev + " to " + c.authorization.target + ".","Site owner");
+      case "request-release-changes": {
+        if (!["release","authorized"].includes(c.stage) || c.accepted?.rev !== c.rev) fail("The site owner can request changes only to an accepted version awaiting or authorized for simulated release.");
+        exact(c,value,action);
+        const note = text(value?.reason,"Site owner revision request"), previous = c.versions.at(-1), evidence = revisionEvidence(value,c.rev,"Site owner");
+        c.adjustment = note; c.adjustments.push({rev:c.rev,text:note,actor:"Site owner",...(evidence ? {evidence:clone(evidence)} : {})}); f.adjustmentEvidence = evidence; c.rev += 1;
+        c.accepted = null; c.authorization = null; c.receipt = null; c.candidateOverride = previous.candidate;
+        f.candidateDraft = clone(previous.reviewFlow?.candidateDraft || {approach:previous.candidate,checks:previous.checks.map(row=>row.value || row.label).join("\n")});
+        f.result = null; f.teamCheck = null; f.releaseAttempt = null;
+        c = stage(c,"processing","candidate");
+        return done("The site owner requested changes to V" + (c.rev - 1) + ": " + note + ". The revised version needs customer acceptance and separate authorization again.","Site owner");
+      }
+      case "publish-failed": {
+        if (c.stage !== "authorized" || f.phase !== "authorized" || c.accepted?.rev !== c.rev || c.authorization?.rev !== c.rev) fail("Record a release failure only for the exact accepted and authorized version.");
+        exact(c,value,action);
+        const reason = text(value?.reason,"Simulated release failure reason");
+        f.releaseAttempt = {rev:c.rev,target:c.authorization.target,status:"failed",reason,simulated:true,at:new Date().toISOString()};
+        f.releaseAttempts = [...(f.releaseAttempts || []),clone(f.releaseAttempt)]; c.receipt = null;
+        c = stage(c,"authorized","release-failed");
+        return done("Simulated release of V" + c.rev + " failed: " + reason + ". Retry this exact authorized version; no success receipt was recorded.","Website team",true);
+      }
+      case "retry-publish":
+        if (c.stage !== "authorized" || f.phase !== "release-failed" || f.releaseAttempt?.rev !== c.rev || c.accepted?.rev !== c.rev || c.authorization?.rev !== c.rev) fail("Retry only the failed release of the exact accepted and authorized version.");
+        exact(c,value,action); f.releaseAttempt = {...f.releaseAttempt,status:"retrying"}; c = stage(c,"authorized","authorized");
+        return done("Retrying the simulated release of the same authorized V" + c.rev + ". Content and approvals did not change.","Website team",true);
       case "publish": {
-        if (c.stage !== "authorized" || c.accepted?.rev !== c.rev || c.authorization?.rev !== c.rev) fail("Execute only the exact accepted and authorized version."); exact(c,value,action);
+        if (c.stage !== "authorized" || f.phase !== "authorized" || c.accepted?.rev !== c.rev || c.authorization?.rev !== c.rev) fail("Execute only the exact accepted and authorized version. A failed release needs an explicit retry first."); exact(c,value,action);
         const version = c.versions.at(-1);
+        if (c.authorization.target !== version.reviewFlow.target) fail("The authorized release target must match this exact submitted version.");
         c.receipt = {rev:c.rev,target:c.authorization.target,simulated:true,candidate:version.candidate,checks:clone(version.checks),
           result:clone(version.result),teamCheck:clone(version.teamCheck),implemented:false,verified:false};
+        if (f.releaseAttempt) f.releaseAttempt = {...f.releaseAttempt,status:"succeeded"};
         c = stage(c,"published","published"); return done("Simulated release of V" + c.rev + ". No live feature was implemented, tested or published.","Website team",true);
       }
       default: fail("Unknown action “" + action + "”.");

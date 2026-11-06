@@ -1,0 +1,272 @@
+/* The customer workspace uses the existing CaseEngine and storage, not a second workflow engine. */
+(function(root){
+  'use strict';
+  const query=new URLSearchParams(location.search);
+  const active=!(query.has('walkthrough')||query.has('capture')||query.has('demo')||query.has('legacy'));
+  root.FeedbackWorkspace={active};if(!active)return;
+  const S=root.FeedbackStore,E=root.CaseEngine,C=root.FlowScenarios,V=root.FeedbackView;
+  const clone=x=>JSON.parse(JSON.stringify(x));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let error='',notice='',data,brokenStorage=false;
+  function read(){
+    try{const raw=localStorage.getItem(S.key);if(!raw)return S.migrate(null);const parsed=JSON.parse(raw);if(!Array.isArray(parsed.items))throw Error('Saved records have an unsupported shape.');return S.migrate(parsed);}
+    catch(e){brokenStorage=true;error='Saved feedback could not be read. It has not been removed. Use an earlier copy or another browser profile to continue.';return S.migrate(null);}
+  }
+  data=read();
+  const ui=data.feedbackExperience.ui||{};
+  let page=ui.page||'inbox',actor='Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,historyVersion=null,filter='all',search='';
+  let consoleState={open:false,mode:'practice',playing:false},watchTimer=null,backgroundTimer=null,preparationTimer=null;
+  let site=initialSite(),resultState=null,returnFocus=null,returnFocusSelector=null,composer=null,rendered=null;
+  const app=document.createElement('div');app.id='feedback-root';document.body.appendChild(app);
+  const oldApp=document.querySelector('.app');if(oldApp)oldApp.style.display='none';
+  document.querySelector('.skip')?.setAttribute('href','#feedback-main');
+  const modalRoot=document.createElement('div');modalRoot.id='feedback-modal-root';document.body.appendChild(modalRoot);
+  const modal=document.createElement('dialog');modal.className='fs-dialog';modal.id='feedback-dialog';modalRoot.appendChild(modal);
+  const current=()=>S.get(data,data.current),scenario=()=>C.get(scenarioId)||C.get('pdf');
+  function initialSite(){return {compartment:'1',title:'Compartment 1 · Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
+  function persist(next){
+    if(brokenStorage)throw Error('The existing saved data needs recovery before it can be changed.');
+    localStorage.setItem(S.key,JSON.stringify(next));data=next;
+  }
+  function syncUI(){
+    const next=read();if(brokenStorage)return;
+    next.current=data.current;next.feedbackExperience.ui={page,scenarioId};persist(next);
+  }
+  function changeRecord(fn){const next=read();if(brokenStorage)throw Error('Saved feedback needs recovery.');const item=S.get(next,data.current);if(!item)throw Error('This feedback is no longer available.');fn(item,next);persist(next);return item;}
+  function roleOwner(item=current()){return S.status(item,S.now(data)).owner;}
+  function render(){
+    const item=current();if(item?.c.reviewFlow?.scenarioId&&page==='ticket')scenarioId=item.c.reviewFlow.scenarioId;
+    if(page==='ticket'&&!item){page='inbox';error=error||'Choose a feedback item to continue.';}
+    const status=S.status(page==='site'?null:item,S.now(data));
+    rendered=item?{ticketId:item.id,sequence:item.sequence,rev:item.c.rev,bundleId:item.c.reviewFlow?.sentBundle?.id}:null;
+    app.innerHTML=V.render({page,items:S.customerItems(data),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),status,console:consoleState,error,notice,contextOpen,historyVersion,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?E.reviewPreview(item.c):null,clock:S.now(data)});
+    configureDrawer();
+    document.title=(page==='ticket'&&item?scenario().title+' · ':'')+'WinQuote Feedback';
+  }
+  function configureDrawer(focus=false){
+    const opened=contextOpen&&matchMedia('(max-width:900px)').matches,drawer=app.querySelector('#feedback-details'),wasModal=drawer?.getAttribute('aria-modal')==='true';
+    if(drawer){if(opened){drawer.setAttribute('role','dialog');drawer.setAttribute('aria-modal','true');}else{drawer.removeAttribute('role');drawer.removeAttribute('aria-modal');}}
+    app.querySelectorAll('.fs-navigation,.fs-topbar,.fs-ticket-document,.fs-console,.fs-console-launcher').forEach(el=>el.inert=opened);
+    if(focus)(opened?drawer?.querySelector('.fs-close-details'):app.querySelector('.fs-top-actions [data-wq=toggle-context]'))?.focus();
+    else if(opened&&!drawer?.contains(document.activeElement))drawer?.querySelector('.fs-close-details')?.focus();
+    else if(!opened&&wasModal)drawer?.focus();
+  }
+  app.addEventListener('keydown',event=>{
+    if(!contextOpen||!matchMedia('(max-width:900px)').matches||modal.open||composer)return;
+    const drawer=app.querySelector('#feedback-details');if(!drawer)return;
+    if(event.key==='Escape'){event.preventDefault();contextOpen=false;render();configureDrawer(true);}
+    if(event.key==='Tab'){const nodes=[...drawer.querySelectorAll('button,a[href],input,textarea,select,summary,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length&&!el.closest('details:not([open]) > :not(summary)')),first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+  });
+  addEventListener('resize',()=>configureDrawer());
+  function showError(e){error=e.message;render();if(modal.open){modal.querySelector('[data-dialog-error]')?.remove();modal.insertAdjacentHTML('afterbegin','<p role="alert" data-dialog-error class="fs-note">'+esc(error)+'</p>');}}
+  function go(nextPage){saveDraft();clearTimeout(preparationTimer);clearTimeout(backgroundTimer);page=nextPage;historyVersion=null;error='';if(page==='site'){const snapshot=current()?.ux?.context;if(snapshot?.state)site={...site,...snapshot.state,compartment:snapshot.compartment||site.compartment};history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(scenarioId));}syncUI();render();window.scrollTo(0,0);app.querySelector('#feedback-main')?.focus({preventScroll:true});}
+  function routeTicket(id,eventId){
+    stopWatch();data=read();const found=S.resolve(data,id,eventId);
+    if(found.missing){page='inbox';error=found.message;render();return;}
+    data.current=id;
+    if(!found.item.c.reviewFlow?.scenarioId){persist(data);location.href='?legacy=1&ticket='+encodeURIComponent(id);return;}
+    if(eventId)data=S.markRead(data,eventId);
+    notice=found.message||(eventId?'You’re back in the same feedback. Here is the current task.':'');
+    actor=found.event?.recipient||'Requester';scenarioId=found.item.c.reviewFlow.scenarioId;page='ticket';historyVersion=null;persist(data);syncUI();
+    history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(id)+(eventId?'&event='+encodeURIComponent(eventId):''));render();
+  }
+  function startScenario(id){
+    if(!C.get(id))return;saveDraft();stopWatch();scenarioId=id;site=initialSite();
+    site.section=id==='pdf'?'make-pdf':id==='compartment'?'panels':'refrigeration';page='site';actor='Requester';notice='';error='';consoleState.open=consoleState.mode==='watch';syncUI();
+    history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(id));render();
+  }
+  function field(name){return (modal.open?modal.querySelector('[name="'+name+'"]')?.value:undefined)??app.querySelector('[name="'+name+'"]')?.value??'';}
+  function readQuestions(){return [...app.querySelectorAll('[data-question-id]')].map(el=>{
+    const read=k=>el.querySelector('[data-field="'+k+'"]');
+    const previous=current().c.reviewFlow.questionDraft.find(q=>q.id===el.dataset.questionId)||{};
+    const opts=(read('options')?.value??previous.options?.join('\n')??'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const preserved=clone(previous),changed=JSON.stringify(opts)!==JSON.stringify(previous.options);
+    if(changed){delete preserved.optionIds;delete preserved.optionSnapshots;delete preserved.exclusiveOptionIds;delete preserved.maxSelections;}
+    const optionIds=preserved.optionIds||opts.map((_,index)=>el.dataset.questionId.slice(0,52)+'-'+(index+1));
+    const enteredExclusive=read('exclusiveOptions')?.value?.split('\n').map(s=>s.trim()).filter(Boolean)||[];
+    const exclusiveLabels=[...new Set([...enteredExclusive,...opts.filter(s=>/^(?:none(?: of (?:these|the above))?|not sure|i[’']?m not sure|unsure)$/i.test(s))])];
+    if(exclusiveLabels.some(label=>!opts.includes(label)))throw Error('Selection rules must use exact labels from the current options.');
+    const type=read('type')?.value??previous.type,required=read('required')?.checked??previous.required;
+    return {...preserved,id:el.dataset.questionId,text:read('text')?.value??previous.text,type,options:opts,optionIds,reason:read('reason')?.value??previous.reason,disposition:read('disposition')?.value??previous.disposition,required,screened:true,...(type==='multi'?{exclusiveOptionIds:exclusiveLabels.map(label=>optionIds[opts.indexOf(label)]),minSelections:read('minSelections')?.value!==undefined&&read('minSelections').value!==''?Number(read('minSelections').value):required?1:0,maxSelections:read('maxSelections')?.value!==undefined&&read('maxSelections').value!==''?Number(read('maxSelections').value):opts.length}:{})};
+  });}
+  function readAnswers(){const answers={};for(const el of app.querySelectorAll('[data-answer-id]')){const id=el.dataset.answerId;if(el.type==='checkbox'){answers[id]||=[];if(el.checked)answers[id].push(el.value);}else if(el.type==='radio'){if(el.checked)answers[id]=el.value;}else answers[id]=el.value;}return answers;}
+  function readAnswerNotes(){return Object.fromEntries([...app.querySelectorAll('[data-answer-other]')].map(el=>[el.dataset.answerOther,el.value]));}
+  function formScope(){const f=current()?.c.reviewFlow;return {approach:field('approach')||f?.suggestedScope?.approach||f?.scope?.approach||'',checks:field('checks')||f?.suggestedScope?.checks||f?.scope?.checks||'',understanding:field('understanding')||undefined};}
+  function saveDraft(){
+    if(page!=='ticket'||!current()||historyVersion)return;
+    const values={};for(const el of app.querySelectorAll('[name]'))if(['INPUT','TEXTAREA','SELECT'].includes(el.tagName))values[el.name]=el.type==='checkbox'?el.checked:el.value;
+    let qs=[];try{qs=readQuestions();}catch(e){error=e.message;}const answers=readAnswers();
+    try{changeRecord(i=>{i.ux||={};i.ux.drafts={...i.ux.drafts,fields:values,...(qs.length?{questions:qs}:{}),...(Object.keys(answers).length?{answers,answerNotes:readAnswerNotes(),bundleId:rendered?.bundleId}:{})};});}catch(e){error='Your draft is still on this page but could not be saved: '+e.message;}
+  }
+  function apply(action,value,{simulated=false,quiet=false}={}){
+    if(historyVersion)throw Error('This is an earlier version. Return to the current task before taking action.');
+    const item=current();if(!item)throw Error('Open a feedback item first.');
+    const fresh=read(),r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
+    r.item.ux.drafts={};persist(r.data);if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    if(!quiet)render();return r.item;
+  }
+  function contextSnapshot(){return {page:scenario().target,route:location.pathname+'?workflow='+scenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-workspace-v3',state:{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration},simulated:true};}
+  async function submitPayload(payload,simulated=false){
+    const r=S.add(read(),scenario(),payload,{example:simulated});persist(r.data);page='ticket';actor='Requester';historyVersion=null;syncUI();
+    history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
+    if(!simulated)showModal('<div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');
+    clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
+    const preparation=(stage)=>{if(page!=='ticket'||current()?.id!==r.item.id||current().c.reviewFlow.phase!=='triage')return;changeRecord(i=>{i.ux.preparation={stage,at:S.now(data),simulated:true};});const message=stage==='draft-ready'?'Simulated preparation is ready. The website team still owns the decision.':'Evidence is ready for team review. No customer question has been sent.';notice=message;if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else{document.getElementById('live').textContent=message;}};
+    preparationTimer=setTimeout(()=>preparation('draft-ready'),2000);
+    backgroundTimer=setTimeout(()=>preparation('team-review-pending'),40000);
+    return r.item;
+  }
+  function openComposer(){stopWatch();composer=root.FeedbackComposer.open({scenarioId,context:contextSnapshot(),feedback:scenario().feedback,draftKey:'winquote:'+scenarioId,selectionRoot:app.querySelector('[data-feedback-surface]')||app,onSubmit:payload=>submitPayload(payload),onClose:()=>{composer=null;}});}
+  function showModal(html){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;modal.innerHTML=html;if(!modal.open)modal.showModal();}
+  function restoreFocus(){const target=returnFocus?.isConnected?returnFocus:(returnFocusSelector?app.querySelector(returnFocusSelector):null)||app.querySelector('#feedback-main');target?.focus({preventScroll:true});}
+  function closeModal(){if(modal.open)modal.close();resultState=null;restoreFocus();}
+  modal.addEventListener('close',restoreFocus);
+  function openEmail(event){if(!event)throw Error('There is no customer update yet. Send a reviewed question or result first.');const url=location.origin+location.pathname+'?ticket='+encodeURIComponent(event.ticketId)+'&event='+encodeURIComponent(event.id);showModal('<div class="fs-eyebrow">Email preview · not sent</div><h2>'+esc(event.title)+'</h2><p>WinQuote · '+esc(event.ticketId)+'</p><p>'+esc(event.cta)+'. Your feedback and its history are kept together.</p><a class="fs-button fs-primary" href="'+esc(url)+'">'+esc(event.cta)+'</a><p class="fs-muted">This is a simulated notification. No email has been sent.</p><button class="fs-button" data-wq="close-dialog">Close preview</button>');}
+  function stopWatch(){clearTimeout(watchTimer);watchTimer=null;consoleState.playing=false;}
+  async function watchNext(){
+    if(page==='site'){await submitPayload({text:scenario().feedback,occurredAt:'Just now',context:contextSnapshot(),attachments:[],captureId:'watch-'+Date.now()},true);return;}
+    const item=current();if(!item)return startScenario(scenarioId);
+    if(item.c.reviewFlow.needsMaterialReview)throw Error('This feedback needs the team’s judgement. Switch to Practice to review its materials.');
+    const f=item.c.reviewFlow,p=f.phase;actor=roleOwner(item);if(actor==='Complete'){stopWatch();render();return;}
+    let action,value;
+    switch(p){
+      case 'triage':action='confirm-scope';value=f.scope;break;
+      case 'spec-review':action=scenarioId==='refrigeration'&&!f.questionRounds?.some(r=>r.round==='detailed')?'begin-detailed-questions':'finish-spec';break;
+      case 'question-draft':action=f.questionPreview?'send-questions':'preview-questions';break;
+      case 'awaiting-answer':action='answer';value={bundleId:f.sentBundle.id,answers:Object.fromEntries(f.sentBundle.questions.map(q=>[q.id,q.type==='multi'?[q.options[0]]:q.options?.[0]||'Please keep this focused on the current quote.']))};break;
+      case 'answer-review':if((f.suggestedScope?.decisionRequired||f.suggestedScope?.conflict))throw Error('This answer needs a team decision. Continue in Practice.');action='confirm-scope';value=f.suggestedScope||f.scope;break;
+      case 'candidate':case 'checking':action='prepare-result';break;
+      case 'ready':action='deliver';break;
+      case 'review':action='accept';value={rev:item.c.rev};break;
+      case 'accepted':action='authorize';value={rev:item.c.rev};break;
+      case 'authorized':action='publish';value={rev:item.c.rev};break;
+      case 'release-failed':action='retry-publish';value={rev:item.c.rev};break;
+      default:stopWatch();return;
+    }
+    apply(action,value,{simulated:true});
+  }
+  function scheduleWatch(){clearTimeout(watchTimer);if(!consoleState.playing)return;watchTimer=setTimeout(async()=>{try{await watchNext();if(current()?.c.stage==='published')stopWatch();scheduleWatch();}catch(e){stopWatch();error=e.message;render();}},2600);}
+  function startWatch(){consoleState.mode='watch';consoleState.playing=true;consoleState.open=true;notice='Scripted roles and decisions will be simulated. Pause to take over.';render();scheduleWatch();}
+
+  // Result previews run authored fixtures for the exact candidate, never arbitrary code.
+  function openResult(){
+    const item=current(),v=historyVersion?item.c.versions.find(v=>v.rev===historyVersion):null;
+    const input=v||item.c,preview=E.reviewPreview(input);
+    if(!preview.interactive)throw Error(preview.reason||'The team needs to update this result preview.');
+    const rev=v?.rev||item.c.rev,signature=JSON.stringify(preview),saved=item.ux?.resultSessions?.[rev];
+    resultState={preview,rev,ticketId:item.id,signature,model:preview.type==='pdf-workflow'?null:saved?.signature===signature?saved.model:root.ResultModel.create(preview),tab:'quote',pdfOpened:false,notice:''};
+    showModal('');renderResult();
+  }
+  function updateResult(action,value){
+    const r=resultState;r.model=root.ResultModel.update(r.model,action,value);
+    const fresh=read(),item=S.get(fresh,r.ticketId);if(!item)throw Error('This feedback is no longer available.');
+    item.ux.resultSessions||={};item.ux.resultSessions[r.rev]={signature:r.signature,model:r.model};persist(fresh);renderResult();
+  }
+  function renderResult(){
+    const r=resultState;if(!r)return;
+    const m=r.model,money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:m?.currency||'USD',maximumFractionDigits:0}).format(n);let html='';
+    if(r.preview.type==='pdf-workflow')html='<div class="fs-preview"><div class="fs-eyebrow">Quote MW-1042 · Make PDF</div><h3>Your PDF is ready</h3><p>The saved customer PDF opens separately. This quote stays here.</p><div class="fs-actions"><button class="fs-button fs-primary" data-wq="result-pdf">Open saved PDF ↗</button><button class="fs-button" data-wq="result-workflow">Go to Workflow</button></div>'+(r.tab==='workflow'?'<p role="status">Workflow · Quote MW-1042</p><button class="fs-button" data-wq="result-back">Back to Make PDF</button>':'')+'</div>';
+    else {
+      const c=m.compartments.find(c=>c.id===m.selectedId);
+      html='<div class="fs-toolbar">'+m.compartments.map(c=>'<button class="fs-button '+(m.selectedId===c.id?'fs-selected':'')+'" data-wq="result-compartment" data-value="'+esc(c.id)+'">'+esc(c.title||'Compartment '+c.number+' · '+c.type)+'</button>').join('')+'</div>';
+      if(m.type==='compartment')html+='<div class="fs-preview"><label class="fs-field">Editable compartment title<input data-wq="result-title" maxlength="160" value="'+esc(c.title)+'"></label><h3>'+esc(c.title)+'</h3><div class="fs-preview-sections">'+c.sections.map(section=>'<section><strong>'+esc(m.repeatLabels?'Compartment '+c.number+' · '+c.type+' · '+section:section)+'</strong><p class="fs-muted">Settings for compartment '+c.number+'</p></section>').join('')+'</div><p class="fs-muted">Titles save in this preview. Switch compartments to check that the other title stays unchanged.</p></div>';
+      else {
+        const totals=root.ResultModel.totals(m),saved=totals.compartments.find(x=>x.id===c.id);
+        html+='<div class="fs-preview"><div class="fs-eyebrow">Quote MW-1042 · Compartment '+c.number+' · '+esc(c.type)+'</div><h3>Refrigeration</h3><label class="fs-option"><input type="checkbox" data-wq="result-no-refrigeration" '+(c.draftNoRefrigeration?'checked':'')+'> No refrigeration required</label>'+
+          (!c.draftNoRefrigeration?'<label class="fs-field">Equipment<select data-wq="result-equipment"><option value="">Select equipment</option>'+c.availableEquipment.map(e=>'<option value="'+esc(e.id)+'" '+(c.draftEquipment.some(x=>x.id===e.id)?'selected':'')+'>'+esc(e.label)+' · '+money(e.amount)+'</option>').join('')+'</select></label>':'')+
+          '<p>'+esc(c.savedNoRefrigeration?'Saved: no refrigeration equipment':saved.equipment.length?'Saved: '+saved.equipment.map(e=>e.label).join(', '):'Saved: no equipment selected. Choose equipment when needed.')+'</p><div class="fs-metric"><span>Saved refrigeration amount</span><strong>'+money(saved.refrigerationAmount)+'</strong></div>'+
+          '<div class="fs-actions"><button class="fs-button fs-primary" data-wq="result-save">Save this compartment</button><button class="fs-button" data-wq="result-summary">View quote summary</button></div><p class="fs-muted">'+(c.dirty?'Unsaved changes. Totals below still reflect the saved quote.':'This compartment is saved.')+'</p></div>';
+        html+='<div class="fs-preview"><h3>Saved quote summary</h3>'+totals.compartments.map(row=>'<div class="fs-metric"><span>Compartment '+row.number+' · '+esc(row.type)+'<small style="display:block">Base '+money(row.baseAmount)+' + refrigeration '+money(row.refrigerationAmount)+'</small></span><strong>'+money(row.total)+'</strong></div>').join('')+'<div class="fs-metric"><strong>Quote total</strong><strong>'+money(totals.quoteTotal)+'</strong></div><p class="fs-muted">Illustrative amounts. Only the selected compartment changes.</p></div>';
+        if(r.tab==='summary')html+='<div class="fs-preview" role="status"><div class="fs-eyebrow">Simulated PDF · same saved quote</div><h3>Quote MW-1042</h3>'+totals.pdf.compartments.map(row=>'<div class="fs-metric"><span>Compartment '+row.number+' · '+esc(row.type)+'</span><strong>'+money(row.total)+'</strong></div>').join('')+'<div class="fs-metric"><strong>Total</strong><strong>'+money(totals.pdf.total)+'</strong></div></div>';
+      }
+    }
+    modal.innerHTML='<div class="fs-toolbar"><span class="fs-eyebrow">Interactive result · V'+r.rev+' · Simulation</span><button class="fs-button" data-wq="close-dialog">Close result</button></div><h2>'+esc(scenario().title)+'</h2>'+html+(r.notice?'<p role="status">'+esc(r.notice)+'</p>':'')+'<p class="fs-muted">This fixture demonstrates the proposal. It does not change a live WinQuote quote.</p>';
+  }
+  function openPDF(){
+    const w=window.open('','_blank');if(!w)throw Error('The browser blocked the new tab. Allow pop-ups, then select Open saved PDF again.');
+    w.opener=null;w.document.write('<!doctype html><html lang="en"><title>MW-1042 · Sample customer PDF</title><style>body{font:16px system-ui;max-width:700px;margin:60px auto;padding:24px;color:#222}h1{font-family:Georgia}small{color:#666}section{border-top:1px solid #ddd;padding:24px 0}</style><small>WINQUOTE · SIMULATED PDF PREVIEW</small><h1>Quote MW-1042</h1><section>Customer quote<br>Walk-in cooler configuration</section><p>This is an authored document preview for the demo, not a generated customer PDF.</p><p>Your Make PDF tab remains open.</p></html>');w.document.close();if(resultState){resultState.pdfOpened=true;resultState.notice='Opened the sample document in a separate tab. This quote is still here.';renderResult();}
+  }
+  async function openAttachment(id){const result=await root.FeedbackMediaStore.get(id);if(!result)throw Error('This attachment is not available on this device.');const url=URL.createObjectURL(result.blob);showModal('<h2>'+esc(result.manifest.name||'Attached evidence')+'</h2>'+(result.manifest.kind==='audio'?'<audio controls src="'+url+'"></audio>':'<img class="fs-evidence-image" alt="Attached feedback evidence" src="'+url+'">')+'<p><button class="fs-button" data-wq="close-dialog">Close</button></p>');modal.addEventListener('close',()=>URL.revokeObjectURL(url),{once:true});}
+
+  async function handle(action,value,el){
+    error='';
+    if(action!=='watch-toggle'&&action!=='watch-next'&&consoleState.playing)stopWatch();
+    switch(action){
+      case 'nav-inbox':history.replaceState({},'',location.pathname);return go('inbox');
+      case 'nav-updates':return go('updates');
+      case 'open-ticket':return routeTicket(value);
+      case 'open-update':{const ev=S.updates(data).find(x=>x.id===value);if(ev)return routeTicket(ev.ticketId,ev.id);break;}
+      case 'start-scenario':return startScenario(value||'pdf');
+      case 'open-composer':return openComposer();
+      case 'resume':if(current())return routeTicket(current().id);return startScenario(scenarioId);
+      case 'open-console':saveDraft();consoleState.open=true;break;
+      case 'close-console':saveDraft();consoleState.open=false;break;
+      case 'change-role':saveDraft();actor=value;historyVersion=null;break;
+      case 'change-mode':saveDraft();consoleState.mode=value;stopWatch();break;
+      case 'watch-toggle':if(consoleState.playing)stopWatch();else return startWatch();break;
+      case 'watch-next':await watchNext();return;
+      case 'advance-time':persist(S.advance(read(),3));notice='Simulation advanced by 3 hours. No background work or message delivery was performed.';break;
+      case 'legacy-links':showModal('<h2>Earlier walkthroughs</h2><p>These original examples remain available. They use the same saved workspace.</p><div class="fs-actions">'+[['create','Explore “Create”'],['pdf','PDF · team review'],['pdf&branch=ask&mode=practice','PDF · ask the customer'],['journey','Two-round journey'],['customer&mode=practice','Requester practice'],['team&mode=practice','Website team practice'],['publisher&mode=practice','Site owner practice']].map(([q,t])=>'<a class="fs-button" href="?walkthrough='+q+'">'+t+'</a>').join('')+'</div><button class="fs-button" data-wq="close-dialog">Close</button>');return;
+      case 'back':if(historyVersion){historyVersion=null;break;}return go('inbox');
+      case 'toggle-context':saveDraft();contextOpen=!contextOpen;render();configureDrawer(true);return;
+      case 'filter-inbox':filter=value;break;
+      case 'search-inbox':search=value;break;
+      case 'mark-read-all':{const next=read();next.feedbackExperience.read=[...new Set([...(next.feedbackExperience.read||[]),...S.updates(next).map(e=>e.id)])];persist(next);break;}
+      case 'simulate-email':return openEmail(S.updates(data).find(e=>e.ticketId===data.current));
+      case 'open-attachment':return openAttachment(value);
+      case 'view-version':saveDraft();historyVersion=Number(value);notice='Historical version. Return to the current task to take action.';break;
+      case 'current-version':historyVersion=null;notice='';break;
+      case 'activity':showModal('<h2>Activity</h2>'+(current()?.c.trail||[]).filter(t=>actor==='Website team'||['submit','send-questions','answer','confirm-scope','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish'].includes(t.action)).slice().reverse().map(t=>'<div class="fs-activity"><strong>'+esc(t.actor)+'</strong><p>'+esc(t.text)+'</p><small>'+esc(new Date(t.at).toLocaleString())+'</small></div>').join('')+'<button class="fs-button" data-wq="close-dialog">Close</button>');return;
+      case 'set-next-update':changeRecord(i=>{const at=S.now(data);i.ux.timing={...i.ux.timing,nextUpdateAt:new Date(Date.parse(at)+2*3600000).toISOString(),delayReason:'The team is checking the result before sending it.'};});notice='Next update set for two simulated hours from now.';break;
+      case 'keep-working':closeModal();return go('site');
+      case 'close-dialog':return closeModal();
+      case 'site-select-compartment':site.compartment=value;site.title='Compartment '+value+(value==='1'?' · Cooler':' · Freezer');break;
+      case 'site-title':site.title=value;return;
+      case 'site-no-refrigeration':site.noRefrigeration=el.checked;return;
+      case 'site-save':site.savedNoRefrigeration=site.noRefrigeration;site.notice='Saved. The selected equipment and amount are still visible — this is the issue to report.';break;
+      case 'site-make-pdf':site.pdfGenerated=true;site.notice='PDF generated. It did not open automatically — this is the issue to report.';break;
+      case 'site-workflow':site.section='workflow';break;
+      case 'site-back':site.section='make-pdf';break;
+      case 'select-variant':{const selected=C.variant(scenarioId,value);if(!selected)throw Error('That candidate is unavailable.');return apply('edit-candidate',selected.scope);}
+      case 'save-questions':return apply('save-questions',readQuestions());
+      case 'preview-questions':apply('save-questions',readQuestions(),{quiet:true});return apply('preview-questions');
+      case 'send-questions':{const qs=readQuestions(),pick=rows=>rows.filter(q=>q.disposition==='ask'||!q.disposition).map(q=>[q.id,q.text,q.type,q.options,q.required,q.minSelections,q.maxSelections,q.exclusiveOptionIds]);const unchanged=JSON.stringify(pick(qs))===JSON.stringify(pick(current().c.reviewFlow.questionPreview?.questions||[]));apply('save-questions',qs,{quiet:true});apply('preview-questions',undefined,{quiet:true});if(!unchanged){notice='The customer preview changed. Review it before sending.';render();return;}return apply('send-questions');}
+      case 'answer':return apply('answer',{bundleId:rendered?.bundleId,answers:readAnswers(),answerNotes:readAnswerNotes()});
+      case 'confirm-scope':return apply('confirm-scope',formScope());
+      case 'edit-candidate':{if(!app.querySelector('[name=approach]')&&(!modal.open||!modal.querySelector('[name=approach]'))){const scope=current().c.reviewFlow.candidateDraft||current().c.reviewFlow.scope;showModal('<h2>Edit version '+current().c.rev+'</h2><p>Editing this candidate clears its prepared result. Prepare it again before sending.</p><label class="fs-field">Proposed behavior<textarea name="approach" rows="5">'+esc(scope.approach)+'</textarea></label><label class="fs-field">Acceptance checks<textarea name="checks" rows="5">'+esc(scope.checks)+'</textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="edit-candidate">Save draft</button></div>');return;}const updated=apply('edit-candidate',{approach:field('approach'),checks:field('checks')});if(modal.open)closeModal();return updated;}
+      case 'prepare-result':if(app.querySelector('[name=approach]'))apply('edit-candidate',{approach:field('approach'),checks:field('checks')},{quiet:true});return apply('prepare-result');
+      case 'adjust':case 'request-release-changes':case 'correct-understanding':{const reason=field('reason').trim();if(!reason){showModal('<h2>'+esc(action==='correct-understanding'?'Correct our understanding':'What needs to change?')+'</h2><p>Tell the team what is missing. Your note stays with this feedback.</p><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="'+action+'">Send to the team</button><button class="fs-button" data-wq="adjustment-media" data-value="'+action+'">Add image or recording</button></div>');return;}const v=action==='correct-understanding'?{text:reason}:{rev:rendered.rev,reason};const result=apply(action,v);closeModal();return result;}
+      case 'adjustment-media':{
+        const note=field('reason'),action=value,rev=rendered.rev,id=rendered.ticketId,sequence=rendered.sequence;
+        closeModal();composer=root.FeedbackComposer.open({title:'What needs to change?',description:'Add a note, image or recording for the website team. It will stay with this version.',label:'Your adjustment',submitLabel:'Send adjustment',showTiming:false,allowSelection:false,feedback:note,draftKey:'adjust:'+id+':V'+rev,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
+          if(action==='correct-understanding'){const result=apply(action,{text:payload.text||'Please review the attached adjustment evidence.'},{quiet:true});changeRecord(i=>{i.ux.correctionEvidence={rev,attachments:payload.attachments,context:payload.context};});render();return result;}
+          const fresh=read(),r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);notice='Your adjustment and materials are with the website team.';render();
+        },onClose:()=>{composer=null;}});return;
+      }
+      case 'accept':case 'authorize':case 'publish':case 'retry-publish':return apply(action,{rev:current().c.rev});
+      case 'publish-failed':return apply(action,{rev:current().c.rev,reason:'The simulated release attempt did not complete. The approved version is unchanged.'});
+      case 'open-result':if(value)historyVersion=Number(value);return openResult();
+      case 'add-question':{const qs=readQuestions();qs.push({id:'question-'+Date.now(),text:'What additional business detail should the team consider?',type:'text',options:[],reason:'Edit this draft to ask only for missing customer context.',required:true,disposition:'team'});return apply('save-questions',qs);}
+      case 'result-compartment':return updateResult('select-compartment',value);
+      case 'result-title':return updateResult('title',value);
+      case 'result-no-refrigeration':return updateResult('toggle',el.checked);
+      case 'result-equipment':return updateResult('select-equipment',value?[value]:[]);
+      case 'result-save':resultState.notice='Saved. The quote summary and simulated PDF use this same saved state.';return updateResult('save');
+      case 'result-summary':resultState.tab='summary';return renderResult();
+      case 'result-pdf':return openPDF();
+      case 'result-workflow':resultState.tab='workflow';return renderResult();
+      case 'result-back':resultState.tab='quote';return renderResult();
+      default:if(['draft-questions','begin-detailed-questions','close-questions','finish-spec','deliver'].includes(action))return apply(action);return;
+    }
+    render();
+  }
+  document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
+  document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
+  app.addEventListener('input',event=>{const el=event.target;if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();clearTimeout(backgroundTimer);clearTimeout(preparationTimer);}});
+  window.addEventListener('pagehide',()=>{stopWatch();clearTimeout(backgroundTimer);clearTimeout(preparationTimer);saveDraft();});
+  window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';document.getElementById('live').textContent=notice;});
+  if(query.has('ticket'))routeTicket(query.get('ticket'),query.get('event'));
+  else if(query.has('workflow'))startScenario(query.get('workflow'));
+  else {if(page==='ticket'&&!current())page='inbox';notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
+})(globalThis);

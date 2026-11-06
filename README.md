@@ -1,55 +1,61 @@
-# Annora Feedback Flow
+# Annora Feedback Flow · WinQuote
 
-[Open the workspace](https://kyle-annora.github.io/annora-feedback-flow/)
+[Open the customer workspace](https://kyle-annora.github.io/annora-feedback-flow/)
 
-Annora follows feedback from the original request through team review, clarification when needed, a versioned proposal, adjustments, acceptance and separate release authorization. WinQuote supplies two examples: an unclear “Create” button and a historical request to open a generated PDF.
+A hands-on demo of feedback from its original page through team screening, optional clarification, a versioned result, customer acceptance and separate release authorization. It uses the existing Annora records and CaseEngine, with WinQuote as the business example.
 
-The reviewed workflow runs inside the original Feedback Flow workspace and CaseEngine records. Existing saved feedback, original wording, delivered versions and earlier decisions remain available. Starting a walkthrough creates a separate exercise rather than replacing the feedback you were working on.
+## Three workflows
 
-## Customer presentation
+- **Open the generated PDF** — the latest recorded requirements already establish a separate PDF tab, retained Make PDF page and an explicit Workflow action. The main path needs no customer question.
+- **Identify each compartment** — a complete V1 includes numbered/type-aware editable titles and grouped sections. Try a new title or an additional section-label requirement as a meaningful V2 adjustment.
+- **Remove refrigeration from the quote** — explicitly save No Refrigeration Required, inspect equipment and totals, and compare the later reselect/restore policies. This case comes from a historical diagnostic. The alternative restore conversation is a proposed demo branch, not an actual historical customer approval.
 
-The main URL opens a curated PDF demonstration. Each screen pairs the current owner and action with the question, proposal or exact version being reviewed. Choose either customer intention to see the proposed behavior and review checks change together; the team still reviews and confirms the plan. After a requested adjustment, edit the proposal or checks before sending V2. Customer acceptance, site-owner authorization and simulated release remain separate decisions.
+These cases have different evidence labels. Historical requests, recorded decisions, diagnostic reconstruction and proposed dialogue are not interchangeable. The source notes remain in Details.
 
-**Minimize** returns to the sample WinQuote page. The compact entry shows who owns the next step and returns to the current record. **Back** shows earlier steps read-only. **Explore workspace** retains the original inbox and walkthroughs below. The reminder scene is a delivery preview only; no notification is sent. The interface illustration is not a working PDF implementation.
+## How to try it
 
-## Try the PDF case
+1. Choose a workflow, use its sample business page and select **Give feedback**. Keep the supplied text or write your own. Add real images or an audio recording, or select a page region to attach allowed DOM context.
+2. Submit and keep working, or open the saved feedback. **My feedback** and **Updates** show only the current local customer's records. Images, audio and drafts stay on this device; a submitted attachment is not uploaded to a service.
+3. Open the floating **Walkthrough** console when you need to change perspective. **Practice** waits for your decisions. **Watch** runs explicitly labelled scripted decisions. Starting a watched example does not add it to the customer's feedback count.
+4. As **Website team**, screen AI-labelled suggestions privately. Edit or omit questions, answer from records, or keep technical decisions with the team. Only an explicitly sent batch reaches the requester. Initial clarification and later detailed questions are optional, separate rounds.
+5. As **Requester**, answer yes/no, single choice, multiple choice or text questions. Other can include an explanation; uncertainty is not consent. The team reviews how the answer changes the proposed behavior and checks before confirming the plan.
+6. Prepare and try an authored result, then send that exact version. A requested adjustment can include text, images or audio. The team must change the candidate or checks and prepare V2 before sending it again. Unsupported edits remain a draft until an appropriate result is authored.
+7. Customer acceptance hands the exact version to **Site owner**. The owner can request changes or authorize release. The team then runs the simulated release; failure and retry have separate states and no success receipt is created on failure.
 
-[Watch the PDF walkthrough](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf), or [try it yourself](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf&mode=practice).
+The collapsed walkthrough names the current ticket, owner and task. It resumes that record. Product navigation, presentation controls and business approvals remain separate.
 
-The website team first reviews the source and proposed scope. The August 5 historical decision keeps Make PDF open and makes navigation to Workflow a separate action. Confirm that this decision applies, then continue without asking the customer a question.
+## Waiting and returning
 
-[Try the clarification branch](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf&branch=ask&mode=practice) when the team cannot establish that the record applies:
+A submission has an immediate durable receipt. While that screen remains open, short local timers show labelled preparation stages. They never send questions or confirm a human decision. Leaving stops those timers; there is no background worker.
 
-1. Draft and edit the questions privately. Choose their wording, answer type, options and required setting. Assign each item to the customer, existing records or the website team.
-2. **Save private draft** without sending anything. Preview the customer bundle, then explicitly send only the reviewed customer questions. Internal investigation stays with the team.
-3. Switch to **Requester** and answer. “Keep editing this quote” and “Move on to next workflow step” produce different proposed approaches and checks.
-4. Return to **Website team** to select or edit the suggested scope and confirm it. A customer answer does not itself approve the proposal or override the recorded navigation constraint.
-5. Edit V1 and prepare its labelled simulated result and team check summary before sending it for review. A requested adjustment returns to the team for an actual V2 edit and a fresh preview.
+Waiting screens show the current owner, last meaningful update, next update time and what you can do. **Advance time** moves a local simulation clock without performing the work. Overdue updates remain overdue until the team explicitly sets another expectation. Simulated email links and Updates return to the same canonical ticket; old question and version links explain that they have been answered or superseded.
 
-Supported PDF proposals include an interactive navigation model. Editing the behavior or checks beyond that authored model removes the interaction; the exact proposal remains available for review. The sample document is not a generated customer PDF, and the preview is not evidence that a live PDF feature has been implemented or verified.
+## Real local behavior and simulated behavior
 
-## Create, personal feedback and roles
+Real: local form interaction, file upload/paste/drop, image previews, microphone recording and playback where supported, IndexedDB attachment persistence, allowed DOM region selection, local record/version guards, authored result interactions.
 
-[Explore the Create concern](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=create). Describe the hesitation using a suggested answer or your own words. Worrying that a quote will be sent to a customer and being unsure which quote path to choose lead to different copy and review questions. Unknown answers stay with the team rather than receiving an invented successful result.
+Simulated: AI drafting and interpretation, customer-message delivery, engineering implementation, quote/PDF amounts and documents, and business release. No live WinQuote quote, email, repository or deployment changes when a demo button is pressed. A perspective switch is a demo control, not authentication.
 
-The existing [Requester](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=customer), [Website team](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=team) and [Site owner](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=publisher) entry URLs remain available. Add `&mode=practice` to take part. New personal feedback also starts with team review; unsupported work needs an explicit team-authored proposal and checks.
+The capture adapter records an allowlisted page/quote/compartment/time/build/state snapshot before opening the composer. Selected DOM text is not repository source code. It does not read cookies, credentials, all browser storage, production logs or arbitrary source files. Screenshots can be uploaded or pasted; this version does not automatically take a screenshot or share a screen. Audio is never given an invented transcript.
 
-Use **Demo view** to switch responsibilities on the same exercise. This is a presentation control, not account access control. Changing views does not answer, accept or authorize anything.
+Data is local to the browser and origin. The standalone HTML may have different persistence or microphone behavior when opened as a local file; use the HTTPS demo or localhost for recording. No cross-device sync is promised.
 
-Submitted versions freeze the candidate, scope, source, answers, questions and simulated result. Requester acceptance applies to that exact version. The site owner separately approves its release, then the website team runs the simulation and records a receipt for the same version and destination. Earlier versions remain unchanged.
+## Earlier walkthroughs
 
-The walkthrough shows the current owner, next action and why each step exists. Pause to inspect, or choose **Try this step** to take control. Earlier practice steps are read-only; **Return to current step** resumes the latest task. Records and drafts are saved in the current browser when storage is available. AI, customer messages, implementation and release are simulated; this prototype does not publish changes to WinQuote.
+Earlier Create and PDF stories remain under **Simulation tools → Earlier demo paths**, with their saved records and original URLs:
 
-## Local development
+- [Create concerns](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=create)
+- [PDF team review](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf)
+- [PDF questions](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=pdf&branch=ask&mode=practice)
+- [Two-round journey](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=journey)
+- [Requester](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=customer), [Website team](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=team), [Site owner](https://kyle-annora.github.io/annora-feedback-flow/?walkthrough=publisher)
 
-With Node.js installed, run `npm start` and open the local address printed in the terminal. Run `npm test` for workflow and packaging checks. Run `npm run bundle` to regenerate the identical self-contained entry points under `docs/`; GitHub Pages serves that directory from `main`.
+The Create examples remain synthetic. Historical versions are read-only; viewing one never revives an old approval.
 
-Inter and Source Serif Pro are bundled locally, with sources and licenses in `assets/`. The standalone HTML embeds the fonts, styles and scripts for offline use. The [single-file demo](https://kyle-annora.github.io/annora-feedback-flow/Feedback-Flow.html) can be saved and opened without a server.
+## Development
 
-### In-context reporting and customer return
+Run `npm start` and open its printed local address. `npm test` checks the shared domain, capture/storage and packaging contracts. `npm run bundle` produces identical self-contained `docs/index.html` and `docs/Feedback-Flow.html`; GitHub Pages serves `main/docs`.
 
-Choose **Report from WinQuote**, or open `?capture=pdf`, to report from the simulated Make PDF page. Submit → Keep working preserves the quote surface. **View feedback** opens that same record; the Demo view control lets you operate Website team, Requester, and Site owner explicitly. Team actions generate local **Updates** on the business page. No email, screenshot capture, telemetry or real message delivery is performed.
+The current customer shell is `feedback-app.js` and `feedback-view.js`. `feedback-store.js` commits through the existing CaseEngine and storage key. `scenario-catalog.js` defines the three authored scenarios; `result-model.js` operates only their local result fixtures. Legacy query routes continue through `studio.js`.
 
-The team may share its understanding without asking an initial question, or screen/send initial clarification first. The customer can correct the understanding before a version is sent. A separate optional detailed question batch resolves remaining business decisions. Its answer updates the proposal and acceptance checks only after team confirmation. **PDF · full journey** (or `?walkthrough=journey`) demonstrates both question rounds; old PDF/Create/role routes remain available.
-
-New submissions, drafts and read markers persist in this browser. Updates return to the same current record and exclude walkthrough copies. V1/V2 acceptance and separate release authorization remain exact-version simulations.
+The approved Source Serif Pro headings, Inter body and original WinQuote mark are bundled locally with provenance/licenses in `assets/`. Wesley's independent homepage design and the WinHub sitemap are separate deliverables.
