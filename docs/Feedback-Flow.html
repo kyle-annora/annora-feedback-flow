@@ -2057,6 +2057,146 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 #feedback-modal-root .fs-confetti i { position: absolute; top: 36px; display: block; border-radius: 1px; will-change: transform, opacity; }
 @media (prefers-reduced-motion: reduce) { #feedback-modal-root .fs-confetti { display: none; } }
 
+/* Approved panel audit: Cycle tabs, Intercom disclosures, Attio event rows. */
+#feedback-root .fs-details { background: #fcfcfc; padding-inline: 20px; }
+#feedback-root .fs-details-heading { min-height: 48px; margin-bottom: 0; }
+#feedback-root .fs-detail-tabs { align-self: stretch; gap: 22px; }
+#feedback-root .fs-detail-tabs button { padding: 10px 0; min-height: 42px; color: #737373; font-size: 12px; }
+#feedback-root .fs-detail-tabs button[aria-selected=true] { color: #262626; }
+#feedback-root .fs-detail-tabs button[aria-selected=true]::after { content: ''; position: absolute; height: 2px; background: #153e5c; bottom: -1px; left: 0; right: 0; }
+#feedback-root .fs-inspector-panel { outline: 0; padding-bottom: 30px; }
+#feedback-root .fs-inspector-panel :is(h2,h3) { font: 550 12px/1.5 var(--fs-sans); letter-spacing: 0; }
+#feedback-root .fs-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#feedback-root .fs-basis { padding: 20px 0 16px; }
+#feedback-root .fs-basis-state { color: #737373; font-size: 10px; }
+#feedback-root .fs-basis-facts { list-style: none; padding: 0; margin: 9px 0 0; }
+#feedback-root .fs-basis-facts > li { position: relative; padding: 9px 0 9px 13px; }
+#feedback-root .fs-basis-facts > li::before { content: ''; position: absolute; width: 4px; height: 4px; background: #959595; border-radius: 50%; left: 0; top: 17px; }
+#feedback-root .fs-basis-facts p { font-size: 12px; line-height: 1.65; color: #454545; }
+#feedback-root .fs-fact-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 9px; margin-top: 5px; color: #737373; font-size: 10px; }
+#feedback-root .fs-fact-meta > span { text-transform: none; }
+#feedback-root .fs-source-detail > summary { display: inline-flex; align-items: center; gap: 4px; color: #596b78; font-size: 10px; list-style: none; text-decoration: underline; text-decoration-color: #c5ced4; text-underline-offset: 3px; cursor: pointer; }
+#feedback-root .fs-source-detail > p { border-left: 1px solid #d8d8d8; padding-left: 9px; margin: 8px 0 3px; font-size: 11px; color: #737373; }
+#feedback-root .fs-source-detail small { display: block; overflow-wrap: anywhere; }
+#feedback-root .fs-inspector-empty { color: #737373; font-size: 12px; line-height: 1.65; padding: 11px 0 2px; }
+#feedback-root .fs-side-fold { border-top: 1px solid #e6e6e6; border-bottom: 0; padding: 0; margin: 0; }
+#feedback-root .fs-side-fold > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 11px 0; color: #454545; font: 500 12px/1.5 var(--fs-sans); cursor: pointer; list-style: none; }
+#feedback-root .fs-side-fold > summary > svg { margin-left: auto; color: #8b8b8b; transition: transform .15s; }
+#feedback-root .fs-side-fold[open] > summary > svg { transform: rotate(180deg); }
+#feedback-root .fs-side-count { min-width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 4px; background: #efefef; color: #737373; font: 400 10px/1 var(--fs-sans); }
+#feedback-root .fs-fold-content { padding: 0 0 15px; }
+#feedback-root .fs-original-quote { margin: 2px 0 14px; border-left: 2px solid #ddd; padding: 0 0 0 11px; font-size: 12px; line-height: 1.75; color: #595959; white-space: pre-wrap; overflow-wrap: anywhere; }
+#feedback-root .fs-context-values { margin: 7px 0 0; }
+#feedback-root .fs-context-values > div { grid-template-columns: 75px minmax(0, 1fr); gap: 10px; margin: 9px 0; font-size: 11px; line-height: 1.55; }
+#feedback-root .fs-context-values dd { color: #454545; }
+#feedback-root .fs-evidence-list { display: grid; gap: 4px; }
+#feedback-root .fs-evidence-row { display: grid; grid-template-columns: 40px minmax(0,1fr) 13px; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 7px 0; background: transparent; }
+#feedback-root .fs-evidence-row:hover { background: #f3f3f3; }
+#feedback-root .fs-evidence-thumb { display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; background: #f0f0f0; border: 1px solid #e1e1e1; border-radius: 5px; color: #737373; }
+#feedback-root .fs-evidence-thumb img { width: 100%; height: 100%; object-fit: cover; }
+#feedback-root .fs-evidence-row strong { display: block; color: #454545; font-size: 11px; line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
+#feedback-root .fs-evidence-row small { display: block; color: #737373; font-size: 10px; line-height: 1.5; margin-top: 4px; }
+#feedback-root .fs-evidence-row > svg { color: #737373; }
+#feedback-root .fs-answer-history { padding: 10px 0; border-bottom: 1px solid #ededed; }
+#feedback-root .fs-answer-history:last-child { border-bottom: 0; padding-bottom: 0; }
+#feedback-root .fs-answer-history > div { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 11px; }
+#feedback-root .fs-answer-history strong { font-weight: 500; }
+#feedback-root .fs-answer-history > div > span, #feedback-root .fs-answer-history small { color: #737373; font-size: 10px; }
+#feedback-root .fs-answer-history > p { font-size: 11px; margin: 8px 0; color: #737373; }
+#feedback-root .fs-answer-history blockquote { margin: 8px 0; padding-left: 10px; border-left: 2px solid #d8d8d8; font-size: 12px; color: #454545; white-space: pre-wrap; }
+#feedback-root .fs-answer-history .fs-answer-effect { color: #595959; }
+#feedback-root .fs-history-event { margin: 10px 0 14px; }
+#feedback-root .fs-history-event:last-child { margin-bottom: 0; }
+#feedback-root .fs-history-event > small { color: #737373; font-size: 10px; }
+#feedback-root .fs-version-row { display: grid; grid-template-columns: 24px minmax(0,1fr) 12px; align-items: center; gap: 9px; width: 100%; padding: 11px 0; background: transparent; }
+#feedback-root .fs-version-row:hover, #feedback-root .fs-version-viewed { background: #f1f3f5; }
+#feedback-root .fs-version-icon { color: #737373; align-self: start; padding-top: 2px; }
+#feedback-root .fs-version-row strong { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; }
+#feedback-root .fs-version-row strong small { display: inline; font-size: 9px; color: #737373; font-weight: 400; }
+#feedback-root .fs-version-row > span > span { display: block; margin-top: 2px; color: #595959; font-size: 11px; }
+#feedback-root .fs-version-row > span > small { display: block; color: #737373; font-size: 10px; margin-top: 3px; }
+#feedback-root .fs-activity { padding-top: 5px; }
+#feedback-root .fs-activity ol { margin-top: 0; }
+#feedback-root .fs-activity li { padding: 17px 0; }
+#feedback-root .fs-activity p { color: #595959; font-size: 12px; }
+#feedback-root .fs-activity small { font-size: 10px; }
+#feedback-root .fs-event-version { margin-left: auto; color: #737373; font-size: 10px; }
+#feedback-root .fs-event-detail { margin-top: 8px; }
+#feedback-root .fs-event-detail > summary { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; cursor: pointer; }
+#feedback-root .fs-readonly-banner { display: flex; align-items: flex-start; gap: 9px; padding: 12px 14px; border: 1px solid #dfe3e6; border-radius: 6px; margin-bottom: 20px; background: #fafbfc; color: #595959; }
+#feedback-root .fs-readonly-banner svg { margin-top: 2px; }
+#feedback-root .fs-readonly-banner strong { display: block; font-size: 12px; font-weight: 550; }
+#feedback-root .fs-readonly-banner small { display: block; font-size: 11px; color: #737373; margin-top: 2px; }
+#feedback-root .fs-row-main > .fs-row-timing { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 10px; white-space: normal; margin-top: 5px; }
+#feedback-root .fs-row-timing > span { display: inline; }
+#feedback-root .fs-row-timing .fs-overdue { color: #92694b; }
+#feedback-root .fs-update-group { border-top: 1px solid #e6e6e6; margin-top: 24px; }
+#feedback-root .fs-update-group > header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; padding: 18px 0 0; }
+#feedback-root .fs-update-group > header h2 { font: 550 13px/1.5 var(--fs-sans); letter-spacing: 0; }
+#feedback-root .fs-update-group > header > span { font-size: 10px; color: #737373; }
+#feedback-root .fs-update-group .fs-update { border-bottom: 0; }
+#feedback-root .fs-update-history { margin: -2px 0 16px 40px; }
+#feedback-root .fs-update-history > summary { display: inline-flex; align-items: center; gap: 8px; color: #737373; font-size: 11px; cursor: pointer; }
+#feedback-root .fs-update-history .fs-update { border-top: 1px solid #eee; margin-top: 10px; padding-block: 13px; }
+#feedback-root .fs-preparation ul { margin: 10px 0; padding-left: 17px; font-size: 12px; color: #595959; }
+#feedback-root .fs-preparation li { padding: 3px 0; }
+#feedback-root .fs-preparation li small { display: block; font-size: 10px; color: #737373; }
+#feedback-root .fs-preparation .fs-preparation-label { color: #454545; font-size: 11px; font-weight: 550; margin-top: 14px; }
+#feedback-root .fs-console-replay { padding: 9px 10px; background: #f5f7f8; border: 1px solid #e1e5e8; border-radius: 5px; margin-bottom: 14px; }
+#feedback-root .fs-console-replay strong { display: block; font-size: 11px; font-weight: 550; }
+#feedback-root .fs-console-replay span { display: block; font-size: 10px; color: #737373; margin-top: 3px; }
+#feedback-root .fs-console-history-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px; margin-top: 8px; }
+#feedback-root .fs-console-history-controls > span { color: #737373; font-size: 10px; }
+#feedback-root .fs-console-history-controls .fs-button { padding: 5px 0; font-size: 10px; min-height: 30px; }
+@media (max-width:900px) {
+  #feedback-root .fs-details.fs-details-open { background: #fcfcfc; }
+  #feedback-root .fs-details-heading { background: #fcfcfc; }
+}
+@media (max-width:640px) {
+  #feedback-root .fs-side-fold > summary { min-height: 48px; }
+  #feedback-root .fs-detail-tabs button { min-height: 44px; }
+  #feedback-root .fs-evidence-row { min-height: 62px; }
+  #feedback-root .fs-version-row { min-height: 60px; }
+  #feedback-root .fs-row-main > .fs-row-timing { font-size: 10px; }
+  #feedback-root .fs-update-history { margin-left: 0; }
+  #feedback-root .fs-console-playback .fs-button { min-height: 40px; }
+  #feedback-root .fs-console-history-controls .fs-button { min-height: 40px; }
+}
+#feedback-root .fs-return-summary > span { flex: 1; min-width: 0; }
+#feedback-root .fs-return-summary > .fs-button { flex: none; padding: 1px 3px; min-height: 24px; font-size: 10px; }
+#feedback-root .fs-question-history > summary { display: grid; grid-template-columns: minmax(0,1fr) 12px; gap: 3px 8px; cursor: pointer; }
+#feedback-root .fs-question-history > summary > strong { font-size: 11px; font-weight: 500; }
+#feedback-root .fs-question-history > summary > span { grid-column: 1; }
+#feedback-root .fs-question-history > summary > svg { grid-column: 2; grid-row: 1/3; align-self: center; }
+#feedback-root .fs-question-history[open] > summary > svg { transform: rotate(180deg); }
+@media (max-width:640px) {
+  #feedback-root .fs-return-summary { flex-wrap: wrap; }
+  #feedback-root .fs-return-summary > .fs-button { margin-left: auto; min-height: 34px; }
+}
+#feedback-root .fs-team-preparation { margin: 16px 0; border: 1px solid #e2e2e2; border-radius: 6px; background: #fcfcfc; }
+#feedback-root .fs-team-preparation > summary { display: grid; grid-template-columns: minmax(0,1fr) auto 13px; align-items: center; gap: 8px 12px; min-height: 44px; padding: 11px 14px; cursor: pointer; list-style: none; }
+#feedback-root .fs-team-preparation > summary > span { display: flex; align-items: center; gap: 8px; color: #454545; font-size: 12px; font-weight: 550; }
+#feedback-root .fs-team-preparation > summary > small { color: #737373; font-size: 10px; }
+#feedback-root .fs-team-preparation > summary > svg { color: #737373; }
+#feedback-root .fs-team-preparation[open] > summary > svg { transform: rotate(180deg); }
+#feedback-root .fs-team-preparation-body { padding: 0 14px 15px; }
+#feedback-root .fs-team-preparation-body > p { font-size: 12px; line-height: 1.7; color: #595959; }
+#feedback-root .fs-team-preparation-body > h3 { margin: 16px 0 7px; font-size: 11px; font-weight: 550; }
+#feedback-root .fs-team-preparation-body > .fs-footnote { font-size: 10px; color: #737373; margin-top: 10px; }
+#feedback-root .fs-team-preparation-body .fs-prose-list { margin-block: 6px 12px; }
+#feedback-root .fs-team-preparation-body .fs-prose-list li { font-size: 12px; line-height: 1.65; }
+#feedback-root .fs-team-preparation-body dl { margin: 12px 0; }
+#feedback-root .fs-team-preparation-body dl > div { display: grid; grid-template-columns: 110px minmax(0,1fr); gap: 12px; margin: 9px 0; font-size: 11px; line-height: 1.6; }
+#feedback-root .fs-team-preparation-body dt { color: #737373; }
+#feedback-root .fs-team-preparation-body dd { margin: 0; color: #454545; }
+#feedback-root .fs-team-preparation-body dd > small { display: block; color: #737373; font-size: 10px; margin-top: 3px; }
+@media (max-width:640px) {
+  #feedback-root .fs-team-preparation > summary { grid-template-columns: minmax(0,1fr) 13px; }
+  #feedback-root .fs-team-preparation > summary > small { grid-column: 1; }
+  #feedback-root .fs-team-preparation > summary > svg { grid-column: 2; grid-row: 1/3; }
+  #feedback-root .fs-team-preparation-body dl > div { grid-template-columns: 88px minmax(0,1fr); gap: 10px; }
+}
+
 </style><style>
 .feedback-composer{--fc-ink:#262626;--fc-muted:#737373;--fc-rule:#e6e6e6;--fc-blue:#153e5c;box-sizing:border-box;width:min(600px,calc(100vw - 40px));max-height:calc(100dvh - 64px);margin:auto;padding:0;border:1px solid var(--fc-rule);border-radius:10px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 18px 64px #0002;overflow:hidden}
 .feedback-composer::backdrop,.fc-viewer::backdrop{background:#17171755}
@@ -5580,6 +5720,159 @@ if (typeof module==="object" && module.exports) module.exports = api;
 
 </script>
 <script>
+/* Read-only presentation of current and legacy CaseEngine records. Never a second case engine. */
+(function(root){
+  'use strict';
+  const common=typeof module==='object'&&module.exports;
+  const E=common?require('./engine.js'):root.CaseEngine;
+  const Scenarios=common?require('./scenario-catalog.js'):root.FlowScenarios;
+  const clone=value=>value===undefined?null:JSON.parse(JSON.stringify(value));
+  const rows=value=>Array.isArray(value)?value:[];
+  const lines=value=>String(value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const actorName=value=>value==='Reviewer'?'Requester':value;
+  const publicActions=new Set(['submit','answer','send-questions','confirm-scope','edit-understanding','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish','request-release-changes']);
+  const checked=value=>typeof value==='string'&&value.trim()?value:null;
+  const excerpt=(value,size=180)=>String(value||'').trim().replace(/\s+/g,' ').slice(0,size);
+  function safeView(c,snapshot){
+    if(snapshot)return clone(snapshot.view)||{candidate:snapshot.candidate||snapshot.text||'',checks:clone(snapshot.checks)||[]};
+    try{return E.derive(c);}catch{return {candidate:'',checks:[],manual:true,blocked:true,reason:'The team needs to review this saved record before continuing.'};}
+  }
+  function scenarioOf(c){
+    const f=c.reviewFlow||{};
+    if(f.scenarioId)return Scenarios?.get(f.scenarioId);
+    return Scenarios?.list().find(s=>s.ticketId===f.source?.id)||null;
+  }
+  function knownTarget(c,scenario){return c.reviewFlow?.target||scenario?.target||c.authorization?.target||c.receipt?.target||'WinQuote homepage';}
+  function title(c,scenario){
+    if(scenario)return scenario.title;
+    const view=safeView(c);
+    if(view.proposal||['hesitation','button'].includes(view.kind))return 'Clarify the quote entry';
+    if(view.kind==='entry')return 'Homepage quote instructions';
+    return excerpt(c.text,110)||'Your WinQuote feedback';
+  }
+  function versionRows(c){
+    const trail=rows(c.trail),latest=rows(c.versions).at(-1)?.rev;
+    const versions=rows(c.versions).map(v=>{
+      const event=action=>trail.find(t=>t.action===action&&t.rev===v.rev);
+      const statuses=['submitted'];
+      if(c.accepted?.rev===v.rev||event('accept'))statuses.push('accepted');
+      if(c.authorization?.rev===v.rev||event('authorize'))statuses.push('authorized');
+      if(c.receipt?.rev===v.rev||event('publish'))statuses.push('released');
+      const statusKey=statuses.at(-1),label={submitted:'Submitted',accepted:'Accepted',authorized:'Release approved',released:'Released in simulation'}[statusKey];
+      return {rev:v.rev,status:label,statusKey,statuses,at:event('deliver')?.at||v.deliveredAt||v.at||null,current:c.rev===v.rev,latestSubmitted:latest===v.rev,readOnly:true};
+    });
+    if(!versions.some(v=>v.rev===c.rev)&&!['draft'].includes(c.stage))versions.push({rev:c.rev,status:'Draft',statusKey:'draft',statuses:['draft'],at:null,current:true,latestSubmitted:false,readOnly:false});
+    return versions.sort((a,b)=>b.rev-a.rev);
+  }
+  function why(item,{actor='Requester',rev}={}){
+    const c=item?.c||{},scenario=scenarioOf(c),phase=c.reviewFlow?.phase||c.stage,view=safeView(c),version=rev||c.rev||1;
+    const specifics={
+      pdf:'The later PDF record already resolves navigation: open the saved PDF separately and keep Make PDF available. Avoid asking the customer to decide this again.',
+      compartment:'The customer requested editable numbered titles; the owner also requested grouping. Keep those sources distinct while checking every compartment section.',
+      refrigeration:'The saved flag, equipment and charges must agree. The team checks those facts; only the later equipment-choice policy needs a business decision when unresolved.',
+    };
+    const concern=view.proposal?.branch==='sending'?'The requester is worried that Create sends a quote. The candidate and check must explain what opens and what is sent.':view.proposal?.branch==='paths'?'The requester cannot choose an entry. The candidate and check must distinguish a template from starting from scratch.':'';
+    const purpose={
+      draft:'Describe the problem and preserve its context before asking the team to solve it.',
+      triage:specifics[scenario?.id]||'Read the original feedback and supplied materials. The team should resolve known facts before asking for more context.',
+      'question-draft':'These are private drafts. Screen out technical and already answered questions, then preview exactly what the requester will receive.',
+      'awaiting-answer':c.reviewFlow?.sentBundle?.round==='detailed'?'The specification exposed a business choice. Answer this distinct batch; the team must confirm how it changes the scope.':'Only the requester knows the missing intent. The answer guides a team proposal; it does not accept a result.',
+      clarify:'Describe the missing intent so the team can propose the solution instead of asking you to write it.',
+      'answer-review':concern||'The actual answer changes a proposed scope, not an approved decision. The team checks the complete answer and any conflict before sharing an updated plan.',
+      'spec-review':specifics[scenario?.id]||'The team has shared its understanding. Ask a second batch only for a new unresolved business decision; otherwise proceed without another customer reply.',
+      candidate:concern||'Turn the confirmed scope and any requested change into the actual version '+version+' candidate and corresponding checks.',
+      checking:'The result must demonstrate this exact candidate. A labelled simulation and team check are preparation for review, not proof of a live implementation.',
+      ready:'Open the exact version '+version+' result and its checks before sending it. Sending freezes this candidate together with its evidence.',
+      review:concern||'Try the delivered version '+version+' against the reported problem. Accepting it is separate from authorizing a release.',
+      accepted:'The requester accepted version '+version+'. The site owner now reviews the same content and target before a separate authorization.',
+      release:'The requester accepted version '+version+'. The site owner must separately authorize this exact version.',
+      authorized:'Only the exact accepted and authorized version '+version+' can be released in this simulation.',
+      'release-failed':'The failed attempt produced no success receipt. Retry the same authorized content or return the change to the team.',
+      published:'This receipt identifies the accepted and authorized version '+version+'. The live WinQuote application was not changed.',
+      blocked:'The saved input is retained. The team must resolve the unsupported or conflicting requirement instead of inventing a successful result.',
+      processing:concern||'The website team prepares the actual candidate and checks from the supplied feedback. The requester can keep working.',
+    };
+    return {text:purpose[phase]||'Follow the current owner and check the exact current version before acting.',scenarioId:scenario?.id||null,phase,actor:actorName(actor),rev:version,source:scenario?.ticketId||'Original feedback'};
+  }
+  /** Material-specific, explicitly simulated organization; never analyzes an image or transcribes audio. */
+  function preparation(item,stage=item?.ux?.preparation?.stage||'context-ready',{actor='Website team'}={}){
+    const c=item?.c||{},f=c.reviewFlow||{},context=f.context||item?.ux?.context||{},attachments=rows(f.attachments||item?.ux?.attachments);
+    const images=attachments.filter(a=>a.kind==='image').length,audio=attachments.filter(a=>a.kind==='audio').length;
+    const items=[];
+    const attachmentOnly=attachments.length&&/^See the attached (?:recording|image)\.$/.test(c.text||'');
+    if(checked(c.text)&&!attachmentOnly)items.push({id:'request',label:'Requester’s words',text:excerpt(c.text,240),source:'Original feedback',status:'unconfirmed'});
+    else if(attachmentOnly)items.push({id:'request',label:'Attachment-only feedback',text:'The requester supplied evidence without a written description.',source:'Submitted materials',status:'pending-team-review'});
+    const page=context.page||context.route;if(page)items.push({id:'page',label:'Affected page',text:page,source:'Saved demo context',status:'captured'});
+    if(context.quote||context.quoteId)items.push({id:'quote',label:'Quote',text:String(context.quote||context.quoteId),source:'Saved demo context',status:'captured'});
+    if(context.selection?.label)items.push({id:'selection',label:'Selected area',text:context.selection.label,source:'Selected DOM context; not a screenshot',status:'captured'});
+    if(images)items.push({id:'images',label:'Image evidence',text:images+' image'+(images===1?'':'s')+' retained for the team to inspect.',source:'Local originals',status:'unreviewed'});
+    if(audio)items.push({id:'audio',label:'Voice evidence',text:audio+' voice note'+(audio===1?'':'s')+' retained. No automatic transcription or interpretation.',source:'Local originals',status:'unreviewed'});
+    const scenario=scenarioOf(c);
+    const later=stage==='team-review-pending',supported=scenario&&!f.needsMaterialReview&&Scenarios.matchesFeedback(scenario.id,c.text);
+    let teamDraft=null;
+    if(later&&supported){
+      items.push({id:'records',label:'Preliminary reading',text:scenario.summary,source:scenario.ticketId+' · authored simulation, not a team decision',status:'pending-team-review'});
+      teamDraft={kind:'plan',approach:scenario.scope.approach,checks:lines(scenario.scope.checks),questions:[],source:scenario.ticketId,status:'pending-team-review',simulated:true,shared:false};
+    }else if(later&&!attachmentOnly){
+      let original;try{original=E.derive(E.transition(E.createCase(c.text),'submit'));}catch{}
+      if(original?.question)teamDraft={kind:'missing-context',approach:null,checks:[],questions:[original.question.text],source:'Original feedback · authored parser',status:'pending-team-review',simulated:true,shared:false};
+      else if(original?.candidate&&!original.blocked&&!original.manual)teamDraft={kind:'plan',approach:original.candidate,checks:rows(original.checks).map(c=>c.value||c.label),questions:[],source:'Original feedback · authored parser',status:'pending-team-review',simulated:true,shared:false};
+      else teamDraft={kind:'manual-review',approach:null,checks:[],questions:[],source:'Original materials',note:'The team must inspect this request and write the missing business question or proposal. No supported plan is inferred.',status:'pending-team-review',simulated:true,shared:false};
+    }else if(later)teamDraft={kind:'material-review',approach:null,checks:[],questions:[],source:'Original attachments',note:'Inspect the original image or listen to the recording before drafting a business question or plan. No media meaning was inferred.',status:'pending-team-review',simulated:true,shared:false};
+    const value={stage,title:stage==='context-ready'?'Your material is saved':later?'A preliminary plan is ready for team review':'Context brief ready',summary:stage==='context-ready'?'The request and available context stay together on this device.':later?supported?'A simulated plan and matching checks use the supported request and recorded context. The website team must confirm them before sharing the plan or sending questions.':'The supplied materials need a team decision. No automatic question or successful plan has been sent.':'The saved request, location and evidence are organized below. This brief does not interpret images or recordings.',items,facts:clone(items),questions:[],limitations:['Simulated preparation; pending team review.',...(images?['Images are retained for a person to inspect, not analyzed automatically.']:[]),...(audio?['Voice notes are not automatically transcribed.']:[])],simulated:true,pendingTeamReview:true,analyzedMedia:false};
+    if(actor==='Website team'&&teamDraft){value.teamDraft=teamDraft;value.draftPlan=teamDraft;}
+    return value;
+  }
+  /** Historical projections read ONLY the selected submitted snapshot. Missing data stays missing. */
+  function describe(item,{rev,actor='Requester'}={}){
+    if(!item?.c)return {missing:true,reason:'This feedback is unavailable.'};
+    const c=item.c,historical=rev!==undefined&&rev!==null,snapshot=historical?rows(c.versions).find(v=>v.rev===Number(rev)):null;
+    if(historical&&!snapshot)return {missing:true,historical:true,viewedRev:Number(rev),reason:'This submitted version is unavailable. Return to the current task.'};
+    const view=safeView(c,snapshot),f=historical?(snapshot.reviewFlow||null):(c.reviewFlow||null);
+    const presentationCase=historical?{...c,text:snapshot.source||'',reviewFlow:f||undefined,versions:[snapshot]}:c,scenario=scenarioOf(presentationCase);
+    const text=historical?(snapshot.source??null):c.text;
+    const context=historical?clone(f?.context||snapshot.evidence?.context):clone(f?.context||item.ux?.context);
+    const attachments=historical?clone(f?.attachments||snapshot.evidence?.attachments)||[]:clone(f?.attachments||item.ux?.attachments)||[];
+    const team=actor==='Website team',submitted=historical||['review','release','authorized','published'].includes(c.stage);
+    // Delivery is the boundary: a submitted current version reads its own
+    // immutable candidate, even if an older answer suggestion remains on f.
+    const basisSnapshot=historical?snapshot:submitted?rows(c.versions).find(v=>v.rev===c.rev):null;
+    const candidate=submitted?(basisSnapshot?.candidate??basisSnapshot?.text??''):(team?f?.candidateDraft?.approach||view.candidate||'':'');
+    const checks=clone(submitted?basisSnapshot?.checks||basisSnapshot?.view?.checks||[]:team?view.checks:[])||[];
+    const understanding=clone(f?.sharedUnderstanding);
+    const pending=!submitted&&team&&f?.phase==='answer-review'&&!!f.suggestedScope;
+    const editing=!submitted&&team&&['candidate','checking','ready'].includes(f?.phase);
+    const scope=submitted?null:pending?f.suggestedScope:editing?f.candidateDraft:team?(f?.confirmedScope||f?.sharedUnderstanding||f?.scope):f?.sharedUnderstanding;
+    const scopeText=submitted?candidate:scope?.text||scope?.approach||(!f&&team?candidate:'');
+    const basisRev=basisSnapshot?.rev||c.rev;
+    const basisStatus=submitted?'submitted-snapshot':pending?'pending-team-review':editing?'team-draft':f?.confirmedScope||understanding?'team-confirmed':'unconfirmed';
+    const basisSource=submitted?{id:'V'+basisRev,kind:'submitted-version',label:'Submitted V'+basisRev,rev:basisRev}:pending?{id:f.sentBundle?.id||null,kind:'answer-proposal',label:'Requester answer · awaiting team confirmation',rev:c.rev}:editing?{id:'draft-V'+c.rev,kind:'team-draft',label:'Team draft V'+c.rev,rev:c.rev}:{id:f?.sharedUnderstanding?.id||null,kind:'team-scope',label:f?.sharedUnderstanding?'Team-shared understanding':'Team scope draft',rev:c.rev};
+    const basis=lines(scopeText).map((text,index)=>({id:'basis-'+index,text,status:basisStatus,source:clone(basisSource)}));
+    let sourceTrail=rows(c.trail);
+    if(historical){const delivery=sourceTrail.findIndex(t=>t.action==='deliver'&&t.rev===snapshot.rev);sourceTrail=delivery>=0?sourceTrail.slice(0,delivery+1):sourceTrail.filter(t=>t.rev<=snapshot.rev);}
+    const sentEvents=sourceTrail.filter(t=>t.action==='send-questions'),answerEvents=sourceTrail.filter(t=>t.action==='answer');
+    let answers=rows(f?.questionRounds).filter(r=>r.answered).flatMap((r,index)=>rows(r.questions).map(q=>({id:r.id+':'+q.id,bundleId:r.id,round:r.round,scopeCycle:r.scopeCycle,question:q.text,text:q.text,answer:clone(r.answers?.[q.id]),value:clone(r.answers?.[q.id]),note:r.answerNotes?.[q.id]||'',simulated:r.answerSimulated===true,at:r.answeredAt||answerEvents[index]?.at||null})));
+    const answer=historical?snapshot.answer:c.answer;
+    if(!answers.length&&checked(answer))answers=[{id:'legacy-answer',round:'initial',question:'Requester’s clarification',text:'Requester’s clarification',answer,value:answer,simulated:(historical?snapshot.answerSimulated:c.answerSimulated)===true,at:answerEvents.at(-1)?.at||null}];
+    let activity=sourceTrail;
+    activity=activity.map((t,index)=>({...clone(t),id:'activity-'+index,actor:actorName(t.actor),at:t.at||null})).filter(t=>team||publicActions.has(t.action)).reverse();
+    const decisions=rows(f?.source?.history).map((decision,index)=>({...clone(decision),id:'decision-'+index,superseded:decision.status==='superseded'||(f?.source?.id==='fb_2026-07-11_002'&&decision.date==='2026-07-16'&&rows(f.source.history).some(later=>later.date==='2026-08-05')),status:decision.status||(f?.source?.id==='fb_2026-07-11_002'&&decision.date==='2026-07-16'?'superseded':'historical-record')}));
+    const questionRounds=rows(f?.questionRounds).map((r,index)=>({id:r.id,round:r.round,scopeCycle:r.scopeCycle,questions:clone(r.questions),answers:clone(r.answers),answerText:r.answerText||'',answered:r.answered===true,simulated:r.answerSimulated===true,at:r.sentAt||r.at||sentEvents[index]?.at||null}));
+    if(!questionRounds.length&&f?.sentBundle)questionRounds.push({id:f.sentBundle.id,round:f.sentBundle.round||'initial',questions:clone(f.sentBundle.questions),answers:clone(f.answers),answered:f.phase!=='awaiting-answer',at:f.sentBundle.at||null});
+    const projection={legacy:!c.reviewFlow||!c.reviewFlow.scenarioId,historical,currentRev:c.rev,viewedRev:historical?snapshot.rev:c.rev,
+      phase:historical?'history':c.reviewFlow?.phase||c.stage,kind:f?.kind||view.kind||'other',title:title(presentationCase,scenario),target:historical?(f?.target||null):knownTarget(c,scenario),
+      request:{text,context,attachments,at:context?.capturedAt||sourceTrail.find(t=>t.action==='submit')?.at||(historical?null:item.ux?.createdAt)||null,unavailable:historical&&(!f||text===null),source:clone(f?.source)},understanding,basis,answers,
+      candidate,checks,proposal:team||submitted?clone(view.proposal):null,versions:versionRows(c),recordedDecisions:decisions,questionRounds,
+      activity,adjustment:historical?snapshot.adjustment:c.adjustment,adjustmentEvidence:clone(f?.adjustmentEvidence||(historical?snapshot.evidence?.adjustment:item.ux?.adjustmentEvidence)),preview:E.reviewPreview(historical?snapshot:c),
+      why:why(item,{actor,rev:historical?snapshot.rev:undefined}),preparation:historical?null:preparation(item,undefined,{actor})};
+    if(historical)projection.why={...projection.why,scenarioId:scenario?.id||null,source:f?.source?.id||'Submitted snapshot',text:'Read-only V'+snapshot.rev+' and its saved evidence. Newer material and later decisions are not substituted into this snapshot.'};
+    return projection;
+  }
+  const api={describe,why,preparation,activity:(item,options)=>describe(item,options).activity||[],publicActions:[...publicActions]};
+  root.FeedbackPresentation=api;if(common)module.exports=api;
+})(globalThis);
+
+</script><script>
 /* One current ticket per record. Presentation cursors never carry case copies. */
 (function(root){
   'use strict';
@@ -5588,15 +5881,28 @@ if (typeof module==="object" && module.exports) module.exports = api;
   const WS=common?require('./workspace-state.js'):root.WorkspaceState;
   const clone=x=>JSON.parse(JSON.stringify(x));
   const client='winquote', key='feedbackflow:casework:v2.1';
+  const fail=message=>{throw Error(message);};
+  const experience=data=>data.feedbackExperience||(data.feedbackExperience={schema:1,read:[],clockOffset:0});
+  const publicNotificationActions=new Set(['send-questions','confirm-scope','deliver','accept','authorize','publish','publish-failed','delay','update-expectation']);
+  const visibleEvents=item=>(item.ux?.events||[]).filter(e=>publicNotificationActions.has(e.action));
+  function publicTrailEvents(item){
+    const c=item.c||{},rounds=c.reviewFlow?.questionRounds||[];let sentIndex=0;
+    return (c.trail||[]).flatMap((t,index)=>{
+      const f=c.reviewFlow||{},round=t.action==='send-questions'?rounds[sentIndex++]:null;
+      const titles={deliver:'V'+t.rev+' is ready for review',accept:'V'+t.rev+' was accepted',authorize:'V'+t.rev+' release authorized',publish:'V'+t.rev+' release simulated','send-questions':'Question from the website team','confirm-scope':'The team shared a plan','publish-failed':'Release needs attention'};
+      if(!titles[t.action])return [];
+      return [{id:item.id+':legacy:'+index+':'+t.action,ticketId:item.id,action:t.action,title:titles[t.action],cta:t.action==='send-questions'?'Answer the questions':t.action==='deliver'?'Review V'+t.rev:t.action==='accept'?'Approve the release':'View feedback',recipient:t.action==='accept'?'Site owner':'Requester',bundleId:round?.id||null,rev:t.rev,at:t.at||null,simulated:true,legacy:true}];
+    });
+  }
   function migrate(value){
     const base=value&&Array.isArray(value.items)?clone(value):{items:[],serial:20,current:null};
     const migrated=WS.migrate(base);
-    return {...migrated,serial:Math.max(20,Number(base.serial)||0,...base.items.map(i=>/^WQ-\d+$/.test(i.id)?Number(i.id.slice(3)):0)),feedbackExperience:{schema:1,read:[],clockOffset:0,...base.feedbackExperience},items:migrated.items.map(i=>({...i,sequence:i.sequence||0}))};
+    return {...migrated,serial:Math.max(20,Number(base.serial)||0,...base.items.map(i=>/^WQ-\d+$/.test(i.id)?Number(i.id.slice(3)):0)),feedbackExperience:{schema:1,read:[],clockOffset:0,...base.feedbackExperience},items:migrated.items.map(i=>({...i,sequence:i.sequence||0,ux:{...i.ux,events:Array.isArray(i.ux?.events)?i.ux.events:publicTrailEvents(i),drafts:i.ux?.drafts||{},walk:i.ux?.walk||{mode:'practice',role:'Requester',open:false},timing:i.ux?.timing||{updatedAt:i.c?.trail?.at(-1)?.at||null,nextUpdateAt:null}}}))};
   }
   const now=data=>new Date(Date.now()+(data.feedbackExperience?.clockOffset||0)).toISOString();
   const get=(data,id)=>data.items.find(i=>i.id===id&&(Object.prototype.hasOwnProperty.call(i,'clientId')?i.clientId:client)===client);
   const customerItems=data=>WS.items(data.items,client);
-  const phase=item=>item?.c?.reviewFlow?.phase||item?.c?.stage;
+  const phase=item=>item?.c?.reviewFlow?.phase||(item?.c?.stage==='authorized'&&item.ux?.releaseAttempt?.status==='failed'?'release-failed':item?.c?.stage);
   function status(item,clock){
     if(!item)return {owner:'Requester',label:'Ready when you are',next:'Choose a workflow to try.',why:'Start with a real business problem, in the page where it happens.'};
     const c=item.c,f=c.reviewFlow||{},p=phase(item),v='V'+c.rev;
@@ -5617,10 +5923,13 @@ if (typeof module==="object" && module.exports) module.exports = api;
       clarify:['Requester','Needs your input','Answer the team’s question.','Only missing context needs an answer.'],
       release:['Site owner','Waiting for release approval','The site owner will approve this version.','Acceptance does not automatically publish the change.'],
       draft:['Requester','Draft','Finish your feedback.','Describe the problem without needing to write the solution.'],
+      processing:['Website team','Preparing V'+c.rev,'The team is preparing a candidate from your feedback. You can keep working.','The team connects the actual request to a candidate and its checks.'],
+      blocked:['Website team','Needs team review','The team needs to resolve the unsupported or conflicting requirement.','Keep the original input and evidence; do not invent a successful result.'],
     };
     const s=states[p]||['Website team','With the team','The team will review the next step.','The team owns the next decision.'];
     const t=item.ux?.timing||{};
-    return {owner:s[0],label:s[1],next:s[2],why:s[3],updatedAt:t.updatedAt||c.trail?.at(-1)?.at||null,nextUpdate:t.nextUpdateAt||null,overdue:!!(t.nextUpdateAt&&Date.parse(clock||new Date())>Date.parse(t.nextUpdateAt)&&s[0]==='Website team'),delayReason:t.delayReason||null};
+    const P=common?require('./feedback-presentation.js'):root.FeedbackPresentation;
+    return {owner:s[0],label:s[1],next:s[2],why:P?.why(item)?.text||s[3],phase:p,needsInput:['clarify','awaiting-answer','review'].includes(p),updatedAt:t.updatedAt||c.trail?.at(-1)?.at||null,nextUpdate:t.nextUpdateAt||null,overdue:!!(t.nextUpdateAt&&Date.parse(clock||new Date())>Date.parse(t.nextUpdateAt)&&s[0]==='Website team'),delayReason:t.delayReason||null};
   }
   function add(data,scenario,payload,options={}){
     const next=migrate(data);
@@ -5637,41 +5946,87 @@ if (typeof module==="object" && module.exports) module.exports = api;
     next.items.push(item);next.current=id;return {data:next,item};
   }
   const permitted={
-    Requester:['answer','correct-understanding','adjust','accept'],
+    Requester:['submit','answer','correct-understanding','adjust','accept'],
     'Website team':['edit-scope','draft-questions','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
     'Site owner':['authorize','request-release-changes'],
   };
   function notification(item,action,at){
-    const f=item.c.reviewFlow,v=item.c.rev;
+    const f=item.c.reviewFlow||{},v=item.c.rev;
     const types={
       'send-questions':['Question from the website team','Answer the questions','Requester',f.sentBundle?.id],
       'confirm-scope':['The team shared a plan','Read the shared plan','Requester',null],
       deliver:['V'+v+' is ready for review','Review V'+v,'Requester',null],
       accept:['V'+v+' was accepted','Approve the release','Site owner',null],
+      authorize:['V'+v+' release authorized','View feedback','Requester',null],
       publish:['V'+v+' release simulated','View the receipt','Requester',null],
       'publish-failed':['Release needs attention','Read the update','Requester',null],
     };
     const spec=types[action];if(!spec)return null;
     return {id:item.id+':'+item.sequence+':'+action,ticketId:item.id,action,title:spec[0],cta:spec[1],recipient:spec[2],bundleId:spec[3],rev:v,at,simulated:true};
   }
+  function exactLegacy(c,value,action){
+    if(value?.rev!==c.rev||c.versions?.at(-1)?.rev!==c.rev)fail(action+' must identify the exact current submitted version V'+c.rev+'.');
+  }
+  function legacyCommand(item,command){
+    const c=item.c,{action,value}=command;
+    if(['accept','authorize','publish','adjust','request-release-changes','publish-failed','retry-publish'].includes(action))exactLegacy(c,value,action);
+    if(action==='authorize'&&c.accepted?.rev!==c.rev)fail('Authorize only the exact accepted version.');
+    if(['publish','publish-failed','retry-publish'].includes(action)&&(c.accepted?.rev!==c.rev||c.authorization?.rev!==c.rev))fail('Execute only the exact accepted and authorized version.');
+    if(action==='publish'&&item.ux?.releaseAttempt?.status==='failed')fail('A failed release requires an explicit retry first.');
+    if(action==='publish-failed'){
+      if(c.stage!=='authorized'||!value?.reason?.trim())fail('Record a simulated failure only for an authorized version, with a reason.');
+      item.ux.releaseAttempt={rev:c.rev,target:c.authorization.target,status:'failed',reason:value.reason,simulated:true};return {...clone(c),trail:[...(c.trail||[]),{action,actor:'Website team',rev:c.rev,text:'Simulated release failed: '+value.reason,simulated:true,at:null}]};
+    }
+    if(action==='retry-publish'){
+      if(c.stage!=='authorized'||item.ux?.releaseAttempt?.rev!==c.rev||item.ux.releaseAttempt.status!=='failed')fail('Retry only the failed release of this exact authorized version.');
+      item.ux.releaseAttempt={...item.ux.releaseAttempt,status:'retrying'};return {...clone(c),trail:[...(c.trail||[]),{action,actor:'Website team',rev:c.rev,text:'Retrying the same authorized version in simulation.',simulated:true,at:null}]};
+    }
+    if(action==='request-release-changes'){
+      if(!['release','authorized'].includes(c.stage)||c.accepted?.rev!==c.rev||!value.reason?.trim())fail('The site owner can request meaningful changes only to the accepted version.');
+      const reopened={...clone(c),stage:'review',owner:'Reviewer',accepted:null,authorization:null,receipt:null};
+      const next=E.transition(reopened,'adjust',value.reason);next.trail.at(-1).actor='Site owner';next.adjustments.at(-1).actor='Site owner';item.ux.releaseAttempt=null;return next;
+    }
+    let next;
+    if(action==='edit-candidate')next=E.editCandidate(c,typeof value==='string'?value:value?.approach);
+    else if(action==='answer'){
+      const answer=typeof value==='string'?value:value?.answer??Object.values(value?.answers||{})[0];
+      if(typeof answer!=='string'||!answer.trim())fail('Answer the current saved question before continuing.');next=E.transition(c,'answer',answer);
+    }else next=E.transition(c,action,action==='adjust'?value.reason:value);
+    if(JSON.stringify(next)===JSON.stringify(c))fail('This action is unavailable for the current saved feedback. Review its current task.');
+    return next;
+  }
+  function legacyAdjustmentEvidence(item,command){
+    const value=command.value||{},attachments=value.attachments||[];
+    if(!Array.isArray(attachments)||attachments.some(a=>!a||!['image','audio'].includes(a.kind)||typeof(a.id||a.attachmentId)!=='string'||a.blob!==undefined||a.dataUrl!==undefined))fail('Pass local image or audio manifest references for this adjustment, not binary originals.');
+    const hasEvidence=['attachments','context','captureId'].some(k=>Object.prototype.hasOwnProperty.call(value,k));
+    const evidence=hasEvidence?{rev:value.rev,actor:command.actor,attachments:clone(attachments),...(value.captureId?{captureId:value.captureId}:{}),...(value.context?{context:clone(value.context)}:{})}:null;
+    item.ux.adjustmentEvidence=evidence;
+    if(evidence&&item.c.adjustments?.length)item.c.adjustments.at(-1).evidence=clone(evidence);
+  }
   function commit(data,id,command){
     const next=clone(data),item=get(next,id);
     if(!item)throw Error('This feedback is not available in this workspace.');
     if(item.sequence!==command.expectedSequence)throw Error('This feedback has changed. Review its latest version before continuing.');
     if(!permitted[command.actor]?.includes(command.action))throw Error('This action belongs to a different role.');
-    item.c=E.review(item.c,command.action,command.value);
+    item.ux=item.ux||{events:[],drafts:{},attachments:[]};
+    const legacy=!item.c.reviewFlow;
+    item.c=item.c.reviewFlow?E.review(item.c,command.action,command.value):legacyCommand(item,command);
+    if(legacy&&['adjust','request-release-changes'].includes(command.action))legacyAdjustmentEvidence(item,command);
+    if(legacy&&command.action==='deliver')item.c.versions.at(-1).evidence={context:clone(item.ux.context||{}),attachments:clone(item.ux.attachments||[]),adjustment:clone(item.ux.adjustmentEvidence||null)};
     item.sequence+=1;const at=now(next);if(item.c.trail?.length)item.c.trail.at(-1).at=at;
     item.ux=item.ux||{events:[],drafts:{},attachments:[]};
     const owner=status(item).owner;
     const previousTiming=item.ux.timing||{};
     const privateEdit=['edit-scope','draft-questions','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
+    // A completed task consumes its return prompt; retaining it would point at the previous owner/action.
+    if(!privateEdit)delete item.ux.sinceLastVisit;
     item.ux.timing={...previousTiming,updatedAt:privateEdit?previousTiming.updatedAt:at,nextUpdateAt:owner==='Website team'?(previousTiming.nextUpdateAt||new Date(Date.parse(at)+2*3600000).toISOString()):null};
     if(command.simulated){
       item.c.trail.at(-1).simulated=true;item.c.trail.at(-1).text='Walkthrough simulation · '+item.c.trail.at(-1).text;
       const f=item.c.reviewFlow;
       if(command.action==='answer'){
-        if(!f.journey?.enabled||f.sentBundle.round==='initial')item.c.answerSimulated=true;
-        if(f.questionRounds)f.questionRounds=f.questionRounds.map(r=>r.id===f.sentBundle.id?{...r,answerSimulated:true}:r);
+        if(!f?.journey?.enabled||f.sentBundle.round==='initial')item.c.answerSimulated=true;
+        if(f?.questionRounds)f.questionRounds=f.questionRounds.map(r=>r.id===f.sentBundle.id?{...r,answerSimulated:true}:r);
       }
       if(command.action==='accept')item.c.accepted.simulated=true;
       if(command.action==='authorize')item.c.authorization.simulated=true;
@@ -5682,20 +6037,92 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   function updates(data){
     const read=new Set(data.feedbackExperience?.read||[]);
-    return customerItems(data).flatMap(i=>(i.ux?.events||[]).map(e=>({...e,read:read.has(e.id),ticketTitle:i.c.reviewFlow?.target||'Your feedback'}))).sort((a,b)=>b.at.localeCompare(a.at));
+    return customerItems(data).flatMap(i=>visibleEvents(i).map(e=>({...e,read:read.has(e.id),ticketTitle:i.c.reviewFlow?.target||'Your feedback'}))).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))||String(b.id).localeCompare(String(a.id)));
   }
   function resolve(data,ticketId,eventId){
     const item=get(data,ticketId);if(!item)return {missing:true,message:'This feedback is not available on this device. Return to My feedback to continue.'};
     const event=(item.ux?.events||[]).find(e=>e.id===eventId),f=item.c.reviewFlow;
     let stale=false,message='';
     if(eventId&&!event)message='This update is no longer available. You are viewing the current feedback.';
-    if(event?.bundleId&&(f.sentBundle?.id!==event.bundleId||f.phase!=='awaiting-answer')){stale=true;message='This question has already been answered or replaced. You are viewing the current task.';}
+    if(event?.bundleId&&(f?.sentBundle?.id!==event.bundleId||f?.phase!=='awaiting-answer')){stale=true;message='This question has already been answered or replaced. You are viewing the current task.';}
     if(event&&event.rev!==item.c.rev){stale=true;message='V'+event.rev+' is an earlier version. You are viewing the current V'+item.c.rev+'.';}
     return {item,event,stale,message};
   }
-  function markRead(data,eventId){const next=clone(data);next.feedbackExperience.read=[...new Set([...(next.feedbackExperience.read||[]),eventId])];return next;}
-  function advance(data,hours=3){const next=clone(data);next.feedbackExperience.clockOffset=(next.feedbackExperience.clockOffset||0)+hours*3600000;return next;}
-  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance};
+  function markRead(data,eventId){const next=clone(data);if(!updates(next).some(e=>e.id===eventId))return next;experience(next).read=[...new Set([...(next.feedbackExperience.read||[]),eventId])];return next;}
+  function advance(data,hours=3){if(typeof hours!=='number'||!Number.isFinite(hours)||hours<0)fail('Advance the local simulation by a finite nonnegative number of hours.');const next=clone(data);experience(next).clockOffset=(next.feedbackExperience.clockOffset||0)+hours*3600000;return next;}
+  /** Visit cursors are customer metadata. Opening a ticket never marks an answer, approval, or update read. */
+  function visit(data,id){
+    const next=clone(data),item=get(next,id);if(!item)fail('This feedback is not available in this workspace.');
+    const fx=experience(next),clients=fx.clients||{},settings=clients[client]||{},visits=settings.visits||{},previous=Object.prototype.hasOwnProperty.call(visits,id)?visits[id]:null;
+    const events=visibleEvents(item),seen=new Set(previous?.eventIds||[]),unseen=previous?events.filter(e=>!seen.has(e.id)):[];
+    const delivered=unseen.filter(e=>e.action==='deliver').map(e=>'V'+e.rev),asked=unseen.filter(e=>e.action==='send-questions').length,delayed=unseen.some(e=>e.action==='delay'),released=unseen.some(e=>e.action==='publish');
+    const descriptions=[];if(delivered.length)descriptions.push(delivered.join(', ')+' '+(delivered.length===1?'is':'are')+' ready for review');if(asked)descriptions.push(asked+(asked===1?' question batch was':' question batches were')+' sent');if(delayed)descriptions.push('an update was delayed');if(released)descriptions.push('the release was simulated');
+    const other=unseen.length-unseen.filter(e=>['deliver','send-questions','delay','publish'].includes(e.action)).length;
+    if(other)descriptions.push(other+(other===1?' other update':' other updates'));
+    const text=descriptions.length?descriptions.join('; ')+'. '+status(item,now(next)).next:'';
+    const summary=previous&&unseen.length?{text,count:unseen.length,eventIds:unseen.map(e=>e.id),fromAt:previous.at,toAt:now(next),newVersionIds:delivered}:null;
+    fx.clients={...clients,[client]:{...settings,visits:{...visits,[id]:{at:now(next),eventIds:events.map(e=>e.id),lastSubmittedRev:item.c.versions?.at(-1)?.rev||null}}}};
+    item.ux||={};item.ux.sinceLastVisit=text||null;
+    return {data:next,item,summary};
+  }
+  /** One digest per customer ticket; events remain independently addressable for stale-link checks. */
+  function digest(data){
+    const groups=new Map();
+    for(const event of updates(data)){
+      if(!groups.has(event.ticketId))groups.set(event.ticketId,[]);groups.get(event.ticketId).push(event);
+    }
+    return [...groups.entries()].map(([ticketId,events])=>{
+      const latest=events[0],item=get(data,ticketId),state=status(item,now(data)),unreadCount=events.filter(e=>!e.read).length;
+      return {...latest,id:ticketId+':digest',ticketId,eventId:latest.id,latestEventId:latest.id,events:clone(events),count:events.length,unreadCount,read:unreadCount===0,
+        title:events.length===1?latest.title:events.length+' updates · '+(item?.c.reviewFlow?.target||'Your feedback'),summary:latest.title+'. '+state.next,body:latest.title+'. '+state.next,status:state,cta:state.needsInput?'Open current task':'View feedback',at:latest.at,rev:item?.c.rev};
+    }).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))||a.ticketId.localeCompare(b.ticketId));
+  }
+  function metadataItem(data,id){const next=clone(data),item=get(next,id);if(!item)fail('This feedback is not available in this workspace.');item.ux||={events:[],drafts:{}};return {next,item};}
+  function metadataEvent(item,action,title,at,eventId){
+    return {id:eventId,ticketId:item.id,action,title,cta:'Read the update',recipient:'Requester',bundleId:null,rev:item.c.rev,at,simulated:true};
+  }
+  /** An explicit scheduling decision; ordinary private draft saves never call this. */
+  function setExpectation(data,id,{at,reason='',eventId}={}){
+    const {next,item}=metadataItem(data,id);
+    if(at!==null&&(!at||!Number.isFinite(Date.parse(at))))fail('Set a valid update time, or explicitly leave it unset.');
+    if(typeof reason!=='string'||reason.length>2000)fail('Keep the update explanation to 2,000 characters.');
+    const timestamp=now(next),eventKey=eventId||id+':expectation:'+String(at)+':'+reason;
+    if((item.ux.events||[]).some(e=>e.id===eventKey))return {data:next,item,event:null,duplicate:true};
+    const old=item.ux.timing||{},changed=old.nextUpdateAt!==at;
+    item.ux.timing={...old,nextUpdateAt:at,delayReason:reason||null,updatedAt:timestamp,
+      expectationHistory:[...(old.expectationHistory||[]),...(changed&&old.nextUpdateAt?[{at:old.nextUpdateAt,replacedAt:timestamp,reason:old.delayReason||null}]:[])]};
+    const event=metadataEvent(item,'update-expectation',at?'The team set the next update':'The next update time is not set',timestamp,eventKey);event.expectedAt=at;event.reason=reason;
+    item.ux.events=[...(item.ux.events||[]),event];return {data:next,item,event,duplicate:false};
+  }
+  /** Record a disclosed delay once per promised checkpoint. It never moves that checkpoint. */
+  function recordDelay(data,id,{reason='The team has not set a revised update time yet.',eventId}={}){
+    const {next,item}=metadataItem(data,id),timing=item.ux.timing||{},promised=timing.nextUpdateAt;
+    if(typeof reason!=='string'||!reason.trim()||reason.length>2000)fail('Explain the delay in 1 to 2,000 characters.');
+    if(!promised||Date.parse(promised)>=Date.parse(now(next)))fail('A delayed update needs an existing overdue checkpoint.');
+    const eventKey=eventId||id+':delay:'+promised;
+    if((item.ux.events||[]).some(e=>e.id===eventKey))return {data:next,item,event:null,duplicate:true};
+    item.ux.timing={...timing,delayReason:reason,delayedFor:promised,updatedAt:now(next)};
+    const event=metadataEvent(item,'delay','The next update is delayed',now(next),eventKey);event.expectedAt=promised;event.reason=reason;
+    item.ux.events=[...(item.ux.events||[]),event];return {data:next,item,event,duplicate:false};
+  }
+  /** Presentation state may contain read-only scene snapshots. It cannot overwrite item.c. */
+  function saveWalk(data,id,patch={}){
+    const {next,item}=metadataItem(data,id);
+    if(!patch||typeof patch!=='object'||Array.isArray(patch)||Object.prototype.hasOwnProperty.call(patch,'c')||Object.prototype.hasOwnProperty.call(patch,'case'))fail('Save walkthrough metadata separately from the canonical case.');
+    if(patch.mode!==undefined&&!['watch','practice'].includes(patch.mode))fail('Choose Watch or Practice.');
+    if(patch.role!==undefined&&!['Requester','Website team','Site owner'].includes(patch.role))fail('Choose a supported demo perspective.');
+    if(patch.scenes!==undefined&&(!Array.isArray(patch.scenes)||patch.scenes.length>512))fail('Keep walkthrough history within 512 read-only scenes.');
+    item.ux.walk={...(item.ux.walk||{}),...clone(patch)};return {data:next,item,walk:clone(item.ux.walk)};
+  }
+  /** Store a useful local simulated intermediate without sending questions or changing business state. */
+  function preparation(data,id,stage='draft-ready'){
+    const {next,item}=metadataItem(data,id);
+    if(!['context-ready','draft-ready','team-review-pending'].includes(stage))fail('Choose a supported simulated preparation stage.');
+    const P=common?require('./feedback-presentation.js'):root.FeedbackPresentation;
+    const value=P.preparation(item,stage);item.ux.preparation={...value,at:now(next)};
+    return {data:next,item,preparation:clone(item.ux.preparation)};
+  }
+  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,setExpectation,recordDelay,saveWalk,preparation};
   root.FeedbackStore=api;if(common)module.exports=api;
 })(globalThis);
 
@@ -6038,7 +6465,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
   const icon = (name, size = 16) => root.Glyph ? root.Glyph(name, size) : '';
   const lines = value => String(value || '').split('\n').map(line => line.trim()).filter(Boolean);
   const actorName = value => value === 'Reviewer' ? 'Requester' : value;
+  const textOf = value => typeof value === 'string' ? value : value?.text || value?.summary || value?.label || '';
+  const safeMedia = value => /^(blob:|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(String(value || '')) ? value : '';
+  const orderTime = value => Number.isFinite(Date.parse(value)) ? Date.parse(value) : 0;
   const phases = {
+    draft: ['Requester', 'Ready to submit'],
     triage: ['Website team', 'Reviewing the scope'],
     'question-draft': ['Website team', 'Preparing questions'],
     'awaiting-answer': ['Requester', 'Needs your input'],
@@ -6053,6 +6484,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     published: ['Complete', 'Release simulated'],
     'release-failed': ['Website team', 'Release needs attention']
   };
+  const legacyPhases = { draft: 'draft', clarify: 'awaiting-answer', processing: 'candidate', blocked: 'triage', release: 'accepted' };
 
   function displayTime(value) {
     if (value && typeof value === 'object') value = value.label || value.at || value.time || '';
@@ -6082,9 +6514,9 @@ if (typeof module==="object" && module.exports) module.exports = api;
 
   function statusFor(item, supplied) {
     const caseRecord = item?.c || {};
-    const phase = caseRecord.reviewFlow?.phase || caseRecord.stage || 'triage';
+    const phase = caseRecord.reviewFlow?.phase || legacyPhases[caseRecord.stage] || caseRecord.stage || 'triage';
     const fallback = phases[phase] || [actorName(caseRecord.owner) || 'Website team', 'In progress'];
-    return { owner: fallback[0], label: fallback[1], phase, ...supplied };
+    return { owner: fallback[0], label: fallback[1], phase, ...item?.status, ...item?.presentation?.status, ...supplied };
   }
 
   function avatar(actor) {
@@ -6106,7 +6538,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const scenario = scenarioFor(vm, item);
     const original = String(item?.c?.text || '').trim().split('\n')[0];
     const excerpt = original.length > 110 ? original.slice(0, 107).trimEnd() + '…' : original;
-    return item?.title || item?.ux?.title || item?.c?.title || scenario?.title || item?.c?.reviewFlow?.title || excerpt || 'Your WinQuote feedback';
+    return item?.title || item?.presentation?.title || (vm.current?.id === item?.id ? vm.presentation?.title : '') || item?.ux?.title || item?.c?.title || scenario?.title || item?.c?.reviewFlow?.title || excerpt || 'Your WinQuote feedback';
   }
 
   function notice(vm) {
@@ -6160,17 +6592,17 @@ if (typeof module==="object" && module.exports) module.exports = api;
       'release-failed': 'The team is working on the release attempt.',
       published: 'The release is complete in this simulation.'
     }[status.phase];
-    return { ...status, next: ux.next || ux.timing?.next || next || '', updatedAt: ux.timing?.updatedAt || ux.updatedAt || '' };
+    return { ...status, next: status.next || ux.next || ux.timing?.next || next || '', updatedAt: status.updatedAt || ux.timing?.updatedAt || ux.updatedAt || '', nextUpdate: status.nextUpdate || ux.timing?.nextUpdateAt || ux.timing?.nextUpdate || '', overdue: status.overdue || ux.timing?.overdue || false };
   }
 
   function inbox(vm) {
     const all = array(vm.items);
-    const needsYou = item => ['awaiting-answer', 'review'].includes(item.c?.reviewFlow?.phase);
-    const complete = item => item.c?.reviewFlow?.phase === 'published';
+    const needsYou = item => ['draft', 'awaiting-answer', 'review'].includes(statusFor(item).phase);
+    const complete = item => statusFor(item).phase === 'published';
     const filter = vm.filter || 'all';
     const query = String(vm.search || '').toLowerCase().trim();
     const filtered = all.filter(item => (filter === 'all' || filter === 'needs-you' && needsYou(item) || filter === 'with-team' && !needsYou(item) && !complete(item) || filter === 'complete' && complete(item)) && (!query || (titleFor(vm, item) + ' ' + item.id + ' ' + item.c?.text).toLowerCase().includes(query)));
-    filtered.sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)));
+    filtered.sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)) || orderTime(entryStatus(b).updatedAt) - orderTime(entryStatus(a).updatedAt));
     const filters = [['all', 'All', all.length], ['needs-you', 'Needs you', all.filter(needsYou).length], ['with-team', 'With the team', all.filter(item => !needsYou(item) && !complete(item)).length], ['complete', 'Complete', all.filter(complete).length]];
     return `<section class="fs-inbox"><header class="fs-page-heading"><div><h1>My feedback</h1><p>Your requests, next steps, and the people moving them forward.</p></div>${button('start-scenario', 'Start walkthrough', { value: vm.scenarios?.[0]?.id || 'pdf-open', primary: true, icon: 'play' })}</header>
       ${notice(vm)}
@@ -6178,15 +6610,29 @@ if (typeof module==="object" && module.exports) module.exports = api;
       <div class="fs-list-toolbar"><div class="fs-filters" aria-label="Filter feedback">${filters.map(([id, label, count]) => `<button type="button" data-wq="filter-inbox" data-value="${id}" aria-pressed="${id === filter}">${label}<small>${count}</small></button>`).join('')}</div><label class="fs-search">${icon('search', 15)}<input type="search" data-wq="search-inbox" value="${escape(vm.search)}" placeholder="Search feedback" aria-label="Search feedback"></label></div>
       <div class="fs-ticket-list">${filtered.length ? filtered.map(item => {
         const status = entryStatus(item);
-        return `<button type="button" class="fs-ticket-row" data-wq="open-ticket" data-value="${escape(item.id)}"><span class="fs-row-icon">${icon(needsYou(item) ? 'ask' : complete(item) ? 'checks' : 'feedback', 18)}</span><span class="fs-row-main"><strong>${escape(titleFor(vm, item))}</strong><span>${escape(status.next || item.ux?.summary || item.c?.text)}</span><small>${escape(item.id)} <span aria-hidden="true">·</span> ${escape(status.owner)}${status.updatedAt ? ' · ' + escape(displayTime(status.updatedAt)) : ''}</small></span>${badge(status)}${icon('next', 14)}</button>`;
+        return `<button type="button" class="fs-ticket-row" data-wq="open-ticket" data-value="${escape(item.id)}"><span class="fs-row-icon">${icon(needsYou(item) ? 'ask' : complete(item) ? 'checks' : 'feedback', 18)}</span><span class="fs-row-main"><strong>${escape(titleFor(vm, item))}</strong><span>${escape(status.next || item.ux?.summary || item.c?.text)}</span><small>${escape(item.id)} <span aria-hidden="true">·</span> ${escape(status.owner)}</small><span class="fs-row-timing">${status.updatedAt ? `<span>Updated ${escape(displayTime(status.updatedAt))}</span>` : ''}${status.nextUpdate && !complete(item) ? `<span${status.overdue ? ' class="fs-overdue"' : ''}>${status.overdue ? 'Update overdue · ' : 'Next update · '}${escape(displayTime(status.nextUpdate))}</span>` : ''}</span></span>${badge(status)}${icon('next', 14)}</button>`;
       }).join('') : `<div class="fs-empty">${icon(filter === 'all' ? 'feedback' : 'inbox', 24)}<h2>${filter === 'all' && !query ? 'Your feedback starts here' : 'Nothing in this view'}</h2><p>${filter === 'all' && !query ? 'Start from a sample quote, describe what gets in your way, and follow the same request through to a result.' : 'Try a different filter or search.'}</p></div>`}</div>
       ${scenarioCards(vm)}
     </section>`;
   }
 
   function updates(vm) {
-    const list = array(vm.updates);
-    return `<section class="fs-inbox fs-updates"><header class="fs-page-heading"><div><h1>Updates</h1><p>Return to the next useful step in each request.</p></div>${list.length ? button('mark-read-all', 'Mark all as read', { quiet: true, icon: 'checks' }) : ''}</header>${notice(vm)}<div class="fs-update-list">${list.length ? list.slice().reverse().map(update => `<button type="button" class="fs-update${!update.read && !update.readAt ? ' fs-unread' : ''}" data-wq="open-update" data-value="${escape(update.id)}"><span class="fs-update-mark">${icon(update.kind === 'review' ? 'verify' : update.kind === 'question' ? 'ask' : 'bell', 17)}</span><span class="fs-row-main"><strong>${escape(update.title || update.label || 'Feedback updated')}</strong><span>${escape(update.body || update.summary || update.text || update.message || '')}</span><small>${escape(update.ticketId || update.recordId || '')}${update.createdAt || update.at ? ' · ' + escape(displayTime(update.createdAt || update.at)) : ''}</small></span>${icon('next', 14)}</button>`).join('') : `<div class="fs-empty">${icon('bell', 24)}<h2>You’re all caught up</h2><p>We’ll show questions, review requests, and release updates here.</p>${button('nav-inbox', 'Back to my feedback', { quiet: true, arrow: true })}</div>`}</div><p class="fs-footnote">Notifications in this workspace are simulated.</p></section>`;
+    const list = array(vm.updates).slice().sort((a, b) => orderTime(b.createdAt || b.at) - orderTime(a.createdAt || a.at));
+    const groups = new Map();
+    list.forEach(update => {
+      const id = update.ticketId || update.recordId || 'workspace';
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(update);
+    });
+    if (array(vm.updateGroups).length) {
+      groups.clear();
+      vm.updateGroups.forEach(group => groups.set(group.ticketId, array(group.events).length ? group.events : [group]));
+    }
+    const row = update => `<button type="button" class="fs-update${!update.read && !update.readAt ? ' fs-unread' : ''}" data-wq="open-update" data-value="${escape(update.id)}"><span class="fs-update-mark">${icon(update.kind === 'review' ? 'verify' : update.kind === 'question' ? 'ask' : 'bell', 17)}</span><span class="fs-row-main"><strong>${escape(update.title || update.label || 'Feedback updated')}</strong><span>${escape(update.body || update.summary || update.text || update.message || '')}</span><small>${escape(displayTime(update.createdAt || update.at) || 'Time not recorded')}</small></span>${icon('next', 14)}</button>`;
+    return `<section class="fs-inbox fs-updates"><header class="fs-page-heading"><div><h1>Updates</h1><p>The latest handoff for each request, with earlier updates close by.</p></div>${list.length ? button('mark-read-all', 'Mark all as read', { quiet: true, icon: 'checks' }) : ''}</header>${notice(vm)}<div class="fs-update-list">${list.length ? [...groups].map(([id, entries]) => {
+      const item = array(vm.items).find(item => item.id === id);
+      return `<section class="fs-update-group"><header><h2>${escape(item ? titleFor(vm, item) : entries[0].ticketTitle || 'Feedback updates')}</h2><span>${escape(id === 'workspace' ? 'Workspace' : id)}</span></header>${row(entries[0])}${entries.length > 1 ? `<details class="fs-update-history"><summary>${entries.length - 1} earlier ${entries.length === 2 ? 'update' : 'updates'} ${icon('down', 13)}</summary>${entries.slice(1).map(row).join('')}</details>` : ''}</section>`;
+    }).join('') : `<div class="fs-empty">${icon('bell', 24)}<h2>You’re all caught up</h2><p>Questions, review requests, and release updates will appear here.</p>${button('nav-inbox', 'Back to my feedback', { quiet: true, arrow: true })}</div>`}</div><p class="fs-footnote">Notifications in this workspace are simulated.</p></section>`;
   }
 
   function textField(name, label, value, options = {}) {
@@ -6194,7 +6640,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
 
   function proseList(value, className = '') {
-    return `<ul class="fs-prose-list ${escape(className)}">${lines(value).map(line => `<li>${escape(line.replace(/^[-•]\s*/, ''))}</li>`).join('')}</ul>`;
+    const values = Array.isArray(value) ? value.map(item => typeof item === 'string' ? item : item.label ? item.label + (item.value ? ' · ' + item.value : '') : textOf(item)) : lines(value);
+    return `<ul class="fs-prose-list ${escape(className)}">${values.filter(Boolean).map(line => `<li>${escape(String(line).replace(/^[-•]\s*/, ''))}</li>`).join('')}</ul>`;
   }
 
   function actions(content) {
@@ -6262,14 +6709,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const status = statusFor(vm.current, vm.status);
     const summary = flow.sharedUnderstanding;
     const freshAnswer = flow.phase === 'answer-review';
-    const preparation = vm.current?.ux?.preparation;
-    const preparationStage = typeof preparation === 'string' ? preparation : preparation?.stage;
+    const artifact = vm.presentation?.preparation;
+    const preparationStage = artifact?.stage;
     const preparationLabel = {
       'context-ready': 'Context saved',
       'draft-ready': 'Simulated preparation ready',
       'team-review-pending': 'Ready for the team to review'
     }[preparationStage];
-    const preparationNote = flow.phase === 'triage' && preparationLabel ? `<div class="fs-preparation" role="status">${icon('checks', 15)}<div><span>Simulated preparation</span><strong>${escape(preparationLabel)}</strong><p>No question or decision has been sent automatically.</p></div></div>` : '';
+    const preparationNote = flow.phase === 'triage' && (preparationLabel || artifact) ? `<section class="fs-preparation" aria-label="Simulated preparation">${icon('checks', 15)}<div><span>Simulated preparation</span><strong>${escape(artifact?.title || preparationLabel)}</strong>${artifact?.summary ? `<p>${escape(artifact.summary)}</p>` : ''}${array(artifact?.facts).length ? `<ul>${artifact.facts.map(fact => `<li>${fact.label ? `<strong>${escape(fact.label)}</strong> ` : ''}${escape(textOf(fact))}${fact.source ? `<small>${escape(textOf(fact.source))}</small>` : ''}</li>`).join('')}</ul>` : ''}${array(artifact?.questions).length ? `<p class="fs-preparation-label">For the team to review</p><ul>${artifact.questions.map(question => `<li>${escape(textOf(question))}</li>`).join('')}</ul>` : ''}${array(artifact?.limitations).map(value => `<p class="fs-footnote">${escape(textOf(value))}</p>`).join('')}<p class="fs-footnote">No question or decision has been sent automatically.</p>${(preparationStage === 'context-ready' || preparationStage === 'draft-ready' && (artifact?.paused === true || vm.preparationPaused === true)) ? button('resume-preparation', 'Continue simulated preparation', { quiet: true, icon: 'next' }) : ''}</div></section>` : '';
     return `<div class="fs-waiting"><span class="fs-waiting-mark">${icon(freshAnswer ? 'checks' : 'clock', 22)}</span><h2>${freshAnswer ? 'Your answer is with the team' : status.owner === 'Site owner' ? 'Your accepted version is awaiting release approval' : status.owner === 'Requester' ? 'The requester is reviewing this step' : status.owner === 'Complete' ? 'This request is complete' : 'The website team has your request'}</h2><p class="fs-task-intro">${escape(status.next || (freshAnswer ? 'The team will review how your answer changes the plan and acceptance checks.' : 'You can keep working. We’ll show the next question or result in Updates.'))}</p>
       ${preparationNote}${delayNotice(status)}
       ${freshAnswer && (flow.detailedAnswerText || caseRecord.answer) ? `<blockquote class="fs-request-quote"><span>Your answer</span><p>${escape(flow.sentBundle?.round === 'detailed' ? flow.detailedAnswerText : caseRecord.answer)}</p></blockquote>` : ''}
@@ -6279,18 +6726,32 @@ if (typeof module==="object" && module.exports) module.exports = api;
       ${actions(button('keep-working', 'Keep working', { icon: 'back' }) + button('nav-updates', 'View updates', { quiet: true, icon: 'bell' }))}</div>`;
   }
 
+  function teamPreparation(vm) {
+    if (vm.actor !== 'Website team' || vm.historyVersion || vm.walkHistory?.active) return '';
+    const preparation = vm.presentation?.preparation;
+    if (!preparation || !['draft-ready', 'team-review-pending'].includes(preparation.stage)) return '';
+    const draft = preparation.teamDraft || preparation.draftPlan;
+    const facts = array(preparation.facts);
+    const brief = `<details class="fs-team-preparation"${draft ? '' : ' open'}><summary><span>${icon('file', 15)}Context brief</span><small>Saved material · simulation</small>${icon('down', 13)}</summary><div class="fs-team-preparation-body">${preparation.summary ? `<p>${escape(preparation.summary)}</p>` : ''}<dl>${facts.map(fact => `<div><dt>${escape(fact.label || 'Context')}</dt><dd>${escape(textOf(fact))}${fact.source ? `<small>${escape(textOf(fact.source))}</small>` : ''}</dd></div>`).join('')}</dl>${array(preparation.limitations).map(note => `<p class="fs-footnote">${escape(textOf(note))}</p>`).join('')}</div></details>`;
+    if (!draft) return brief;
+    return `${brief}<details class="fs-team-preparation fs-private-preparation" open><summary><span>${icon('branch', 15)}Private AI draft</span><small>Simulated · pending your review</small>${icon('down', 13)}</summary><div class="fs-team-preparation-body"><p class="fs-private-boundary">Only the website team can see this draft. Review and edit the scope below before sharing it or sending questions.</p>${draft.approach ? `<h3>Proposed approach</h3>${proseList(draft.approach)}` : ''}${array(draft.checks).length || typeof draft.checks === 'string' && draft.checks ? `<h3>Suggested acceptance checks</h3>${proseList(draft.checks)}` : ''}${array(draft.questions).length ? `<h3>Questions to review</h3>${proseList(draft.questions)}` : ''}${draft.note ? `<p>${escape(draft.note)}</p>` : ''}${draft.source ? `<p class="fs-footnote">Source: ${escape(textOf(draft.source))}</p>` : ''}<p class="fs-footnote">The draft has not been applied to the scope or sent to the requester.</p></div></details>`;
+  }
+
   function task(vm) {
     const caseRecord = vm.current?.c;
     const flow = caseRecord?.reviewFlow;
-    if (!caseRecord || !flow) return `<div class="fs-empty"><h2>This feedback needs a different view</h2><p>Open the earlier demo paths to continue this existing request.</p>${button('legacy-links', 'Open earlier paths', { primary: true })}</div>`;
+    if (!caseRecord) return '';
+    const presentation = panelPresentation(vm);
+    if (vm.historyVersion || presentation.historical || vm.walkHistory?.active) {
+      const replay = Boolean(vm.walkHistory?.active);
+      const version = presentation.viewedRev || vm.historyVersion?.rev || vm.historyVersion;
+      return `<div class="fs-readonly-banner">${icon('history', 16)}<span><strong>${replay ? 'Walkthrough replay' : 'Saved version'} · Read-only</strong><small>${replay ? 'Your current request is unchanged.' : 'The request and acceptance basis below belong to this delivery.'}</small></span></div><h2>${escape(replay ? vm.walkHistory.label || 'Earlier step' : 'Version ' + version)}</h2>${textOf(presentation.understanding) ? `<p class="fs-task-intro">${escape(textOf(presentation.understanding))}</p>` : ''}${presentation.candidate ? `<div class="fs-frozen-copy">${proseList(presentation.candidate)}</div>` : `<p class="fs-task-intro">${escape(textOf(presentation.why) || 'No candidate was saved at this step.')}</p>`}${array(presentation.checks).length || typeof presentation.checks === 'string' && presentation.checks ? `<h3>Saved acceptance checks</h3>${proseList(presentation.checks)}` : ''}${actions(button(replay ? 'walk-current' : 'current-version', 'Return to current step', { primary: true, arrow: true }))}`;
+    }
+    if (!flow) return legacyTask(vm, presentation);
     const status = statusFor(vm.current, vm.status);
     const owns = vm.actor === actorName(status.owner);
     const phase = flow.phase;
     const team = vm.actor === 'Website team';
-    if (vm.historyVersion) {
-      const version = typeof vm.historyVersion === 'object' ? vm.historyVersion : array(caseRecord.versions).find(item => item.rev === Number(vm.historyVersion));
-      return `<h2>Version ${escape(version?.rev || vm.historyVersion)}</h2><p class="fs-task-intro">A saved delivery and its acceptance criteria.</p><div class="fs-frozen-copy">${proseList(version?.candidate)}</div><h3>Acceptance checks</h3>${proseList(version?.result?.checks || version?.reviewFlow?.candidateDraft?.checks)}${actions(button('current-version', 'Return to current version', { primary: true, arrow: true }))}`;
-    }
     if (phase === 'published') return `<div class="fs-complete"><span class="fs-complete-mark">${icon('checks', 26)}</span><h2>Version ${Number(caseRecord.rev)} is released in the simulation</h2><p>No further action is needed. You can reopen the result whenever you need it.</p>${actions(button('open-result', 'View result', { primary: true, icon: 'external' }) + button('nav-inbox', 'Back to my feedback', { quiet: true }))}</div>`;
     if (!owns || !team && ['triage', 'question-draft', 'answer-review', 'spec-review', 'candidate', 'checking', 'ready'].includes(phase)) return waiting(vm, caseRecord);
     if (phase === 'question-draft') return questionEditor(flow, vm);
@@ -6301,6 +6762,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       return `<h2>${phase === 'answer-review' ? 'Turn the answer into a clear plan' : 'Review the request and its scope'}</h2><p class="fs-task-intro">${phase === 'answer-review' ? 'The answer may change the approach and acceptance checks. Confirm what applies before sharing the plan.' : 'Check the customer’s request against the available records. Ask only about a decision the requester can make.'}</p>
         ${phase === 'answer-review' ? `<blockquote class="fs-request-quote"><span>Latest requester answer</span><p>${escape(answer)}</p></blockquote>${scope.reason ? `<p class="fs-because">${icon('branch', 14)}${escape(scope.reason)}</p>` : ''}` : `<blockquote class="fs-request-quote"><span>Original request</span><p>${escape(caseRecord.text)}</p></blockquote>`}
         ${scope.conflict ? `<p class="fs-conflict">${icon('hold', 16)}${escape(scope.conflict)}</p>` : ''}
+        ${phase === 'triage' ? teamPreparation(vm) : ''}
         ${array(flow.understandingCorrections).length ? `<blockquote class="fs-request-quote"><span>Requester’s correction</span><p>${escape(flow.understandingCorrections.at(-1).text)}</p></blockquote>` : ''}
         <div class="fs-scope-form">${textField('understanding', 'What we’ll share with the requester', fieldValue(vm, 'understanding', scope.understanding || scope.approach), { rows: 2 })}${textField('approach', 'Proposed approach', fieldValue(vm, 'approach', scope.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', scope.checks))}${actions(button('draft-questions', 'Review questions', { quiet: true, icon: 'ask' }) + button('confirm-scope', 'Confirm scope & continue', { primary: true, arrow: true }))}</div>`;
     }
@@ -6320,6 +6782,29 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return waiting(vm, caseRecord);
   }
 
+  function legacyTask(vm, p) {
+    const c = vm.current.c;
+    const derived = root.CaseEngine?.derive(c) || {};
+    const status = statusFor(vm.current, vm.status);
+    const owns = vm.actor === actorName(status.owner);
+    const quote = `<blockquote class="fs-request-quote"><span>Original feedback</span><p>${escape(c.text)}</p></blockquote>`;
+    const checks = p.checks || derived.checks;
+    const candidate = p.candidate !== undefined ? p.candidate : derived.candidate;
+    const result = candidate ? `<section class="fs-result"><div class="fs-result-heading"><div><h3>Version ${escape(c.rev)}</h3><p>Proposed homepage copy</p></div><span class="fs-version-tag">Simulation</span></div><div class="fs-frozen-copy">${proseList(candidate)}</div><h3>Acceptance checks</h3>${proseList(checks)}</section>` : '';
+    if (c.stage === 'published') return `<div class="fs-complete"><span class="fs-complete-mark">${icon('checks', 24)}</span><h2>Version ${escape(c.rev)} is released in the simulation</h2>${result}${actions(button('nav-inbox', 'Back to my feedback', { primary: true }))}</div>`;
+    if (!owns) return `<div class="fs-waiting"><span class="fs-waiting-mark">${icon('clock', 22)}</span><h2>${escape(status.label)}</h2><p class="fs-task-intro">${escape(status.next || 'The next step is with ' + actorName(status.owner) + '.')}</p>${result}${delayNotice(status)}<dl class="fs-waiting-details"><div><dt>With</dt><dd>${escape(actorName(status.owner))}</dd></div><div><dt>Last update</dt><dd>${escape(displayTime(status.updatedAt) || 'Time not recorded')}</dd></div><div><dt>Next update</dt><dd>${escape(displayTime(status.nextUpdate) || 'No update time has been set.')}</dd></div></dl>${actions(button('keep-working', 'Keep working') + button('nav-updates', 'View updates', { quiet: true }))}</div>`;
+    if (c.stage === 'draft') return `<h2>Submit your feedback</h2>${quote}${actions(button('legacy-submit', 'Submit feedback', { primary: true, arrow: true }))}`;
+    if (c.stage === 'clarify') {
+      const question = derived.question || p.question || {};
+      return `<h2>A little context will help</h2><p class="fs-task-intro">${escape(question.reason || textOf(p.why))}</p><fieldset class="fs-question"><legend>${escape(question.text || 'What would you like the team to change?')}</legend>${array(question.options).length ? `<div class="fs-options">${question.options.map(value => `<label class="fs-option"><input type="radio" name="answer" value="${escape(typeof value === 'string' ? value : value.label)}"><span>${escape(typeof value === 'string' ? value : value.label)}</span></label>`).join('')}</div>` : ''}${textField('answer', 'Your answer', fieldValue(vm, 'answer', ''), { rows: 2 })}</fieldset>${actions(button('legacy-answer', 'Send answer to the team', { primary: true, arrow: true }))}`;
+    }
+    if (['processing', 'blocked'].includes(c.stage)) return `<h2>Prepare version ${escape(c.rev)}</h2><p class="fs-task-intro">Review the copy and its acceptance checks before sending it.</p>${derived.reason ? `<p class="fs-soft-note">${escape(derived.reason)}</p>` : ''}${quote}${textField('candidate', 'Proposed copy', fieldValue(vm, 'candidate', candidate || ''))}<h3>Acceptance checks</h3>${proseList(checks)}${actions(button('legacy-prepare', 'Save draft & check') + button('legacy-deliver', 'Send version ' + c.rev + ' for review', { primary: true, disabled: Boolean(derived.blocked || !candidate), arrow: true }))}`;
+    if (c.stage === 'review') return `<h2>Does version ${escape(c.rev)} resolve your feedback?</h2><p class="fs-task-intro">Review the proposed copy against your request and the acceptance checks.</p>${result}${actions(button('legacy-adjust', 'Request changes') + button('legacy-accept', 'Accept version ' + c.rev, { primary: true, icon: 'check' }))}<p class="fs-footnote">Release authorization follows acceptance.</p>`;
+    if (c.stage === 'release') return `<h2>Approve version ${escape(c.rev)} for release</h2><p class="fs-task-intro">The requester accepted this exact version. Authorize its simulated release to ${escape(p.target || 'WinQuote homepage')}.</p>${result}${actions(button('legacy-authorize', 'Approve simulated release', { primary: true, icon: 'verify' }))}`;
+    if (c.stage === 'authorized') return `<h2>Run the approved release</h2><p class="fs-task-intro">Version ${escape(c.rev)} has been accepted and authorized for ${escape(p.target || 'WinQuote homepage')}.</p>${result}${actions(button('legacy-publish', 'Simulate release', { primary: true, icon: 'release' }))}`;
+    return `<h2>${escape(status.label)}</h2><p class="fs-task-intro">${escape(textOf(p.why) || 'Review the recorded request and its current basis.')}</p>${quote}`;
+  }
+
   function adjustmentEvidence(caseRecord) {
     const evidence = caseRecord.reviewFlow?.adjustmentEvidence;
     if (!evidence) return '';
@@ -6332,38 +6817,107 @@ if (typeof module==="object" && module.exports) module.exports = api;
       ['Reported', displayTime(context.occurredAt)],
       ['Selected area', context.element || context.selection?.label]
     ].filter(([, value]) => value);
-    return `<section class="fs-adjustment-basis"><h3>Adjustment to V${escape(evidence.rev)}</h3><span class="fs-owner">${avatar(owner)}${escape(owner)}</span>${caseRecord.adjustment ? `<p>${escape(caseRecord.adjustment)}</p>` : ''}${values.length ? `<dl class="fs-context-values">${values.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(typeof value === 'object' ? value.label || value.name || '' : value)}</dd></div>`).join('')}</dl>` : ''}${array(evidence.attachments).length ? `<div class="fs-attached-files">${evidence.attachments.map(attachment => `<button type="button" data-wq="open-attachment" data-value="${escape(attachment.id || attachment.attachmentId)}">${icon(attachment.kind === 'audio' ? 'play' : 'attach', 13)}${escape(attachment.name || attachment.filename || 'Attachment')}</button>`).join('')}</div>` : ''}<span class="fs-footnote">This evidence belongs to the adjustment.</span></section>`;
+    return `<section class="fs-adjustment-basis"><h3>Adjustment to V${escape(evidence.rev)}</h3><span class="fs-owner">${avatar(owner)}${escape(owner)}</span>${caseRecord.adjustment ? `<p>${escape(caseRecord.adjustment)}</p>` : ''}${values.length ? `<dl class="fs-context-values">${values.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(typeof value === 'object' ? value.label || value.name || '' : value)}</dd></div>`).join('')}</dl>` : ''}${array(evidence.attachments).length ? attachmentRows(evidence.attachments) : ''}<span class="fs-footnote">This evidence belongs to the adjustment.</span></section>`;
+  }
+
+  function panelPresentation(vm) {
+    if (vm.presentation) return vm.presentation;
+    if (root.FeedbackPresentation?.describe) return root.FeedbackPresentation.describe(vm.current, { rev: vm.historyVersion?.rev || vm.historyVersion, actor: vm.actor });
+    const c = vm.current?.c || {}, f = c.reviewFlow || {};
+    if (vm.historyVersion) return { historical: true, viewedRev: vm.historyVersion.rev || vm.historyVersion, basis: [], request: {}, versions: [] };
+    const understanding = f.sharedUnderstanding;
+    return { request: { text: c.text, context: vm.current?.ux?.context || f.context, attachments: vm.current?.ux?.attachments }, understanding,
+      basis: understanding?.text ? [{ text: understanding.text, status: understanding.needsRevision ? 'Awaiting team review' : 'Shared by the team', source: 'Shared understanding' }] : [],
+      answers: array(f.questionRounds), versions: array(c.versions).map(v => ({ rev: v.rev, status: 'Submitted', at: v.at })),
+      recordedDecisions: array(f.source?.history), activity: array(c.trail).filter(event => vm.actor === 'Website team' || ['submit', 'send-questions', 'answer', 'confirm-scope', 'correct-understanding', 'deliver', 'adjust', 'accept', 'authorize', 'publish', 'publish-failed', 'retry-publish'].includes(event.action)) };
+  }
+
+  function contextRows(context) {
+    const rows = Array.isArray(context) ? context.map(row => [row.label, row.value]) : [
+      ['Page', context?.page || context?.route || context?.path], ['Quote', context?.quote || context?.quoteId],
+      ['Compartment', context?.compartment || context?.compartmentId], ['Selected area', context?.element || context?.selection?.label],
+      ['Reported', displayTime(context?.occurredAt)], ['Source', context?.source]
+    ];
+    return `<dl class="fs-context-values">${rows.filter(([, value]) => value).map(([label, value]) => `<div><dt>${escape(label)}</dt><dd>${escape(typeof value === 'object' ? textOf(value) || value.name : value)}</dd></div>`).join('')}</dl>`;
+  }
+
+  function attachmentRows(items) {
+    return `<div class="fs-evidence-list">${array(items).map(file => {
+      const type = file.kind || file.mime || file.type || '';
+      const audio = /audio|recording/.test(type);
+      const thumbnail = safeMedia(file.thumbnailUrl || (/image/.test(type) ? file.blobUrl : ''));
+      const size = Number(file.size || file.bytes);
+      const duration = Number(file.duration || file.durationSeconds);
+      const meta = [audio ? 'Audio recording' : /image/.test(type) ? 'Image' : file.mime || 'Attachment', size > 0 ? size >= 1048576 ? (size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(size / 1024)) + ' KB' : '', duration > 0 ? Math.floor(duration / 60) + ':' + String(Math.floor(duration % 60)).padStart(2, '0') : ''].filter(Boolean).join(' · ');
+      return `<button type="button" class="fs-evidence-row" data-wq="open-attachment" data-value="${escape(file.id || file.attachmentId)}"><span class="fs-evidence-thumb">${thumbnail ? `<img src="${escape(thumbnail)}" alt="" loading="lazy">` : icon(audio ? 'play' : 'attach', 18)}</span><span><strong>${escape(file.name || file.filename || (audio ? 'Audio recording' : 'Attached file'))}</strong><small>${escape(meta)}</small></span>${icon('external', 13)}</button>`;
+    }).join('')}</div>`;
+  }
+
+  function panelFold(label, count, contents, options = {}) {
+    return `<details class="fs-side-fold"${options.open ? ' open' : ''}><summary><span>${escape(label)}</span>${count !== undefined ? `<small class="fs-side-count">${escape(count)}</small>` : ''}${icon('down', 13)}</summary><div class="fs-fold-content">${contents}</div></details>`;
+  }
+
+  function basisRows(p) {
+    const facts = array(p.basis);
+    return `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${p.historical ? 'Version ' + escape(p.viewedRev) + ' basis' : 'Current basis'}</h3>${p.historical ? '<span class="fs-basis-state">Read-only</span>' : ''}</div>${facts.length ? `<ul class="fs-basis-facts">${facts.map(fact => {
+      const source = typeof fact.source === 'string' ? { label: fact.source } : fact.source || {};
+      const status = String(fact.status || '').replace(/[-_]/g, ' ');
+      return `<li><p>${escape(textOf(fact))}</p><div class="fs-fact-meta">${status ? `<span>${escape(status)}</span>` : ''}${source.label || source.text ? `<details class="fs-source-detail"><summary>${icon('file', 11)}${escape(source.label || 'Source')}</summary><p>${escape(source.text || source.label)}${source.id ? `<small>${escape(source.id)}</small>` : ''}</p></details>` : ''}</div></li>`;
+    }).join('')}</ul>` : `<p class="fs-inspector-empty">${p.historical ? 'No basis was saved with this version.' : 'The team has not confirmed an approach yet.'}</p>`}</section>`;
+  }
+
+  function activityRows(entries) {
+    const sorted = array(entries).slice().sort((a, b) => orderTime(b.at || b.createdAt) - orderTime(a.at || a.createdAt));
+    return `<section class="fs-activity" aria-label="Activity history">${sorted.length ? `<ol>${sorted.map(event => `<li><div>${avatar(event.actor)}<strong>${escape(actorName(event.actor) || 'Website team')}</strong>${event.rev ? `<span class="fs-event-version">V${escape(event.rev)}</span>` : ''}</div><p>${escape(event.text || event.message || event.label || event.action)}</p><small>${escape(displayTime(event.at || event.createdAt) || 'Time not recorded')}${event.simulated ? ' · Simulated' : ''}</small>${event.detail ? `<details class="fs-event-detail"><summary>Details ${icon('down', 11)}</summary><p>${escape(textOf(event.detail))}</p></details>` : ''}</li>`).join('')}</ol>` : '<p class="fs-inspector-empty">No shared activity has been recorded.</p>'}</section>`;
+  }
+
+  function questionHistory(p) {
+    const groups = new Map();
+    array(p.questionRounds).forEach(round => groups.set(round.id || round.bundleId, { ...round, entries: [] }));
+    array(p.answers).forEach(answer => {
+      const key = answer.bundleId || answer.id || answer.round || 'initial';
+      if (!groups.has(key)) groups.set(key, { id: key, round: answer.round, scopeCycle: answer.scopeCycle, entries: [] });
+      groups.get(key).entries.push(answer);
+    });
+    for (const group of groups.values()) {
+      if (!group.entries.length) group.entries = array(group.questions).map(question => ({ question: question.text, answer: group.answers?.[question.id], note: group.answerNotes?.[question.id], at: group.answeredAt || group.sentAt, simulated: group.answerSimulated }));
+    }
+    const rows = [...groups.values()];
+    if (!rows.length) return '';
+    const answerText = value => Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? textOf(value) : String(value ?? '');
+    return panelFold('Question rounds', rows.length, rows.map((round, index) => {
+      const answered = round.entries.filter(entry => entry.answer !== null && entry.answer !== undefined && entry.answer !== '').length;
+      const label = round.title || (round.round === 'detailed' ? 'Detailed decisions' : 'Initial clarification');
+      return `<details class="fs-question-history"><summary><strong>${escape(label)}</strong><span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${icon('down', 12)}</summary>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</details>`;
+    }).join(''));
   }
 
   function details(vm) {
-    const item = vm.current;
-    const caseRecord = item.c;
-    const flow = caseRecord.reviewFlow || {};
-    const team = vm.actor === 'Website team';
-    const scope = team ? flow.suggestedScope || flow.confirmedScope || flow.scope : flow.sharedUnderstanding;
-    const context = item.ux?.context || flow.context || {};
-    const attachments = array(item.ux?.attachments);
-    const trail = array(caseRecord.trail).filter(entry => team || ['submit', 'send-questions', 'answer', 'confirm-scope', 'correct-understanding', 'deliver', 'adjust', 'accept', 'authorize', 'publish', 'publish-failed', 'retry-publish'].includes(entry.action));
-    const activity = `<section class="fs-activity"><h3>Activity</h3>${trail.length ? `<ol>${trail.slice().reverse().map(entry => `<li><div>${avatar(entry.actor)}<strong>${escape(actorName(entry.actor))}</strong></div><p>${escape(entry.text)}</p>${entry.simulated ? '<small>Simulated action</small>' : ''}</li>`).join('')}</ol>` : '<p class="fs-footnote">No activity yet.</p>'}</section>`;
-    const tab = vm.contextTab === 'activity' || vm.activityOpen ? 'activity' : 'details';
-    const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs"><button type="button" data-wq="details-tab" aria-pressed="${tab === 'details'}">Details</button><button type="button" data-wq="activity" aria-pressed="${tab === 'activity'}">Activity</button></div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
-    if (tab === 'activity') return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback activity">${heading}${activity}</aside>`;
-    return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback details">${heading}
-      <section class="fs-basis"><h3>Current basis</h3>${flow.sharedUnderstanding?.needsRevision ? '<p class="fs-footnote">A correction is awaiting team review.</p>' : ''}${scope ? `<p>${escape(scope.text || scope.understanding || scope.approach)}</p>${team && scope.reason ? `<p class="fs-basis-reason">${escape(scope.reason)}</p>` : ''}<span class="fs-footnote">${team && flow.suggestedScope ? 'Pending team review' : !team && flow.phase === 'answer-review' ? 'Confirmed basis · new answer under team review' : flow.confirmedScope ? 'Confirmed by the website team' : team ? 'Pending team review' : 'Shared by the website team'}</span>` : `<p>The team is reviewing the original request and the attached context.</p>`}${caseRecord.answer ? `<details class="fs-side-fold"><summary>Latest answer ${icon('down', 13)}</summary><p>${escape(caseRecord.answer)}</p></details>` : ''}</section>
-      ${adjustmentEvidence(caseRecord)}
-      <details class="fs-side-fold"><summary>Original request ${icon('down', 13)}</summary><p>${escape(caseRecord.text)}</p>${flow.source?.id ? `<span class="fs-footnote">${escape(flow.source.id)}</span>` : ''}${vm.scenario?.sourceNote ? `<p class="fs-footnote">${escape(vm.scenario.sourceNote)}</p>` : ''}${Object.keys(context).length ? `<dl class="fs-context-values">${[['Page', context.page || context.route || context.path], ['Quote', context.quote || context.quoteId], ['Compartment', context.compartment || context.compartmentId], ['Reported', context.occurredAt || item.ux?.timing?.occurredAt], ['Selected area', context.element || context.selection?.label]].filter(([, value]) => value).map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(typeof value === 'object' ? value.label || value.name || '' : value)}</dd></div>`).join('')}</dl>` : ''}${attachments.length ? `<div class="fs-attached-files">${attachments.map(attachment => `<button type="button" data-wq="open-attachment" data-value="${escape(attachment.id)}">${icon(attachment.kind === 'audio' ? 'play' : 'attach', 13)}${escape(attachment.name || attachment.filename || 'Attachment')}</button>`).join('')}</div>` : ''}</details>
-      <details class="fs-side-fold"><summary>Versions <span class="fs-side-count">${array(caseRecord.versions).length}</span>${icon('down', 13)}</summary>${array(caseRecord.versions).length ? caseRecord.versions.map(version => button('view-version', 'Version ' + version.rev + ' · submitted', { value: version.rev, quiet: true, icon: 'file' })).join('') : '<p class="fs-footnote">No version has been sent for review yet.</p>'}</details>
-      ${array(flow.questionRounds).length ? `<details class="fs-side-fold"><summary>Question rounds ${icon('down', 13)}</summary>${flow.questionRounds.map(round => `<details class="fs-question-history"><summary>${escape(round.round === 'detailed' ? 'Detailed decisions' : 'Initial clarification')} <span>${escape(round.answered ? 'Answered' : 'Sent')}</span></summary>${array(round.questions).map(question => `<p>${escape(question.text)}</p>`).join('')}${round.answerText ? `<blockquote>${escape(round.answerText)}</blockquote>` : ''}</details>`).join('')}</details>` : ''}
-      ${team && array(flow.source?.history).length ? `<details class="fs-side-fold"><summary>Recorded decisions ${icon('down', 13)}</summary>${flow.source.history.map(entry => `<div class="fs-history-event"><span>${escape(entry.date)}</span><p>${escape(entry.decision)}</p></div>`).join('')}</details>` : ''}
-
-    </aside>`;
+    const p = panelPresentation(vm), c = vm.current.c;
+    const tab = vm.contextTab === 'activity' ? 'activity' : 'details';
+    const request = p.request || {};
+    const attachments = array(request.attachments);
+        const decisions = array(p.recordedDecisions);
+    const versions = array(p.versions).slice().sort((a, b) => Number(b.rev) - Number(a.rev));
+    const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs" role="tablist" aria-label="Feedback context">${['details', 'activity'].map(name => `<button type="button" role="tab" id="fs-tab-${name}" data-wq="context-tab" data-value="${name}" aria-selected="${tab === name}" aria-controls="fs-inspector-content" tabindex="${tab === name ? '0' : '-1'}">${name === 'details' ? 'Details' : 'Activity'}</button>`).join('')}</div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
+    const content = tab === 'activity' ? activityRows(p.activity) : `${basisRows(p)}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+      ${panelFold('Original feedback', request.text ? 1 : 0, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${request.sourceNote ? `<p class="fs-footnote">${escape(request.sourceNote)}</p>` : ''}`)}
+      ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
+      ${questionHistory(p)}
+      ${decisions.length ? panelFold('Earlier decisions', decisions.length, decisions.map(decision => `<div class="fs-history-event"><span>${escape(displayTime(decision.date || decision.at))}${decision.superseded ? ' · Superseded' : ''}</span><p>${escape(decision.decision || decision.text || decision.summary)}</p>${decision.source ? `<small>${escape(textOf(decision.source))}</small>` : ''}</div>`).join('')) : ''}
+      ${panelFold('Versions', versions.length, versions.length ? `<div class="fs-version-list">${versions.map(version => `<button type="button" class="fs-version-row${Number(p.viewedRev) === Number(version.rev) && p.historical ? ' fs-version-viewed' : ''}" data-wq="${version.readOnly === false ? 'current-version' : 'view-version'}" data-value="${escape(version.rev)}"><span class="fs-version-icon">${icon('file', 15)}</span><span><strong>Version ${escape(version.rev)}${version.current ? '<small>Current</small>' : ''}</strong><span>${escape(version.status || 'Submitted')}</span>${array(version.statuses).filter(value => ['accepted', 'authorized', 'released'].includes(value)).length > 1 ? `<small>${version.statuses.filter(value => ['accepted', 'authorized', 'released'].includes(value)).map(value => ({accepted:'Accepted',authorized:'Authorized',released:'Released'}[value])).join(' · ')}</small>` : ''}${version.at ? `<small>${escape(displayTime(version.at))}</small>` : ''}</span>${icon('next', 12)}</button>`).join('')}</div>` : '<p class="fs-inspector-empty">No version has been sent for review.</p>', { open: Boolean(versions.length) })}`;
+    return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback ${tab}">${heading}<div id="fs-inspector-content" role="tabpanel" aria-labelledby="fs-tab-${tab}" tabindex="0" class="fs-inspector-panel">${content}</div></aside>`;
   }
 
   function ticket(vm) {
     const item = vm.current;
     if (!item) return `<div class="fs-empty"><h1>This feedback could not be found</h1><p>Return to your requests to pick up a current conversation.</p>${button('nav-inbox', 'My feedback', { primary: true })}</div>`;
     const status = statusFor(item, vm.status);
-    return `<div class="fs-ticket-layout"><article class="fs-ticket-document"><header class="fs-record-heading"><h1>${escape(titleFor(vm, item))}</h1><div class="fs-record-properties">${badge(status)}<span class="fs-property-divider"></span><span class="fs-owner">${avatar(status.owner)}${escape(status.owner)}</span><span class="fs-record-id">${escape(item.id)}</span></div></header>${notice(vm)}${vm.current.ux?.sinceLastVisit ? `<p class="fs-return-summary">${icon('history', 15)}<span><strong>Since your last visit</strong> ${escape(vm.current.ux.sinceLastVisit)}</span></p>` : ''}<section class="fs-task" aria-label="Current task">${task(vm)}</section><footer class="fs-record-footer"><span>${icon('clock', 13)}${escape(displayTime(status.updatedAt) || 'Saved on this device')}</span>${status.nextUpdate ? `<span>Next update · ${escape(displayTime(status.nextUpdate))}</span>` : ''}</footer></article>${details(vm)}</div>`;
+    const p = panelPresentation(vm);
+    const readonly = p.historical || vm.historyVersion || vm.walkHistory?.active;
+    const heading = readonly ? 'Feedback · ' + item.id : titleFor(vm, item);
+    const returned = !readonly && (p.returnSummary || vm.returnSummary || item.ux?.sinceLastVisit);
+    return `<div class="fs-ticket-layout"><article class="fs-ticket-document"><header class="fs-record-heading"><h1>${escape(heading)}</h1><div class="fs-record-properties">${readonly ? '<span class="fs-status">Read-only</span>' : badge(status) + '<span class="fs-property-divider"></span><span class="fs-owner">' + avatar(status.owner) + escape(status.owner) + '</span>'}<span class="fs-record-id">${escape(item.id)}</span></div></header>${notice(vm)}${returned ? `<div class="fs-return-summary">${icon('history', 15)}<span><strong>Since your last visit</strong> ${escape(textOf(returned))}</span>${button('dismiss-return-summary', 'Dismiss', { quiet: true, icon: 'cross' })}</div>` : ''}<section class="fs-task" aria-label="${readonly ? 'Saved task' : 'Current task'}">${task(vm)}</section>${!readonly ? `<footer class="fs-record-footer"><span>${icon('clock', 13)}${escape(displayTime(status.updatedAt) || 'Saved on this device')}</span>${status.nextUpdate ? `<span>${status.overdue ? 'Update overdue' : 'Next update'} · ${escape(displayTime(status.nextUpdate))}</span>` : ''}</footer>` : ''}</article>${details(vm)}</div>`;
   }
 
   function siteKind(vm) {
@@ -6400,13 +6954,18 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const open = vm.console?.open;
     const status = statusFor(vm.current, vm.status);
     const scenario = vm.scenario || scenarioFor(vm);
+    const currentRecordChoice = Boolean(vm.current && !vm.current.c?.reviewFlow?.scenarioId);
+    const history = vm.walkHistory || {};
+    const replay = Boolean(history.active);
+    const why = textOf(history.why || vm.presentation?.why || status.why);
     if (!open) {
       const onSite = vm.page === 'site';
-      const headline = !onSite && vm.current ? vm.current.id + ' · ' + actorName(status.owner) : 'Walkthrough';
-      const next = onSite ? 'Start with this page' : vm.current ? status.label : '';
+      const headline = replay ? 'Replay · Read-only' : !onSite && vm.current ? vm.current.id + ' · ' + actorName(status.owner) : 'Walkthrough';
+      const next = replay ? history.label || 'Return to the current step' : onSite ? 'Start with this page' : vm.current ? status.label : '';
       return `<button type="button" class="fs-console-launcher" data-wq="open-console" aria-label="Open walkthrough controls" title="Walkthrough">${icon('play', 14)}<span class="fs-launcher-copy"><strong>${escape(headline)}</strong>${next ? `<small>${escape(next)}</small>` : ''}</span>${vm.console?.playing ? '<small>Playing</small>' : ''}</button>`;
     }
-    return `<aside class="fs-console" aria-label="Walkthrough controls"><header><span>${icon('play', 15)}Walkthrough</span>${button('close-console', 'Close', { quiet: true, icon: 'cross' })}</header><div class="fs-console-body"><label class="fs-console-field"><span>Workflow</span><select data-wq="start-scenario" aria-label="Workflow">${array(vm.scenarios).slice(0, 3).map(item => `<option value="${escape(item.id)}"${item.id === scenario?.id ? ' selected' : ''}>${escape(item.title)}</option>`).join('')}</select></label><div class="fs-console-selects"><label class="fs-console-field"><span>View as</span><select data-wq="change-role" aria-label="View as">${['Requester', 'Website team', 'Site owner'].map(actor => `<option${actor === vm.actor ? ' selected' : ''}>${actor}</option>`).join('')}</select></label><label class="fs-console-field"><span>Mode</span><select data-wq="change-mode" aria-label="Mode"><option value="practice"${vm.console?.mode !== 'watch' ? ' selected' : ''}>Practice</option><option value="watch"${vm.console?.mode === 'watch' ? ' selected' : ''}>Watch</option></select></label></div><div class="fs-console-progress"><span>${avatar(status.owner)}${escape(status.owner)}</span><strong>${escape(vm.page === 'site' ? 'Describe what gets in your way.' : status.next || status.label)}</strong></div><p class="fs-console-note">${vm.console?.mode === 'watch' ? 'Scripted roles · simulated decisions' : 'Practice · you make each decision'}</p><details class="fs-console-why" open><summary>Why this step? ${icon('down', 13)}</summary><p>${escape(status.why || 'Follow the current owner and review what changes before handing the request to the next person.')}</p></details><div class="fs-console-playback">${vm.console?.mode === 'watch' ? button('watch-toggle', vm.console.playing ? 'Pause' : 'Play', { primary: true, icon: vm.console.playing ? 'pause' : 'play' }) : button(vm.page === 'site' ? 'open-composer' : 'resume', vm.page === 'site' ? 'Give feedback' : 'Resume task', { primary: true, icon: vm.page === 'site' ? 'plus' : 'next' })}${vm.console?.mode === 'watch' ? button('watch-next', 'Next', { icon: 'next' }) : ''}</div><details class="fs-console-tools"><summary>Simulation tools ${icon('down', 13)}</summary>${button('advance-time', 'Advance time', { quiet: true, icon: 'clock' })}${button('simulate-email', 'Preview email update', { quiet: true, icon: 'send' })}${button('set-next-update', 'Set next update', { quiet: true, icon: 'edit' })}${button('legacy-links', 'Earlier demo paths', { quiet: true, icon: 'folder' })}</details></div></aside>`;
+    const playback = replay ? button('walk-current', 'Return to current step', { primary: true, icon: 'next' }) : vm.console?.mode === 'watch' ? button('watch-toggle', vm.console.playing ? 'Pause' : 'Play', { primary: true, icon: vm.console.playing ? 'pause' : 'play' }) + button('watch-next', 'Next', { icon: 'next' }) : button(vm.page === 'site' ? 'open-composer' : 'resume', vm.page === 'site' ? 'Give feedback' : 'Resume task', { primary: true, icon: vm.page === 'site' ? 'plus' : 'next' });
+    return `<aside class="fs-console" aria-label="Walkthrough controls"><header><span>${icon('play', 15)}Walkthrough</span>${button('close-console', 'Close', { quiet: true, icon: 'cross' })}</header><div class="fs-console-body">${replay ? `<div class="fs-console-replay"><strong>Read-only replay</strong><span>${escape(history.label || 'Earlier step')}${history.total ? ' · ' + (Number(history.index) + 1) + ' of ' + Number(history.total) : ''}</span></div>` : ''}<label class="fs-console-field"><span>Workflow</span><select data-wq="start-scenario" aria-label="Workflow"${replay ? ' disabled' : ''}>${currentRecordChoice ? `<option value="" selected disabled>Current feedback · ${escape(vm.presentation?.title || titleFor(vm, vm.current))}</option>` : ''}${array(vm.scenarios).slice(0, 3).map(item => `<option value="${escape(item.id)}"${!currentRecordChoice && item.id === scenario?.id ? ' selected' : ''}>${escape(item.title)}</option>`).join('')}</select></label><div class="fs-console-selects"><label class="fs-console-field"><span>View as</span><select data-wq="change-role" aria-label="View as"${replay ? ' disabled' : ''}>${['Requester', 'Website team', 'Site owner'].map(actor => `<option${actor === vm.actor ? ' selected' : ''}>${actor}</option>`).join('')}</select></label><label class="fs-console-field"><span>Mode</span><select data-wq="change-mode" aria-label="Mode"${replay ? ' disabled' : ''}><option value="practice"${vm.console?.mode !== 'watch' ? ' selected' : ''}>Practice</option><option value="watch"${vm.console?.mode === 'watch' ? ' selected' : ''}>Watch</option></select></label></div><div class="fs-console-progress"><span>${avatar(status.owner)}${escape(status.owner)}</span><strong>${escape(replay ? history.label || status.label : vm.page === 'site' ? 'Describe what gets in your way.' : status.next || status.label)}</strong></div><p class="fs-console-note">${replay ? 'Earlier steps cannot change the current request.' : vm.console?.mode === 'watch' ? 'Scripted roles · simulated decisions' : 'Practice · you make each decision'}</p><details class="fs-console-why" open><summary>Why this step? ${icon('down', 13)}</summary><p>${escape(why || (vm.page === 'site' ? 'Feedback starts from the page and quote you are working on.' : 'The current owner must complete this handoff before the next person can act.'))}</p></details><div class="fs-console-playback">${button('walk-back', 'Back', { icon: 'back', disabled: !history.canBack })}${playback}</div><div class="fs-console-history-controls">${!replay && history.total > 1 ? `<span>${Number(history.total)} saved steps</span>` : ''}${button('walk-restart', 'Restart walkthrough', { quiet: true, icon: 'replay' })}</div><details class="fs-console-tools"><summary>Simulation tools ${icon('down', 13)}</summary>${button('advance-time', 'Advance time', { quiet: true, icon: 'clock', disabled: replay })}${button('simulate-email', 'Preview email update', { quiet: true, icon: 'send', disabled: replay })}${button('set-next-update', 'Set next update', { quiet: true, icon: 'edit', disabled: replay })}${button('legacy-links', 'Earlier demo paths', { quiet: true, icon: 'folder' })}</details></div></aside>`;
   }
 
   function render(vm) {
@@ -6538,9 +7097,9 @@ if (typeof module==="object" && module.exports) module.exports = api;
 (function(root){
   'use strict';
   const query=new URLSearchParams(location.search);
-  const active=!(query.has('walkthrough')||query.has('capture')||query.has('demo')||query.has('legacy'));
+  const active=!(query.has('walkthrough')||query.has('capture')||query.has('demo')||(query.has('legacy')&&!query.has('ticket')));
   root.FeedbackWorkspace={active};if(!active)return;
-  const S=root.FeedbackStore,E=root.CaseEngine,C=root.FlowScenarios,V=root.FeedbackView;
+  const S=root.FeedbackStore,E=root.CaseEngine,C=root.FlowScenarios,V=root.FeedbackView,P=root.FeedbackPresentation;
   const clone=x=>JSON.parse(JSON.stringify(x));
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let error='',notice='',data,brokenStorage=false;
@@ -6550,7 +7109,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   data=read();
   const ui=data.feedbackExperience.ui||{};
-  let page=ui.page||'inbox',actor='Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,historyVersion=null,filter='all',search='';
+  let page=ui.page||'inbox',actor='Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,contextTab='details',historyVersion=null,filter='all',search='';
   let consoleState={open:false,mode:'practice',playing:false},watchTimer=null,backgroundTimer=null,preparationTimer=null;
   let site=initialSite(),resultState=null,returnFocus=null,returnFocusSelector=null,composer=null,rendered=null;
   const app=document.createElement('div');app.id='feedback-root';document.body.appendChild(app);
@@ -6559,6 +7118,39 @@ if (typeof module==="object" && module.exports) module.exports = api;
   const modalRoot=document.createElement('div');modalRoot.id='feedback-modal-root';document.body.appendChild(modalRoot);
   const modal=document.createElement('dialog');modal.className='fs-dialog';modal.id='feedback-dialog';modalRoot.appendChild(modal);
   const current=()=>S.get(data,data.current),scenario=()=>C.get(scenarioId)||C.get('pdf');
+  const mediaCache=new Map();let visibleMediaIds=new Set();
+  let walkCursor=null;
+  function savePresentation(){
+    if(!current())return;
+    const id=current().id,fresh=read();if(!S.get(fresh,id))return;
+    persist(S.saveWalk(fresh,id,{mode:consoleState.mode,role:actor,open:consoleState.open,cursor:walkCursor,historyRev:historyVersion,contextTab}).data);
+  }
+  function restorePresentation(item){
+    const w=item?.ux?.walk||{};actor=['Requester','Website team','Site owner'].includes(w.role)?w.role:'Requester';
+    consoleState={open:!!w.open,mode:w.mode==='watch'?'watch':'practice',playing:false};
+    historyVersion=w.historyRev||null;walkCursor=Number.isInteger(w.cursor)?w.cursor:null;contextTab=w.contextTab==='activity'?'activity':'details';
+  }
+  function recordScene(item,label){
+    item.ux||={};item.ux.walk||={};const scenes=item.ux.walk.scenes||[];
+    if(scenes.at(-1)?.sequence!==item.sequence)scenes.push({sequence:item.sequence,at:S.now(data),label:label||S.status(item).label,role:actor,c:clone(item.c),ux:{context:clone(item.ux.context||{}),attachments:clone(item.ux.attachments||[]),adjustmentEvidence:clone(item.ux.adjustmentEvidence||null),correctionEvidence:clone(item.ux.correctionEvidence||null),preparation:clone(item.ux.preparation||{}),timing:clone(item.ux.timing||{})}});
+    item.ux.walk.scenes=scenes.slice(-40);walkCursor=null;
+  }
+  function presentationVM(item){
+    const scenes=item?.ux?.walk?.scenes||[],snap=walkCursor===null?null:scenes[walkCursor];
+    const display=snap?{...item,c:snap.c,ux:clone(snap.ux||{})}:item;
+    const presentation=display?P.describe(display,{rev:historyVersion||undefined,actor}):null;
+    if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[]]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
+    return {presentation,walkHistory:{active:!!snap,index:snap?walkCursor:scenes.length,total:scenes.length,canBack:scenes.length>0&&(walkCursor===null||walkCursor>0),canForward:!!snap,label:snap?.label||'Current task',why:presentation?.why?.text||''}};
+  }
+  async function hydrateMedia(presentation){
+    const attachments=[...presentation?.request?.attachments||[],...presentation?.adjustmentEvidence?.attachments||[]];
+    const ids=new Set(attachments.map(a=>a.id).filter(Boolean));visibleMediaIds=ids;
+    for(const [id,value] of mediaCache)if(!ids.has(id)){if(value.url)URL.revokeObjectURL(value.url);mediaCache.delete(id);}
+    const pending=attachments.filter(a=>a.id&&!mediaCache.has(a.id));if(!pending.length)return;
+    let changed=false;
+    await Promise.all(pending.map(async a=>{const token={loading:true};mediaCache.set(a.id,token);try{const result=await root.FeedbackMediaStore.get(a.id);if(mediaCache.get(a.id)!==token||!visibleMediaIds.has(a.id))return;mediaCache.set(a.id,result?.blob?{url:URL.createObjectURL(result.blob)}:{missing:true});changed=true;}catch{if(mediaCache.get(a.id)===token){mediaCache.set(a.id,{missing:true});changed=true;}}}));
+    if(changed)render();
+  }
   function initialSite(){return {compartment:'1',title:'Compartment 1 · Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
   function persist(next){
     if(brokenStorage)throw Error('The existing saved data needs recovery before it can be changed.');
@@ -6566,7 +7158,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   function syncUI(){
     const next=read();if(brokenStorage)return;
-    next.current=data.current;next.feedbackExperience.ui={page,scenarioId};persist(next);
+    next.current=data.current;next.feedbackExperience.ui={page,scenarioId};persist(next);savePresentation();
   }
   function changeRecord(fn){const next=read();if(brokenStorage)throw Error('Saved feedback needs recovery.');const item=S.get(next,data.current);if(!item)throw Error('This feedback is no longer available.');fn(item,next);persist(next);return item;}
   function roleOwner(item=current()){return S.status(item,S.now(data)).owner;}
@@ -6575,9 +7167,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
     if(page==='ticket'&&!item){page='inbox';error=error||'Choose a feedback item to continue.';}
     const status=S.status(page==='site'?null:item,S.now(data));
     rendered=item?{ticketId:item.id,sequence:item.sequence,rev:item.c.rev,bundleId:item.c.reviewFlow?.sentBundle?.id}:null;
-    app.innerHTML=V.render({page,items:S.customerItems(data),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),status,console:consoleState,error,notice,contextOpen,historyVersion,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?E.reviewPreview(item.c):null,clock:S.now(data)});
+    const projection=presentationVM(page==='site'?null:item);
+    app.innerHTML=V.render({page,items:S.customerItems(data).map(i=>({...i,status:S.status(i,S.now(data))})),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),updateGroups:S.digest(data),status,console:consoleState,error,notice,contextOpen,contextTab,historyVersion,preparationPaused:!!item?.ux?.preparation?.paused,...projection,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?.c.reviewFlow?E.reviewPreview(item.c):null,clock:S.now(data)});
     configureDrawer();
-    document.title=(page==='ticket'&&item?scenario().title+' · ':'')+'WinQuote Feedback';
+    document.title=(page==='ticket'&&item?projection.presentation.title+' · ':'')+'WinQuote Feedback';
+    void hydrateMedia(projection.presentation);
   }
   function configureDrawer(focus=false){
     const opened=contextOpen&&matchMedia('(max-width:900px)').matches,drawer=app.querySelector('#feedback-details'),wasModal=drawer?.getAttribute('aria-modal')==='true';
@@ -6588,6 +7182,9 @@ if (typeof module==="object" && module.exports) module.exports = api;
     else if(!opened&&wasModal)drawer?.focus();
   }
   app.addEventListener('keydown',event=>{
+    if(event.target.matches('[role=tab][data-wq=context-tab]')&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+      event.preventDefault();contextTab=event.key==='Home'?'details':event.key==='End'?'activity':contextTab==='details'?'activity':'details';saveDraft();savePresentation();render();app.querySelector('[role=tab][data-value="'+contextTab+'"]')?.focus();return;
+    }
     if(!contextOpen||!matchMedia('(max-width:900px)').matches||modal.open||composer)return;
     const drawer=app.querySelector('#feedback-details');if(!drawer)return;
     if(event.key==='Escape'){event.preventDefault();contextOpen=false;render();configureDrawer(true);}
@@ -6595,19 +7192,20 @@ if (typeof module==="object" && module.exports) module.exports = api;
   });
   addEventListener('resize',()=>configureDrawer());
   function showError(e){error=e.message;render();if(modal.open){modal.querySelector('[data-dialog-error]')?.remove();modal.insertAdjacentHTML('afterbegin','<p role="alert" data-dialog-error class="fs-note">'+esc(error)+'</p>');}}
-  function go(nextPage){saveDraft();clearTimeout(preparationTimer);clearTimeout(backgroundTimer);page=nextPage;historyVersion=null;error='';if(page==='site'){const snapshot=current()?.ux?.context;if(snapshot?.state)site={...site,...snapshot.state,compartment:snapshot.compartment||site.compartment};history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(scenarioId));}syncUI();render();window.scrollTo(0,0);app.querySelector('#feedback-main')?.focus({preventScroll:true});}
+  function go(nextPage){saveDraft();pausePreparation();page=nextPage;historyVersion=null;error='';if(page==='site'){const snapshot=current()?.ux?.context;if(snapshot?.state)site={...site,...snapshot.state,compartment:snapshot.compartment||site.compartment};history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(scenarioId));}syncUI();render();window.scrollTo(0,0);app.querySelector('#feedback-main')?.focus({preventScroll:true});}
   function routeTicket(id,eventId){
-    stopWatch();data=read();const found=S.resolve(data,id,eventId);
+    stopWatch();pausePreparation();data=read();const found=S.resolve(data,id,eventId);
     if(found.missing){page='inbox';error=found.message;render();return;}
     data.current=id;
-    if(!found.item.c.reviewFlow?.scenarioId){persist(data);location.href='?legacy=1&ticket='+encodeURIComponent(id);return;}
     if(eventId)data=S.markRead(data,eventId);
     notice=found.message||(eventId?'You’re back in the same feedback. Here is the current task.':'');
-    actor=found.event?.recipient||'Requester';scenarioId=found.item.c.reviewFlow.scenarioId;page='ticket';historyVersion=null;persist(data);syncUI();
+    restorePresentation(found.item);if(eventId){actor=found.event?.recipient||'Requester';historyVersion=null;walkCursor=null;}
+    scenarioId=found.item.c.reviewFlow?.scenarioId||found.item.ux?.scenarioId||'pdf';page='ticket';
+    const visit=S.visit(data,id);data=visit.data;persist(data);syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(id)+(eventId?'&event='+encodeURIComponent(eventId):''));render();
   }
   function startScenario(id){
-    if(!C.get(id))return;saveDraft();stopWatch();scenarioId=id;site=initialSite();
+    if(!C.get(id))return;saveDraft();stopWatch();pausePreparation();scenarioId=id;site=initialSite();
     site.section=id==='pdf'?'make-pdf':id==='compartment'?'panels':'refrigeration';page='site';actor='Requester';notice='';error='';consoleState.open=consoleState.mode==='watch';syncUI();
     history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(id));render();
   }
@@ -6629,27 +7227,36 @@ if (typeof module==="object" && module.exports) module.exports = api;
   function readAnswerNotes(){return Object.fromEntries([...app.querySelectorAll('[data-answer-other]')].map(el=>[el.dataset.answerOther,el.value]));}
   function formScope(){const f=current()?.c.reviewFlow;return {approach:field('approach')||f?.suggestedScope?.approach||f?.scope?.approach||'',checks:field('checks')||f?.suggestedScope?.checks||f?.scope?.checks||'',understanding:field('understanding')||undefined};}
   function saveDraft(){
-    if(page!=='ticket'||!current()||historyVersion)return;
+    if(page!=='ticket'||!current()||historyVersion||walkCursor!==null)return;
     const values={};for(const el of app.querySelectorAll('[name]'))if(['INPUT','TEXTAREA','SELECT'].includes(el.tagName))values[el.name]=el.type==='checkbox'?el.checked:el.value;
     let qs=[];try{qs=readQuestions();}catch(e){error=e.message;}const answers=readAnswers();
     try{changeRecord(i=>{i.ux||={};i.ux.drafts={...i.ux.drafts,fields:values,...(qs.length?{questions:qs}:{}),...(Object.keys(answers).length?{answers,answerNotes:readAnswerNotes(),bundleId:rendered?.bundleId}:{})};});}catch(e){error='Your draft is still on this page but could not be saved: '+e.message;}
   }
   function apply(action,value,{simulated=false,quiet=false}={}){
-    if(historyVersion)throw Error('This is an earlier version. Return to the current task before taking action.');
+    if(historyVersion||walkCursor!==null)throw Error('This is an earlier view. Return to the current task before taking action.');
     const item=current();if(!item)throw Error('Open a feedback item first.');
-    const fresh=read(),r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
-    r.item.ux.drafts={};persist(r.data);if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    const fresh=read();recordScene(S.get(fresh,item.id));
+    const r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
+    r.item.ux.drafts={};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
   }
   function contextSnapshot(){return {page:scenario().target,route:location.pathname+'?workflow='+scenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-workspace-v3',state:{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration},simulated:true};}
+  function pausePreparation(){
+    const running=preparationTimer||backgroundTimer;clearTimeout(preparationTimer);clearTimeout(backgroundTimer);preparationTimer=backgroundTimer=null;
+    if(running&&current()?.c.reviewFlow?.phase==='triage'&&current().ux?.preparation?.stage!=='team-review-pending')changeRecord(i=>{i.ux.preparation={...i.ux.preparation,paused:true};});
+  }
+  function schedulePreparation(id,resume=false){
+    clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
+    const prepare=stage=>{try{if(page!=='ticket'||current()?.id!==id||current()?.c.reviewFlow?.phase!=='triage')return;persist(S.preparation(read(),id,stage).data);notice=stage==='draft-ready'?'A simulated context brief is ready for the team to review.':'A draft is ready for team review. No customer question has been sent.';if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else document.getElementById('live').textContent=notice;}catch(e){showError(e);}};
+    if(resume)prepare('draft-ready');
+    else preparationTimer=setTimeout(()=>{preparationTimer=null;prepare('draft-ready');},2000);
+    backgroundTimer=setTimeout(()=>{backgroundTimer=null;prepare('team-review-pending');},resume?38000:40000);
+  }
   async function submitPayload(payload,simulated=false){
-    const r=S.add(read(),scenario(),payload,{example:simulated});persist(r.data);page='ticket';actor='Requester';historyVersion=null;syncUI();
+    const r=S.add(read(),scenario(),payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
     if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');if(!r.duplicate)celebrateSubmission();}
-    clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
-    const preparation=(stage)=>{if(page!=='ticket'||current()?.id!==r.item.id||current().c.reviewFlow.phase!=='triage')return;changeRecord(i=>{i.ux.preparation={stage,at:S.now(data),simulated:true};});const message=stage==='draft-ready'?'Simulated preparation is ready. The website team still owns the decision.':'Evidence is ready for team review. No customer question has been sent.';notice=message;if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else{document.getElementById('live').textContent=message;}};
-    preparationTimer=setTimeout(()=>preparation('draft-ready'),2000);
-    backgroundTimer=setTimeout(()=>preparation('team-review-pending'),40000);
+    schedulePreparation(r.item.id);
     return r.item;
   }
   // A durable, new customer submission is the only celebration boundary.
@@ -6686,6 +7293,12 @@ if (typeof module==="object" && module.exports) module.exports = api;
   async function watchNext(){
     if(page==='site'){await submitPayload({text:scenario().feedback,occurredAt:'Just now',context:contextSnapshot(),attachments:[],captureId:'watch-'+Date.now()},true);return;}
     const item=current();if(!item)return startScenario(scenarioId);
+    if(!item.c.reviewFlow){
+      actor=roleOwner(item);const p=item.c.stage,answer=E.derive(item.c)?.clarification?.options?.[0]||'I want the button to say Start a new quote.';
+      const steps={draft:['submit'],clarify:['answer',answer],processing:['deliver'],review:['accept',{rev:item.c.rev}],release:['authorize',{rev:item.c.rev}],authorized:['publish',{rev:item.c.rev}]};
+      if(!steps[p]){stopWatch();notice='Continue in Practice to resolve this case.';render();return;}
+      return apply(steps[p][0],steps[p][1],{simulated:true});
+    }
     if(item.c.reviewFlow.needsMaterialReview)throw Error('This feedback needs the team’s judgement. Switch to Practice to review its materials.');
     const f=item.c.reviewFlow,p=f.phase;actor=roleOwner(item);if(actor==='Complete'){stopWatch();render();return;}
     let action,value;
@@ -6706,12 +7319,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
     apply(action,value,{simulated:true});
   }
   function scheduleWatch(){clearTimeout(watchTimer);if(!consoleState.playing)return;watchTimer=setTimeout(async()=>{try{await watchNext();if(current()?.c.stage==='published')stopWatch();scheduleWatch();}catch(e){stopWatch();error=e.message;render();}},2600);}
-  function startWatch(){consoleState.mode='watch';consoleState.playing=true;consoleState.open=true;notice='Scripted roles and decisions will be simulated. Pause to take over.';render();scheduleWatch();}
+  function startWatch(){if(historyVersion||walkCursor!==null){notice='Return to the current task before continuing the walkthrough.';render();return;}consoleState.mode='watch';consoleState.playing=true;consoleState.open=true;savePresentation();notice='Scripted roles and decisions will be simulated. Pause to take over.';render();scheduleWatch();}
 
   // Result previews run authored fixtures for the exact candidate, never arbitrary code.
   function openResult(){
     const item=current(),v=historyVersion?item.c.versions.find(v=>v.rev===historyVersion):null;
-    const input=v||item.c,preview=E.reviewPreview(input);
+    const input=v||item.c;
+    if(!item.c.reviewFlow){const p=P.describe(item,{rev:historyVersion||undefined,actor});showModal('<div class="fs-eyebrow">Candidate · V'+esc(p.viewedRev)+'</div><h2>Homepage quote button</h2><div class="fs-preview"><strong>'+esc(p.candidate||'No candidate recorded')+'</strong></div><h3>Review checks</h3><p>'+esc(Array.isArray(p.checks)?p.checks.join('\n'):p.checks||'No checks recorded.')+'</p><button class="fs-button" data-wq="close-dialog">Close result</button>');return;}
+    const preview=E.reviewPreview(input);
     if(!preview.interactive)throw Error(preview.reason||'The team needs to update this result preview.');
     const rev=v?.rev||item.c.rev,signature=JSON.stringify(preview),saved=item.ux?.resultSessions?.[rev];
     resultState={preview,rev,ticketId:item.id,signature,model:preview.type==='pdf-workflow'?null:saved?.signature===signature?saved.model:root.ResultModel.create(preview),tab:'quote',pdfOpened:false,notice:''};
@@ -6763,21 +7378,35 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'close-console':saveDraft();consoleState.open=false;break;
       case 'change-role':saveDraft();actor=value;historyVersion=null;break;
       case 'change-mode':saveDraft();consoleState.mode=value;stopWatch();break;
+      case 'walk-back':{saveDraft();stopWatch();historyVersion=null;const scenes=current()?.ux?.walk?.scenes||[];walkCursor=walkCursor===null?Math.max(0,scenes.length-1):Math.max(0,walkCursor-1);if(!scenes.length)return go('inbox');notice='Earlier walkthrough view. The current feedback has not changed.';break;}
+      case 'walk-current':walkCursor=null;historyVersion=null;notice='Back at the current task. Your work is unchanged.';break;
+      case 'walk-restart':saveDraft();stopWatch();walkCursor=null;historyVersion=null;notice='';return startScenario(scenarioId);
+      case 'context-tab':saveDraft();contextTab=value==='activity'?'activity':'details';break;
       case 'watch-toggle':if(consoleState.playing)stopWatch();else return startWatch();break;
       case 'watch-next':await watchNext();return;
-      case 'advance-time':persist(S.advance(read(),3));notice='Simulation advanced by 3 hours. No background work or message delivery was performed.';break;
+      case 'advance-time':{let next=S.advance(read(),3);for(const item of S.customerItems(next)){if(S.status(item,S.now(next)).overdue)next=S.recordDelay(next,item.id,{reason:'The team is still reviewing the evidence. A revised checkpoint has not been confirmed.'}).data;}persist(next);notice='Simulation advanced by 3 hours. Delayed checkpoints are recorded in Updates; no background work or email delivery occurred.';break;}
       case 'legacy-links':showModal('<h2>Earlier walkthroughs</h2><p>These original examples remain available. They use the same saved workspace.</p><div class="fs-actions">'+[['create','Explore “Create”'],['pdf','PDF · team review'],['pdf&branch=ask&mode=practice','PDF · ask the customer'],['journey','Two-round journey'],['customer&mode=practice','Requester practice'],['team&mode=practice','Website team practice'],['publisher&mode=practice','Site owner practice']].map(([q,t])=>'<a class="fs-button" href="?walkthrough='+q+'">'+t+'</a>').join('')+'</div><button class="fs-button" data-wq="close-dialog">Close</button>');return;
-      case 'back':if(historyVersion){historyVersion=null;break;}return go('inbox');
+      case 'back':if(historyVersion||walkCursor!==null){historyVersion=null;walkCursor=null;break;}return go('inbox');
       case 'toggle-context':saveDraft();contextOpen=!contextOpen;render();configureDrawer(true);return;
       case 'filter-inbox':filter=value;break;
       case 'search-inbox':search=value;break;
       case 'mark-read-all':{const next=read();next.feedbackExperience.read=[...new Set([...(next.feedbackExperience.read||[]),...S.updates(next).map(e=>e.id)])];persist(next);break;}
       case 'simulate-email':return openEmail(S.updates(data).find(e=>e.ticketId===data.current));
       case 'open-attachment':return openAttachment(value);
-      case 'view-version':saveDraft();historyVersion=Number(value);notice='Historical version. Return to the current task to take action.';break;
-      case 'current-version':historyVersion=null;notice='';break;
+      case 'view-version':saveDraft();walkCursor=null;historyVersion=Number(value);notice='Historical version. Return to the current task to take action.';break;
+      case 'current-version':historyVersion=null;walkCursor=null;notice='';break;
       case 'activity':showModal('<h2>Activity</h2>'+(current()?.c.trail||[]).filter(t=>actor==='Website team'||['submit','send-questions','answer','confirm-scope','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish'].includes(t.action)).slice().reverse().map(t=>'<div class="fs-activity"><strong>'+esc(t.actor)+'</strong><p>'+esc(t.text)+'</p><small>'+esc(new Date(t.at).toLocaleString())+'</small></div>').join('')+'<button class="fs-button" data-wq="close-dialog">Close</button>');return;
-      case 'set-next-update':changeRecord(i=>{const at=S.now(data);i.ux.timing={...i.ux.timing,nextUpdateAt:new Date(Date.parse(at)+2*3600000).toISOString(),delayReason:'The team is checking the result before sending it.'};});notice='Next update set for two simulated hours from now.';break;
+      case 'set-next-update':if(actor!=='Website team')throw Error('The website team owns this checkpoint.');persist(S.setExpectation(read(),current().id,{at:new Date(Date.parse(S.now(data))+2*3600000).toISOString(),reason:'The team is checking the result before sending it.'}).data);notice='Next update set for two simulated hours from now.';break;
+      case 'resume-preparation':schedulePreparation(current().id,true);notice='Simulated preparation resumed on this device. The team still needs to review it.';break;
+      case 'dismiss-return-summary':changeRecord(i=>{delete i.ux.sinceLastVisit;});break;
+      case 'legacy-submit':return apply('submit');
+      case 'legacy-answer':return apply('answer',app.querySelector('textarea[name=answer]')?.value.trim()||app.querySelector('input[name=answer]:checked')?.value||field('answer'));
+      case 'legacy-prepare':return apply('edit-candidate',field('candidate'));
+      case 'legacy-deliver':return apply('deliver');
+      case 'legacy-accept':return apply('accept',{rev:rendered.rev});
+      case 'legacy-authorize':return apply('authorize',{rev:rendered.rev});
+      case 'legacy-publish':return apply('publish',{rev:rendered.rev});
+      case 'legacy-adjust':{const reason=field('reason').trim();if(!reason){showModal('<h2>What needs to change?</h2><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="legacy-adjust">Send to the team</button></div>');return;}const result=apply('adjust',{rev:rendered.rev,reason});closeModal();return result;}
       case 'keep-working':closeModal();return go('site');
       case 'close-dialog':return closeModal();
       case 'site-select-compartment':site.compartment=value;site.title='Compartment '+value+(value==='1'?' · Cooler':' · Freezer');break;
@@ -6800,7 +7429,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
         const note=field('reason'),action=value,rev=rendered.rev,id=rendered.ticketId,sequence=rendered.sequence;
         closeModal();composer=root.FeedbackComposer.open({title:'What needs to change?',description:'Add a note, image or recording for the website team. It will stay with this version.',label:'Your adjustment',submitLabel:'Send adjustment',showTiming:false,allowSelection:false,feedback:note,draftKey:'adjust:'+id+':V'+rev,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
           if(action==='correct-understanding'){const result=apply(action,{text:payload.text||'Please review the attached adjustment evidence.'},{quiet:true});changeRecord(i=>{i.ux.correctionEvidence={rev,attachments:payload.attachments,context:payload.context};});render();return result;}
-          const fresh=read(),r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);notice='Your adjustment and materials are with the website team.';render();
+          const fresh=read();recordScene(S.get(fresh,id));const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);savePresentation();notice='Your adjustment and materials are with the website team.';render();
         },onClose:()=>{composer=null;}});return;
       }
       case 'accept':case 'authorize':case 'publish':case 'retry-publish':return apply(action,{rev:current().c.rev});
@@ -6818,17 +7447,17 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'result-back':resultState.tab='quote';return renderResult();
       default:if(['draft-questions','begin-detailed-questions','close-questions','finish-spec','deliver'].includes(action))return apply(action);return;
     }
-    render();
+    savePresentation();render();
   }
   document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
   document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
   app.addEventListener('input',event=>{const el=event.target;if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();clearTimeout(backgroundTimer);clearTimeout(preparationTimer);}});
-  window.addEventListener('pagehide',()=>{stopWatch();clearTimeout(backgroundTimer);clearTimeout(preparationTimer);saveDraft();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();pausePreparation();savePresentation();}else if(current()?.ux?.preparation?.paused)render();});
+  window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();savePresentation();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
   window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';document.getElementById('live').textContent=notice;});
   if(query.has('ticket'))routeTicket(query.get('ticket'),query.get('event'));
   else if(query.has('workflow'))startScenario(query.get('workflow'));
-  else {if(page==='ticket'&&!current())page='inbox';notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
+  else {if(page==='ticket'&&!current())page='inbox';if(page==='ticket'&&current()){restorePresentation(current());persist(S.visit(data,current().id).data);}notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
 })(globalThis);
 
 </script>
@@ -7724,7 +8353,7 @@ function openWalkthrough(){
     if(tour.reviewUI)tour.reviewUI.historyIndex=null;
     tour.playing=false;page='case';saveTour();render();focusTask();return;
   }
-  openCapturedRecord(record.id,record.reviewUI?.role||'Requester');
+  openCapturedRecord(record.id,record.reviewUI?.role||'Requester',{legacy:true});
 }
 function appendSteps(frames,c){
   for(let i=0;i<15;i++){
@@ -8075,18 +8704,51 @@ function saveCapture(){try{localStorage.setItem(captureKey,JSON.stringify(captur
 function captureInputs(){const field=$('capture-text');if(field){captureState.text=field.value;captureState.when=$('capture-when').value;captureState.includePreview=$('capture-preview').checked;}saveCapture();}
 function renderCapture(){captureState.onSite=true;saveCapture();$('nav').hidden=true;$('nav').inert=true;$('topbar').hidden=true;$('shade').hidden=true;$('walkthrough-dock').hidden=true;const updates=customerUpdates();const receiptRecord=data.items.find(x=>x.id===captureState.receipt?.id);if(receiptRecord&&receiptRecord.id!==data.current)captureState.receipt=null;const receiptStatus=captureState.receipt&&receiptRecord?guideStatus(receiptRecord):null;$('main').innerHTML=window.FlowCaptureUI.render({...captureState,receiptStatus,updates,updatesCount:updates.filter(u=>!u.read).length});captureAccessibility();renderDock();}
 function openCaptureSite(){reviewCapture();parkActive();close();page='site';navOpen=false;render();$('main').focus({preventScroll:true});}
-function openCapturedRecord(id,role='Requester'){captureInputs();parkActive();const record=data.items.find(x=>x.id===id);if(!WS.canResume(id,clientId,data.items))return;data.current=id;record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;captureState.updatesOpen=false;captureState.open=false;page='case';save();saveCapture();render();focusTask();}
+function openCapturedRecord(id,role='Requester',options={}){
+  const record=data.items.find(x=>x.id===id);
+  if(!record||!WS.canResume(id,clientId,data.items))return;
+  captureInputs();parkActive();data.current=id;
+  captureState.updatesOpen=false;captureState.open=false;
+  // Customer receipts and updates enter the same workspace as My feedback.
+  // Explicit demonstration fallbacks retain their controller and saved record.
+  if(!options.legacy&&customerItems().some(item=>item.id===id)){
+    stop();captureState.onSite=false;
+    const store=window.FeedbackStore;
+    if(store)data=store.migrate(data);
+    const current=data.items.find(item=>item.id===id);
+    current.ux||={};current.ux.walk={...current.ux.walk,role:'Requester',mode:'practice',open:false,historyRev:null,cursor:null};
+    const target=new URL(location.href);target.search='';target.hash='';target.searchParams.set('ticket',id);
+    if(options.updateKey){
+      const suffix=options.updateKey.slice(id.length+1),shared=current.c.reviewFlow?.sharedUnderstanding?.id;
+      const event=(current.ux.events||[]).slice().reverse().find(event=>event.recipient==='Requester'&&(
+        event.id===options.updateKey||event.bundleId&&event.bundleId===suffix||
+        event.action==='deliver'&&suffix==='V'+event.rev||
+        event.action==='authorize'&&suffix==='authorized-V'+event.rev||
+        event.action==='publish'&&suffix==='receipt-V'+event.rev||
+        event.action==='confirm-scope'&&suffix===shared&&event.rev===current.c.rev));
+      if(event)target.searchParams.set('event',event.id);
+    }
+    save();saveCapture();location.assign(target.href);return;
+  }
+  record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;
+  page='case';save();saveCapture();render();focusTask();
+}
 function captureAction(action,key){captureInputs();switch(action){
 case 'generate':captureState.generated=true;break;
 case 'open':captureState.open=true;captureState.updatesOpen=false;break;
 case 'close':captureState.open=false;break;
 case 'example':captureState.text=E.pdfFeedback;break;
 case 'keep-working':captureState.open=false;break;
-case 'workspace':captureState.onSite=false;page='list';saveCapture();render();return;
+case 'workspace':{
+  parkActive();stop();captureState.onSite=false;captureState.open=false;captureState.updatesOpen=false;
+  data.feedbackExperience={...data.feedbackExperience,ui:{...data.feedbackExperience?.ui,page:'inbox'}};
+  const target=new URL(location.href);target.search='';target.hash='';
+  save();saveCapture();location.assign(target.href);return;
+}
 case 'view-feedback':if(captureState.receipt)openCapturedRecord(captureState.receipt.id);return;
 case 'new-feedback':captureState.receipt=null;captureState.text='';captureState.when='';captureState.includePreview=false;captureState.open=true;break;
 case 'updates':captureState.updatesOpen=!captureState.updatesOpen;captureState.open=false;break;
-case 'open-update':{const update=customerUpdates().find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id);return;}break;}
+case 'open-update':{const update=customerUpdates().find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id,'Requester',{updateKey:key});return;}break;}
 }
 saveCapture();render();if(action==='open'||action==='example'||action==='new-feedback')($('capture-text')||document.querySelector('[data-capture="keep-working"]'))?.focus();else if(action==='generate'){document.querySelector('[data-capture="generate"]')?.focus();announce('Sample PDF ready. No file was created.');}else if(action==='close'||action==='keep-working')document.querySelector('[data-capture="open"]')?.focus();else if(action==='updates')document.querySelector(captureState.updatesOpen?'[data-capture="open-update"], #capture-updates button':'[data-capture="updates"]')?.focus();}
 document.addEventListener('click',event=>{const el=event.target.closest('[data-capture]');if(el){event.preventDefault();captureAction(el.dataset.capture,el.dataset.key);}});
@@ -8134,7 +8796,7 @@ function openShowcase(startFresh=false){
     const unsupported=f.phase==='awaiting-answer'&&(question?.length!==1||f.sentBundle.round==='detailed'||JSON.stringify(question[0]?.options)!==JSON.stringify(SM.options));
     if(unsupported||(changed&&['question-draft','spec-review','candidate','checking','ready'].includes(f.phase))){
       showcase.minimized=true;showcase.historyIndex=null;try{localStorage.setItem(showcaseKey,JSON.stringify(showcase));}catch{}
-      openCapturedRecord(record.id,record.reviewUI?.role||'Requester');return;
+      openCapturedRecord(record.id,record.reviewUI?.role||'Requester',{legacy:true});return;
     }
   }
   showcase.minimized=false;showcase.historyIndex=null;page='showcase';saveShowcase();render();$('main').focus({preventScroll:true});

@@ -889,7 +889,7 @@ function openWalkthrough(){
     if(tour.reviewUI)tour.reviewUI.historyIndex=null;
     tour.playing=false;page='case';saveTour();render();focusTask();return;
   }
-  openCapturedRecord(record.id,record.reviewUI?.role||'Requester');
+  openCapturedRecord(record.id,record.reviewUI?.role||'Requester',{legacy:true});
 }
 function appendSteps(frames,c){
   for(let i=0;i<15;i++){
@@ -1240,18 +1240,51 @@ function saveCapture(){try{localStorage.setItem(captureKey,JSON.stringify(captur
 function captureInputs(){const field=$('capture-text');if(field){captureState.text=field.value;captureState.when=$('capture-when').value;captureState.includePreview=$('capture-preview').checked;}saveCapture();}
 function renderCapture(){captureState.onSite=true;saveCapture();$('nav').hidden=true;$('nav').inert=true;$('topbar').hidden=true;$('shade').hidden=true;$('walkthrough-dock').hidden=true;const updates=customerUpdates();const receiptRecord=data.items.find(x=>x.id===captureState.receipt?.id);if(receiptRecord&&receiptRecord.id!==data.current)captureState.receipt=null;const receiptStatus=captureState.receipt&&receiptRecord?guideStatus(receiptRecord):null;$('main').innerHTML=window.FlowCaptureUI.render({...captureState,receiptStatus,updates,updatesCount:updates.filter(u=>!u.read).length});captureAccessibility();renderDock();}
 function openCaptureSite(){reviewCapture();parkActive();close();page='site';navOpen=false;render();$('main').focus({preventScroll:true});}
-function openCapturedRecord(id,role='Requester'){captureInputs();parkActive();const record=data.items.find(x=>x.id===id);if(!WS.canResume(id,clientId,data.items))return;data.current=id;record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;captureState.updatesOpen=false;captureState.open=false;page='case';save();saveCapture();render();focusTask();}
+function openCapturedRecord(id,role='Requester',options={}){
+  const record=data.items.find(x=>x.id===id);
+  if(!record||!WS.canResume(id,clientId,data.items))return;
+  captureInputs();parkActive();data.current=id;
+  captureState.updatesOpen=false;captureState.open=false;
+  // Customer receipts and updates enter the same workspace as My feedback.
+  // Explicit demonstration fallbacks retain their controller and saved record.
+  if(!options.legacy&&customerItems().some(item=>item.id===id)){
+    stop();captureState.onSite=false;
+    const store=window.FeedbackStore;
+    if(store)data=store.migrate(data);
+    const current=data.items.find(item=>item.id===id);
+    current.ux||={};current.ux.walk={...current.ux.walk,role:'Requester',mode:'practice',open:false,historyRev:null,cursor:null};
+    const target=new URL(location.href);target.search='';target.hash='';target.searchParams.set('ticket',id);
+    if(options.updateKey){
+      const suffix=options.updateKey.slice(id.length+1),shared=current.c.reviewFlow?.sharedUnderstanding?.id;
+      const event=(current.ux.events||[]).slice().reverse().find(event=>event.recipient==='Requester'&&(
+        event.id===options.updateKey||event.bundleId&&event.bundleId===suffix||
+        event.action==='deliver'&&suffix==='V'+event.rev||
+        event.action==='authorize'&&suffix==='authorized-V'+event.rev||
+        event.action==='publish'&&suffix==='receipt-V'+event.rev||
+        event.action==='confirm-scope'&&suffix===shared&&event.rev===current.c.rev));
+      if(event)target.searchParams.set('event',event.id);
+    }
+    save();saveCapture();location.assign(target.href);return;
+  }
+  record.reviewUI||={history:[],drafts:{}};record.reviewUI.role=role;record.reviewUI.historyIndex=null;
+  page='case';save();saveCapture();render();focusTask();
+}
 function captureAction(action,key){captureInputs();switch(action){
 case 'generate':captureState.generated=true;break;
 case 'open':captureState.open=true;captureState.updatesOpen=false;break;
 case 'close':captureState.open=false;break;
 case 'example':captureState.text=E.pdfFeedback;break;
 case 'keep-working':captureState.open=false;break;
-case 'workspace':captureState.onSite=false;page='list';saveCapture();render();return;
+case 'workspace':{
+  parkActive();stop();captureState.onSite=false;captureState.open=false;captureState.updatesOpen=false;
+  data.feedbackExperience={...data.feedbackExperience,ui:{...data.feedbackExperience?.ui,page:'inbox'}};
+  const target=new URL(location.href);target.search='';target.hash='';
+  save();saveCapture();location.assign(target.href);return;
+}
 case 'view-feedback':if(captureState.receipt)openCapturedRecord(captureState.receipt.id);return;
 case 'new-feedback':captureState.receipt=null;captureState.text='';captureState.when='';captureState.includePreview=false;captureState.open=true;break;
 case 'updates':captureState.updatesOpen=!captureState.updatesOpen;captureState.open=false;break;
-case 'open-update':{const update=customerUpdates().find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id);return;}break;}
+case 'open-update':{const update=customerUpdates().find(u=>u.key===key);if(update){captureState.seen[key]=true;openCapturedRecord(update.id,'Requester',{updateKey:key});return;}break;}
 }
 saveCapture();render();if(action==='open'||action==='example'||action==='new-feedback')($('capture-text')||document.querySelector('[data-capture="keep-working"]'))?.focus();else if(action==='generate'){document.querySelector('[data-capture="generate"]')?.focus();announce('Sample PDF ready. No file was created.');}else if(action==='close'||action==='keep-working')document.querySelector('[data-capture="open"]')?.focus();else if(action==='updates')document.querySelector(captureState.updatesOpen?'[data-capture="open-update"], #capture-updates button':'[data-capture="updates"]')?.focus();}
 document.addEventListener('click',event=>{const el=event.target.closest('[data-capture]');if(el){event.preventDefault();captureAction(el.dataset.capture,el.dataset.key);}});
@@ -1299,7 +1332,7 @@ function openShowcase(startFresh=false){
     const unsupported=f.phase==='awaiting-answer'&&(question?.length!==1||f.sentBundle.round==='detailed'||JSON.stringify(question[0]?.options)!==JSON.stringify(SM.options));
     if(unsupported||(changed&&['question-draft','spec-review','candidate','checking','ready'].includes(f.phase))){
       showcase.minimized=true;showcase.historyIndex=null;try{localStorage.setItem(showcaseKey,JSON.stringify(showcase));}catch{}
-      openCapturedRecord(record.id,record.reviewUI?.role||'Requester');return;
+      openCapturedRecord(record.id,record.reviewUI?.role||'Requester',{legacy:true});return;
     }
   }
   showcase.minimized=false;showcase.historyIndex=null;page='showcase';saveShowcase();render();$('main').focus({preventScroll:true});

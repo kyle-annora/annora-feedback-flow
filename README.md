@@ -22,13 +22,19 @@ These cases have different evidence labels. Historical requests, recorded decisi
 6. Prepare and try an authored result, then send that exact version. A requested adjustment can include text, images or audio. The team must change the candidate or checks and prepare V2 before sending it again. Unsupported edits remain a draft until an appropriate result is authored.
 7. Customer acceptance hands the exact version to **Site owner**. The owner can request changes or authorize release. The team then runs the simulated release; failure and retry have separate states and no success receipt is created on failure.
 
-The collapsed walkthrough names the current ticket, owner and task. It resumes that record. Product navigation, presentation controls and business approvals remain separate.
+The collapsed walkthrough names the current ticket, owner and task. It resumes that record and remembers the perspective and mode after reload, with playback paused. Back opens a read-only presentation snapshot; Return to current resumes the canonical task. Restart returns to the sample page and creates a new example only when submitted, preserving the original record. Product navigation, presentation controls and business approvals remain separate.
 
 ## Waiting and returning
 
-A submission has an immediate durable receipt. While that screen remains open, short local timers show labelled preparation stages. They never send questions or confirm a human decision. Leaving stops those timers; there is no background worker.
+A submission has an immediate durable receipt. While that screen remains open, short local timers show a material-specific context brief and then an explicitly simulated draft for team review. They never send questions or confirm a human decision. Leaving stops those timers; preparation can be resumed locally and there is no background worker.
 
-Waiting screens show the current owner, last meaningful update, next update time and what you can do. **Advance time** moves a local simulation clock without performing the work. Overdue updates remain overdue until the team explicitly sets another expectation. Simulated email links and Updates return to the same canonical ticket; old question and version links explain that they have been answered or superseded.
+Waiting screens show the current owner, last meaningful update, next update time and what you can do. **Advance time** moves a local simulation clock without performing the work. Overdue updates create one delay notice per checkpoint and remain overdue until the team explicitly sets another expectation. Updates are grouped by ticket while preserving individual event links. Returning shows public changes since the previous visit; visiting alone does not mark every notification read. Simulated email links and Updates return to the same canonical ticket; old question and version links explain that they have been answered or superseded.
+
+## Evidence and existing records
+
+Existing plain and team-reviewed customer records open in the same workspace without replacing their case, assigning a new scenario or regenerating their versions. Details separates the current basis, original request, material, question rounds and version list; Activity is a separate timestamped view. The main document keeps the current task and handoff prominent.
+
+Selecting a submitted version reads only its frozen evidence. Older records that did not save context or media show that absence explicitly; they never inherit newer material. Later historical decisions are distinguished from superseded ones. Image thumbnails and voice-note playback use the actual locally saved files, not decorative evidence.
 
 ## Real local behavior and simulated behavior
 
@@ -56,6 +62,6 @@ The Create examples remain synthetic. Historical versions are read-only; viewing
 
 Run `npm start` and open its printed local address. `npm test` checks the shared domain, capture/storage and packaging contracts. `npm run bundle` produces identical self-contained `docs/index.html` and `docs/Feedback-Flow.html`; GitHub Pages serves `main/docs`.
 
-The current customer shell is `feedback-app.js` and `feedback-view.js`. `feedback-store.js` commits through the existing CaseEngine and storage key. `scenario-catalog.js` defines the three authored scenarios; `result-model.js` operates only their local result fixtures. Legacy query routes continue through `studio.js`.
+The current customer shell is `feedback-app.js` and `feedback-view.js`. `feedback-store.js` commits through the existing CaseEngine and storage key. `scenario-catalog.js` defines the three authored scenarios; `result-model.js` operates only their local result fixtures. Original walkthrough query routes continue through `studio.js`; old `legacy=1&ticket=...` links now open the canonical customer workspace. `feedback-presentation.js` projects current and historical evidence without mutating the case.
 
 The approved Source Serif Pro headings, Inter body and original WinQuote mark are bundled locally with provenance/licenses in `assets/`. Wesley's independent homepage design and the WinHub sitemap are separate deliverables.

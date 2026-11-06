@@ -2,9 +2,9 @@
 (function(root){
   'use strict';
   const query=new URLSearchParams(location.search);
-  const active=!(query.has('walkthrough')||query.has('capture')||query.has('demo')||query.has('legacy'));
+  const active=!(query.has('walkthrough')||query.has('capture')||query.has('demo')||(query.has('legacy')&&!query.has('ticket')));
   root.FeedbackWorkspace={active};if(!active)return;
-  const S=root.FeedbackStore,E=root.CaseEngine,C=root.FlowScenarios,V=root.FeedbackView;
+  const S=root.FeedbackStore,E=root.CaseEngine,C=root.FlowScenarios,V=root.FeedbackView,P=root.FeedbackPresentation;
   const clone=x=>JSON.parse(JSON.stringify(x));
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let error='',notice='',data,brokenStorage=false;
@@ -14,7 +14,7 @@
   }
   data=read();
   const ui=data.feedbackExperience.ui||{};
-  let page=ui.page||'inbox',actor='Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,historyVersion=null,filter='all',search='';
+  let page=ui.page||'inbox',actor='Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,contextTab='details',historyVersion=null,filter='all',search='';
   let consoleState={open:false,mode:'practice',playing:false},watchTimer=null,backgroundTimer=null,preparationTimer=null;
   let site=initialSite(),resultState=null,returnFocus=null,returnFocusSelector=null,composer=null,rendered=null;
   const app=document.createElement('div');app.id='feedback-root';document.body.appendChild(app);
@@ -23,6 +23,39 @@
   const modalRoot=document.createElement('div');modalRoot.id='feedback-modal-root';document.body.appendChild(modalRoot);
   const modal=document.createElement('dialog');modal.className='fs-dialog';modal.id='feedback-dialog';modalRoot.appendChild(modal);
   const current=()=>S.get(data,data.current),scenario=()=>C.get(scenarioId)||C.get('pdf');
+  const mediaCache=new Map();let visibleMediaIds=new Set();
+  let walkCursor=null;
+  function savePresentation(){
+    if(!current())return;
+    const id=current().id,fresh=read();if(!S.get(fresh,id))return;
+    persist(S.saveWalk(fresh,id,{mode:consoleState.mode,role:actor,open:consoleState.open,cursor:walkCursor,historyRev:historyVersion,contextTab}).data);
+  }
+  function restorePresentation(item){
+    const w=item?.ux?.walk||{};actor=['Requester','Website team','Site owner'].includes(w.role)?w.role:'Requester';
+    consoleState={open:!!w.open,mode:w.mode==='watch'?'watch':'practice',playing:false};
+    historyVersion=w.historyRev||null;walkCursor=Number.isInteger(w.cursor)?w.cursor:null;contextTab=w.contextTab==='activity'?'activity':'details';
+  }
+  function recordScene(item,label){
+    item.ux||={};item.ux.walk||={};const scenes=item.ux.walk.scenes||[];
+    if(scenes.at(-1)?.sequence!==item.sequence)scenes.push({sequence:item.sequence,at:S.now(data),label:label||S.status(item).label,role:actor,c:clone(item.c),ux:{context:clone(item.ux.context||{}),attachments:clone(item.ux.attachments||[]),adjustmentEvidence:clone(item.ux.adjustmentEvidence||null),correctionEvidence:clone(item.ux.correctionEvidence||null),preparation:clone(item.ux.preparation||{}),timing:clone(item.ux.timing||{})}});
+    item.ux.walk.scenes=scenes.slice(-40);walkCursor=null;
+  }
+  function presentationVM(item){
+    const scenes=item?.ux?.walk?.scenes||[],snap=walkCursor===null?null:scenes[walkCursor];
+    const display=snap?{...item,c:snap.c,ux:clone(snap.ux||{})}:item;
+    const presentation=display?P.describe(display,{rev:historyVersion||undefined,actor}):null;
+    if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[]]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
+    return {presentation,walkHistory:{active:!!snap,index:snap?walkCursor:scenes.length,total:scenes.length,canBack:scenes.length>0&&(walkCursor===null||walkCursor>0),canForward:!!snap,label:snap?.label||'Current task',why:presentation?.why?.text||''}};
+  }
+  async function hydrateMedia(presentation){
+    const attachments=[...presentation?.request?.attachments||[],...presentation?.adjustmentEvidence?.attachments||[]];
+    const ids=new Set(attachments.map(a=>a.id).filter(Boolean));visibleMediaIds=ids;
+    for(const [id,value] of mediaCache)if(!ids.has(id)){if(value.url)URL.revokeObjectURL(value.url);mediaCache.delete(id);}
+    const pending=attachments.filter(a=>a.id&&!mediaCache.has(a.id));if(!pending.length)return;
+    let changed=false;
+    await Promise.all(pending.map(async a=>{const token={loading:true};mediaCache.set(a.id,token);try{const result=await root.FeedbackMediaStore.get(a.id);if(mediaCache.get(a.id)!==token||!visibleMediaIds.has(a.id))return;mediaCache.set(a.id,result?.blob?{url:URL.createObjectURL(result.blob)}:{missing:true});changed=true;}catch{if(mediaCache.get(a.id)===token){mediaCache.set(a.id,{missing:true});changed=true;}}}));
+    if(changed)render();
+  }
   function initialSite(){return {compartment:'1',title:'Compartment 1 · Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
   function persist(next){
     if(brokenStorage)throw Error('The existing saved data needs recovery before it can be changed.');
@@ -30,7 +63,7 @@
   }
   function syncUI(){
     const next=read();if(brokenStorage)return;
-    next.current=data.current;next.feedbackExperience.ui={page,scenarioId};persist(next);
+    next.current=data.current;next.feedbackExperience.ui={page,scenarioId};persist(next);savePresentation();
   }
   function changeRecord(fn){const next=read();if(brokenStorage)throw Error('Saved feedback needs recovery.');const item=S.get(next,data.current);if(!item)throw Error('This feedback is no longer available.');fn(item,next);persist(next);return item;}
   function roleOwner(item=current()){return S.status(item,S.now(data)).owner;}
@@ -39,9 +72,11 @@
     if(page==='ticket'&&!item){page='inbox';error=error||'Choose a feedback item to continue.';}
     const status=S.status(page==='site'?null:item,S.now(data));
     rendered=item?{ticketId:item.id,sequence:item.sequence,rev:item.c.rev,bundleId:item.c.reviewFlow?.sentBundle?.id}:null;
-    app.innerHTML=V.render({page,items:S.customerItems(data),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),status,console:consoleState,error,notice,contextOpen,historyVersion,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?E.reviewPreview(item.c):null,clock:S.now(data)});
+    const projection=presentationVM(page==='site'?null:item);
+    app.innerHTML=V.render({page,items:S.customerItems(data).map(i=>({...i,status:S.status(i,S.now(data))})),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),updateGroups:S.digest(data),status,console:consoleState,error,notice,contextOpen,contextTab,historyVersion,preparationPaused:!!item?.ux?.preparation?.paused,...projection,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?.c.reviewFlow?E.reviewPreview(item.c):null,clock:S.now(data)});
     configureDrawer();
-    document.title=(page==='ticket'&&item?scenario().title+' · ':'')+'WinQuote Feedback';
+    document.title=(page==='ticket'&&item?projection.presentation.title+' · ':'')+'WinQuote Feedback';
+    void hydrateMedia(projection.presentation);
   }
   function configureDrawer(focus=false){
     const opened=contextOpen&&matchMedia('(max-width:900px)').matches,drawer=app.querySelector('#feedback-details'),wasModal=drawer?.getAttribute('aria-modal')==='true';
@@ -52,6 +87,9 @@
     else if(!opened&&wasModal)drawer?.focus();
   }
   app.addEventListener('keydown',event=>{
+    if(event.target.matches('[role=tab][data-wq=context-tab]')&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+      event.preventDefault();contextTab=event.key==='Home'?'details':event.key==='End'?'activity':contextTab==='details'?'activity':'details';saveDraft();savePresentation();render();app.querySelector('[role=tab][data-value="'+contextTab+'"]')?.focus();return;
+    }
     if(!contextOpen||!matchMedia('(max-width:900px)').matches||modal.open||composer)return;
     const drawer=app.querySelector('#feedback-details');if(!drawer)return;
     if(event.key==='Escape'){event.preventDefault();contextOpen=false;render();configureDrawer(true);}
@@ -59,19 +97,20 @@
   });
   addEventListener('resize',()=>configureDrawer());
   function showError(e){error=e.message;render();if(modal.open){modal.querySelector('[data-dialog-error]')?.remove();modal.insertAdjacentHTML('afterbegin','<p role="alert" data-dialog-error class="fs-note">'+esc(error)+'</p>');}}
-  function go(nextPage){saveDraft();clearTimeout(preparationTimer);clearTimeout(backgroundTimer);page=nextPage;historyVersion=null;error='';if(page==='site'){const snapshot=current()?.ux?.context;if(snapshot?.state)site={...site,...snapshot.state,compartment:snapshot.compartment||site.compartment};history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(scenarioId));}syncUI();render();window.scrollTo(0,0);app.querySelector('#feedback-main')?.focus({preventScroll:true});}
+  function go(nextPage){saveDraft();pausePreparation();page=nextPage;historyVersion=null;error='';if(page==='site'){const snapshot=current()?.ux?.context;if(snapshot?.state)site={...site,...snapshot.state,compartment:snapshot.compartment||site.compartment};history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(scenarioId));}syncUI();render();window.scrollTo(0,0);app.querySelector('#feedback-main')?.focus({preventScroll:true});}
   function routeTicket(id,eventId){
-    stopWatch();data=read();const found=S.resolve(data,id,eventId);
+    stopWatch();pausePreparation();data=read();const found=S.resolve(data,id,eventId);
     if(found.missing){page='inbox';error=found.message;render();return;}
     data.current=id;
-    if(!found.item.c.reviewFlow?.scenarioId){persist(data);location.href='?legacy=1&ticket='+encodeURIComponent(id);return;}
     if(eventId)data=S.markRead(data,eventId);
     notice=found.message||(eventId?'You’re back in the same feedback. Here is the current task.':'');
-    actor=found.event?.recipient||'Requester';scenarioId=found.item.c.reviewFlow.scenarioId;page='ticket';historyVersion=null;persist(data);syncUI();
+    restorePresentation(found.item);if(eventId){actor=found.event?.recipient||'Requester';historyVersion=null;walkCursor=null;}
+    scenarioId=found.item.c.reviewFlow?.scenarioId||found.item.ux?.scenarioId||'pdf';page='ticket';
+    const visit=S.visit(data,id);data=visit.data;persist(data);syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(id)+(eventId?'&event='+encodeURIComponent(eventId):''));render();
   }
   function startScenario(id){
-    if(!C.get(id))return;saveDraft();stopWatch();scenarioId=id;site=initialSite();
+    if(!C.get(id))return;saveDraft();stopWatch();pausePreparation();scenarioId=id;site=initialSite();
     site.section=id==='pdf'?'make-pdf':id==='compartment'?'panels':'refrigeration';page='site';actor='Requester';notice='';error='';consoleState.open=consoleState.mode==='watch';syncUI();
     history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(id));render();
   }
@@ -93,27 +132,36 @@
   function readAnswerNotes(){return Object.fromEntries([...app.querySelectorAll('[data-answer-other]')].map(el=>[el.dataset.answerOther,el.value]));}
   function formScope(){const f=current()?.c.reviewFlow;return {approach:field('approach')||f?.suggestedScope?.approach||f?.scope?.approach||'',checks:field('checks')||f?.suggestedScope?.checks||f?.scope?.checks||'',understanding:field('understanding')||undefined};}
   function saveDraft(){
-    if(page!=='ticket'||!current()||historyVersion)return;
+    if(page!=='ticket'||!current()||historyVersion||walkCursor!==null)return;
     const values={};for(const el of app.querySelectorAll('[name]'))if(['INPUT','TEXTAREA','SELECT'].includes(el.tagName))values[el.name]=el.type==='checkbox'?el.checked:el.value;
     let qs=[];try{qs=readQuestions();}catch(e){error=e.message;}const answers=readAnswers();
     try{changeRecord(i=>{i.ux||={};i.ux.drafts={...i.ux.drafts,fields:values,...(qs.length?{questions:qs}:{}),...(Object.keys(answers).length?{answers,answerNotes:readAnswerNotes(),bundleId:rendered?.bundleId}:{})};});}catch(e){error='Your draft is still on this page but could not be saved: '+e.message;}
   }
   function apply(action,value,{simulated=false,quiet=false}={}){
-    if(historyVersion)throw Error('This is an earlier version. Return to the current task before taking action.');
+    if(historyVersion||walkCursor!==null)throw Error('This is an earlier view. Return to the current task before taking action.');
     const item=current();if(!item)throw Error('Open a feedback item first.');
-    const fresh=read(),r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
-    r.item.ux.drafts={};persist(r.data);if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    const fresh=read();recordScene(S.get(fresh,item.id));
+    const r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
+    r.item.ux.drafts={};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
   }
   function contextSnapshot(){return {page:scenario().target,route:location.pathname+'?workflow='+scenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-workspace-v3',state:{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration},simulated:true};}
+  function pausePreparation(){
+    const running=preparationTimer||backgroundTimer;clearTimeout(preparationTimer);clearTimeout(backgroundTimer);preparationTimer=backgroundTimer=null;
+    if(running&&current()?.c.reviewFlow?.phase==='triage'&&current().ux?.preparation?.stage!=='team-review-pending')changeRecord(i=>{i.ux.preparation={...i.ux.preparation,paused:true};});
+  }
+  function schedulePreparation(id,resume=false){
+    clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
+    const prepare=stage=>{try{if(page!=='ticket'||current()?.id!==id||current()?.c.reviewFlow?.phase!=='triage')return;persist(S.preparation(read(),id,stage).data);notice=stage==='draft-ready'?'A simulated context brief is ready for the team to review.':'A draft is ready for team review. No customer question has been sent.';if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else document.getElementById('live').textContent=notice;}catch(e){showError(e);}};
+    if(resume)prepare('draft-ready');
+    else preparationTimer=setTimeout(()=>{preparationTimer=null;prepare('draft-ready');},2000);
+    backgroundTimer=setTimeout(()=>{backgroundTimer=null;prepare('team-review-pending');},resume?38000:40000);
+  }
   async function submitPayload(payload,simulated=false){
-    const r=S.add(read(),scenario(),payload,{example:simulated});persist(r.data);page='ticket';actor='Requester';historyVersion=null;syncUI();
+    const r=S.add(read(),scenario(),payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
     if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');if(!r.duplicate)celebrateSubmission();}
-    clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
-    const preparation=(stage)=>{if(page!=='ticket'||current()?.id!==r.item.id||current().c.reviewFlow.phase!=='triage')return;changeRecord(i=>{i.ux.preparation={stage,at:S.now(data),simulated:true};});const message=stage==='draft-ready'?'Simulated preparation is ready. The website team still owns the decision.':'Evidence is ready for team review. No customer question has been sent.';notice=message;if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else{document.getElementById('live').textContent=message;}};
-    preparationTimer=setTimeout(()=>preparation('draft-ready'),2000);
-    backgroundTimer=setTimeout(()=>preparation('team-review-pending'),40000);
+    schedulePreparation(r.item.id);
     return r.item;
   }
   // A durable, new customer submission is the only celebration boundary.
@@ -150,6 +198,12 @@
   async function watchNext(){
     if(page==='site'){await submitPayload({text:scenario().feedback,occurredAt:'Just now',context:contextSnapshot(),attachments:[],captureId:'watch-'+Date.now()},true);return;}
     const item=current();if(!item)return startScenario(scenarioId);
+    if(!item.c.reviewFlow){
+      actor=roleOwner(item);const p=item.c.stage,answer=E.derive(item.c)?.clarification?.options?.[0]||'I want the button to say Start a new quote.';
+      const steps={draft:['submit'],clarify:['answer',answer],processing:['deliver'],review:['accept',{rev:item.c.rev}],release:['authorize',{rev:item.c.rev}],authorized:['publish',{rev:item.c.rev}]};
+      if(!steps[p]){stopWatch();notice='Continue in Practice to resolve this case.';render();return;}
+      return apply(steps[p][0],steps[p][1],{simulated:true});
+    }
     if(item.c.reviewFlow.needsMaterialReview)throw Error('This feedback needs the team’s judgement. Switch to Practice to review its materials.');
     const f=item.c.reviewFlow,p=f.phase;actor=roleOwner(item);if(actor==='Complete'){stopWatch();render();return;}
     let action,value;
@@ -170,12 +224,14 @@
     apply(action,value,{simulated:true});
   }
   function scheduleWatch(){clearTimeout(watchTimer);if(!consoleState.playing)return;watchTimer=setTimeout(async()=>{try{await watchNext();if(current()?.c.stage==='published')stopWatch();scheduleWatch();}catch(e){stopWatch();error=e.message;render();}},2600);}
-  function startWatch(){consoleState.mode='watch';consoleState.playing=true;consoleState.open=true;notice='Scripted roles and decisions will be simulated. Pause to take over.';render();scheduleWatch();}
+  function startWatch(){if(historyVersion||walkCursor!==null){notice='Return to the current task before continuing the walkthrough.';render();return;}consoleState.mode='watch';consoleState.playing=true;consoleState.open=true;savePresentation();notice='Scripted roles and decisions will be simulated. Pause to take over.';render();scheduleWatch();}
 
   // Result previews run authored fixtures for the exact candidate, never arbitrary code.
   function openResult(){
     const item=current(),v=historyVersion?item.c.versions.find(v=>v.rev===historyVersion):null;
-    const input=v||item.c,preview=E.reviewPreview(input);
+    const input=v||item.c;
+    if(!item.c.reviewFlow){const p=P.describe(item,{rev:historyVersion||undefined,actor});showModal('<div class="fs-eyebrow">Candidate · V'+esc(p.viewedRev)+'</div><h2>Homepage quote button</h2><div class="fs-preview"><strong>'+esc(p.candidate||'No candidate recorded')+'</strong></div><h3>Review checks</h3><p>'+esc(Array.isArray(p.checks)?p.checks.join('\n'):p.checks||'No checks recorded.')+'</p><button class="fs-button" data-wq="close-dialog">Close result</button>');return;}
+    const preview=E.reviewPreview(input);
     if(!preview.interactive)throw Error(preview.reason||'The team needs to update this result preview.');
     const rev=v?.rev||item.c.rev,signature=JSON.stringify(preview),saved=item.ux?.resultSessions?.[rev];
     resultState={preview,rev,ticketId:item.id,signature,model:preview.type==='pdf-workflow'?null:saved?.signature===signature?saved.model:root.ResultModel.create(preview),tab:'quote',pdfOpened:false,notice:''};
@@ -227,21 +283,35 @@
       case 'close-console':saveDraft();consoleState.open=false;break;
       case 'change-role':saveDraft();actor=value;historyVersion=null;break;
       case 'change-mode':saveDraft();consoleState.mode=value;stopWatch();break;
+      case 'walk-back':{saveDraft();stopWatch();historyVersion=null;const scenes=current()?.ux?.walk?.scenes||[];walkCursor=walkCursor===null?Math.max(0,scenes.length-1):Math.max(0,walkCursor-1);if(!scenes.length)return go('inbox');notice='Earlier walkthrough view. The current feedback has not changed.';break;}
+      case 'walk-current':walkCursor=null;historyVersion=null;notice='Back at the current task. Your work is unchanged.';break;
+      case 'walk-restart':saveDraft();stopWatch();walkCursor=null;historyVersion=null;notice='';return startScenario(scenarioId);
+      case 'context-tab':saveDraft();contextTab=value==='activity'?'activity':'details';break;
       case 'watch-toggle':if(consoleState.playing)stopWatch();else return startWatch();break;
       case 'watch-next':await watchNext();return;
-      case 'advance-time':persist(S.advance(read(),3));notice='Simulation advanced by 3 hours. No background work or message delivery was performed.';break;
+      case 'advance-time':{let next=S.advance(read(),3);for(const item of S.customerItems(next)){if(S.status(item,S.now(next)).overdue)next=S.recordDelay(next,item.id,{reason:'The team is still reviewing the evidence. A revised checkpoint has not been confirmed.'}).data;}persist(next);notice='Simulation advanced by 3 hours. Delayed checkpoints are recorded in Updates; no background work or email delivery occurred.';break;}
       case 'legacy-links':showModal('<h2>Earlier walkthroughs</h2><p>These original examples remain available. They use the same saved workspace.</p><div class="fs-actions">'+[['create','Explore “Create”'],['pdf','PDF · team review'],['pdf&branch=ask&mode=practice','PDF · ask the customer'],['journey','Two-round journey'],['customer&mode=practice','Requester practice'],['team&mode=practice','Website team practice'],['publisher&mode=practice','Site owner practice']].map(([q,t])=>'<a class="fs-button" href="?walkthrough='+q+'">'+t+'</a>').join('')+'</div><button class="fs-button" data-wq="close-dialog">Close</button>');return;
-      case 'back':if(historyVersion){historyVersion=null;break;}return go('inbox');
+      case 'back':if(historyVersion||walkCursor!==null){historyVersion=null;walkCursor=null;break;}return go('inbox');
       case 'toggle-context':saveDraft();contextOpen=!contextOpen;render();configureDrawer(true);return;
       case 'filter-inbox':filter=value;break;
       case 'search-inbox':search=value;break;
       case 'mark-read-all':{const next=read();next.feedbackExperience.read=[...new Set([...(next.feedbackExperience.read||[]),...S.updates(next).map(e=>e.id)])];persist(next);break;}
       case 'simulate-email':return openEmail(S.updates(data).find(e=>e.ticketId===data.current));
       case 'open-attachment':return openAttachment(value);
-      case 'view-version':saveDraft();historyVersion=Number(value);notice='Historical version. Return to the current task to take action.';break;
-      case 'current-version':historyVersion=null;notice='';break;
+      case 'view-version':saveDraft();walkCursor=null;historyVersion=Number(value);notice='Historical version. Return to the current task to take action.';break;
+      case 'current-version':historyVersion=null;walkCursor=null;notice='';break;
       case 'activity':showModal('<h2>Activity</h2>'+(current()?.c.trail||[]).filter(t=>actor==='Website team'||['submit','send-questions','answer','confirm-scope','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish'].includes(t.action)).slice().reverse().map(t=>'<div class="fs-activity"><strong>'+esc(t.actor)+'</strong><p>'+esc(t.text)+'</p><small>'+esc(new Date(t.at).toLocaleString())+'</small></div>').join('')+'<button class="fs-button" data-wq="close-dialog">Close</button>');return;
-      case 'set-next-update':changeRecord(i=>{const at=S.now(data);i.ux.timing={...i.ux.timing,nextUpdateAt:new Date(Date.parse(at)+2*3600000).toISOString(),delayReason:'The team is checking the result before sending it.'};});notice='Next update set for two simulated hours from now.';break;
+      case 'set-next-update':if(actor!=='Website team')throw Error('The website team owns this checkpoint.');persist(S.setExpectation(read(),current().id,{at:new Date(Date.parse(S.now(data))+2*3600000).toISOString(),reason:'The team is checking the result before sending it.'}).data);notice='Next update set for two simulated hours from now.';break;
+      case 'resume-preparation':schedulePreparation(current().id,true);notice='Simulated preparation resumed on this device. The team still needs to review it.';break;
+      case 'dismiss-return-summary':changeRecord(i=>{delete i.ux.sinceLastVisit;});break;
+      case 'legacy-submit':return apply('submit');
+      case 'legacy-answer':return apply('answer',app.querySelector('textarea[name=answer]')?.value.trim()||app.querySelector('input[name=answer]:checked')?.value||field('answer'));
+      case 'legacy-prepare':return apply('edit-candidate',field('candidate'));
+      case 'legacy-deliver':return apply('deliver');
+      case 'legacy-accept':return apply('accept',{rev:rendered.rev});
+      case 'legacy-authorize':return apply('authorize',{rev:rendered.rev});
+      case 'legacy-publish':return apply('publish',{rev:rendered.rev});
+      case 'legacy-adjust':{const reason=field('reason').trim();if(!reason){showModal('<h2>What needs to change?</h2><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="legacy-adjust">Send to the team</button></div>');return;}const result=apply('adjust',{rev:rendered.rev,reason});closeModal();return result;}
       case 'keep-working':closeModal();return go('site');
       case 'close-dialog':return closeModal();
       case 'site-select-compartment':site.compartment=value;site.title='Compartment '+value+(value==='1'?' · Cooler':' · Freezer');break;
@@ -264,7 +334,7 @@
         const note=field('reason'),action=value,rev=rendered.rev,id=rendered.ticketId,sequence=rendered.sequence;
         closeModal();composer=root.FeedbackComposer.open({title:'What needs to change?',description:'Add a note, image or recording for the website team. It will stay with this version.',label:'Your adjustment',submitLabel:'Send adjustment',showTiming:false,allowSelection:false,feedback:note,draftKey:'adjust:'+id+':V'+rev,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
           if(action==='correct-understanding'){const result=apply(action,{text:payload.text||'Please review the attached adjustment evidence.'},{quiet:true});changeRecord(i=>{i.ux.correctionEvidence={rev,attachments:payload.attachments,context:payload.context};});render();return result;}
-          const fresh=read(),r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);notice='Your adjustment and materials are with the website team.';render();
+          const fresh=read();recordScene(S.get(fresh,id));const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);savePresentation();notice='Your adjustment and materials are with the website team.';render();
         },onClose:()=>{composer=null;}});return;
       }
       case 'accept':case 'authorize':case 'publish':case 'retry-publish':return apply(action,{rev:current().c.rev});
@@ -282,15 +352,15 @@
       case 'result-back':resultState.tab='quote';return renderResult();
       default:if(['draft-questions','begin-detailed-questions','close-questions','finish-spec','deliver'].includes(action))return apply(action);return;
     }
-    render();
+    savePresentation();render();
   }
   document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
   document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
   app.addEventListener('input',event=>{const el=event.target;if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();clearTimeout(backgroundTimer);clearTimeout(preparationTimer);}});
-  window.addEventListener('pagehide',()=>{stopWatch();clearTimeout(backgroundTimer);clearTimeout(preparationTimer);saveDraft();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();pausePreparation();savePresentation();}else if(current()?.ux?.preparation?.paused)render();});
+  window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();savePresentation();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
   window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';document.getElementById('live').textContent=notice;});
   if(query.has('ticket'))routeTicket(query.get('ticket'),query.get('event'));
   else if(query.has('workflow'))startScenario(query.get('workflow'));
-  else {if(page==='ticket'&&!current())page='inbox';notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
+  else {if(page==='ticket'&&!current())page='inbox';if(page==='ticket'&&current()){restorePresentation(current());persist(S.visit(data,current().id).data);}notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
 })(globalThis);

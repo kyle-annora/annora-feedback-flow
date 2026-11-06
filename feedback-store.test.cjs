@@ -87,6 +87,19 @@ test("reading a notification does not answer, accept or authorize; answering ret
   assert.throws(()=>command(answered.data,id,"Requester","answer",{bundleId:event.bundleId,answers:{business:"b"}}),/unavailable/);
 });
 
+test("answering clears the consumed return prompt without losing the question history", () => {
+  let {data,item}=add();const id=item.id;
+  data=S.visit(data,id).data;
+  for(const [action,value] of [["draft-questions"],["save-questions",[businessQuestion]],["send-questions"]])({data,item}=command(data,id,"Website team",action,value));
+  const returned=S.visit(data,id),events=clone(returned.item.ux.events);
+  assert.match(returned.item.ux.sinceLastVisit,/Answer the questions/);
+  const answered=command(returned.data,id,"Requester","answer",{bundleId:item.c.reviewFlow.sentBundle.id,answers:{business:"a"}});
+  assert.equal(answered.item.ux.sinceLastVisit,undefined);
+  assert.equal(S.status(answered.item).owner,"Website team");
+  assert.deepEqual(answered.item.ux.events.slice(0,events.length),events);
+  assert.equal(answered.item.c.reviewFlow.answers.business,"A");
+});
+
 test("old review links cannot revive V1 decisions after a genuine V2 draft/delivery and role guards keep authorization separate", () => {
   let {data,item}=review("compartment");const id=item.id,v1=clone(item.c.versions[0]),event=S.updates(data).find(e=>e.action==="deliver");
   ({data,item}=command(data,id,"Requester","adjust",{rev:1,reason:"Repeat the compartment number on every section header."}));

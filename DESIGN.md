@@ -99,7 +99,7 @@ The canvas and record are white, the rail and context pane are #fafafa, and 1px 
 
 ## Typography
 
-Use locally bundled Source Serif Pro for complete page, task and section headings. Use locally bundled Inter for body text, labels, candidate copy, navigation, buttons and metadata; system fonts provide glyph fallbacks. The current task is the most prominent heading, at 30–36px. The record identity remains quieter at 24–29px. Main section headings are 22–27px and context headings 19–20px. Body copy is 14px; supporting context is 12–13px. Mobile editable fields use 16px. IDs and version tags remain monospace; measurements use tabular numerals. Do not style isolated words in a different face or accent color.
+Use locally bundled Source Serif Pro for complete page, task and section headings. Use locally bundled Inter for body text, labels, candidate copy, navigation, buttons and metadata; system fonts provide glyph fallbacks. The current task is the most prominent heading, at 30–36px. The record identity remains quieter at 24–29px. Main section headings are 22–27px. In the unified customer workspace, inspector categories are 12px Inter UI labels, subordinate to the main task; they are not editorial section headings. Earlier legacy context-heading sizes no longer govern that workspace. Body copy is 14px; supporting context is 12–13px. Mobile editable fields use 16px. IDs and version tags remain monospace; measurements use tabular numerals. Do not style isolated words in a different face or accent color.
 
 ## Layout
 
@@ -209,3 +209,24 @@ Changed components live in `feedback-view.css` / `capture-composer.css` and are 
 A newly persisted customer feedback submission retains its success receipt and gets one brief confetti burst. The acknowledgement celebrates reporting; it does not claim the issue has been resolved. A retry returning an existing capture, failed persistence, Watch submission, notification visit or page reload does not replay it. Reduced-motion users receive the static check and identical receipt actions.
 
 Reference lock: retain the existing Cycle/Attio layout and WinQuote typography/palette. Borrow the narrow success-feedback pattern from [Sunsama](https://refero.design/pages/7ce3603d-48e5-4dd7-a343-32e7ff9a88a1) and [ManyChat](https://refero.design/pages/f44ba6ff-b03a-4437-8366-4fc68dae4818): durable action acknowledgement with an optional celebratory layer. Do not import their canvas or typography. Navy, pale blue, the existing success green and neutral gray are confined to small decorative particles. The burst lasts roughly one second, blocks no input, cleans up on close/leave, and adds no dependency or artificial wait.
+
+
+## Unified evidence inspector · approved audit corrections
+
+This section applies to every customer record reached from My feedback, including older reviewed records without a scenario ID and plain homepage records. The existing routes remain callable; ordinary customer navigation must not redirect to a visually different legacy record shell. The saved CaseEngine record remains canonical.
+
+The approved panel audit uses [Cycle’s compact insight pane](https://refero.design/pages/0da65a89-ff3c-4f70-a444-c73d9f8109a8) for tabs and traceable evidence, [Intercom’s Details inspector](https://refero.design/pages/6e593aaa-7caa-45af-88a9-799d52b987bb) for small property rows and counted disclosures, and [Attio’s Activity/Details record](https://refero.design/pages/dc6815b4-b871-4434-b336-eec3f08dec4c) for actor/action/time history separated from properties. These bounded component references preserve the white/neutral canvas, existing WinQuote navy, Source Serif Pro main task titles and Inter UI copy. They do not introduce another brand direction.
+
+- Details and Activity are actual tabs in the same inspector. Keyboard tab selection, focus restoration and the 390px modal drawer retain one interaction model.
+- Current basis contains concise facts, an explicit confirmation status and expandable source attribution. Submitted-version views use only that version’s saved basis; absent historical material is identified as absent, never substituted from the current case.
+- Original feedback, answers, earlier decisions and versions use counted disclosures. Earlier decisions retain dates and superseded labels. Attachment rows use real thumbnails when an actual saved image is available, or an honest file/audio icon with recorded metadata. No invented screenshot, transcription or waveform is used.
+- Versions are newest first, distinguish draft/submitted/accepted/authorized/released, and expose saved deliveries as read-only. A current draft returns to the current task rather than pretending to be a delivered snapshot.
+- Activity lists the responsible person, concrete event, relevant version and recorded time. A missing timestamp is identified, not generated. Private team work is excluded from the requester projection.
+- My feedback includes the last update and next expectation, including an explicit overdue label. Updates groups messages by ticket and keeps the newest event above expandable earlier events.
+- Simulated preparation describes the actual supplied words, affected page, selection and available files. It states that media has not been automatically interpreted and that questions and decisions still need team review.
+- The walkthrough supports Back, Return to current step and Restart. Replay is visibly read-only, never displays mutable task controls, and does not replace the current saved case. Why this step comes from the scenario and actual answer branch rather than generic encouragement.
+
+This is a component hierarchy correction: inspector labels become compact sans UI while primary editorial headings retain serif. It supersedes earlier instructions to use 19–20px serif category headings in the context pane. Research evidence and screenshots live in the approved panel-audit packet.
+
+
+The preparation sequence has two distinct artifacts: the early context brief lists supplied material; the later private simulated AI draft gives the team a proposed approach, checks and questions where supported. In team triage, the first brief opens by default; when a private draft is available, the draft opens and the brief remains available as a disclosure. Draft content comes only from the role-filtered presentation projection. It does not prefill or submit scope, and it never appears in the requester view. Unsupported or attachment-only input instead asks the team to inspect the originals without inferring a media meaning.

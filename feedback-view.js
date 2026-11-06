@@ -9,7 +9,11 @@
   const icon = (name, size = 16) => root.Glyph ? root.Glyph(name, size) : '';
   const lines = value => String(value || '').split('\n').map(line => line.trim()).filter(Boolean);
   const actorName = value => value === 'Reviewer' ? 'Requester' : value;
+  const textOf = value => typeof value === 'string' ? value : value?.text || value?.summary || value?.label || '';
+  const safeMedia = value => /^(blob:|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(String(value || '')) ? value : '';
+  const orderTime = value => Number.isFinite(Date.parse(value)) ? Date.parse(value) : 0;
   const phases = {
+    draft: ['Requester', 'Ready to submit'],
     triage: ['Website team', 'Reviewing the scope'],
     'question-draft': ['Website team', 'Preparing questions'],
     'awaiting-answer': ['Requester', 'Needs your input'],
@@ -24,6 +28,7 @@
     published: ['Complete', 'Release simulated'],
     'release-failed': ['Website team', 'Release needs attention']
   };
+  const legacyPhases = { draft: 'draft', clarify: 'awaiting-answer', processing: 'candidate', blocked: 'triage', release: 'accepted' };
 
   function displayTime(value) {
     if (value && typeof value === 'object') value = value.label || value.at || value.time || '';
@@ -53,9 +58,9 @@
 
   function statusFor(item, supplied) {
     const caseRecord = item?.c || {};
-    const phase = caseRecord.reviewFlow?.phase || caseRecord.stage || 'triage';
+    const phase = caseRecord.reviewFlow?.phase || legacyPhases[caseRecord.stage] || caseRecord.stage || 'triage';
     const fallback = phases[phase] || [actorName(caseRecord.owner) || 'Website team', 'In progress'];
-    return { owner: fallback[0], label: fallback[1], phase, ...supplied };
+    return { owner: fallback[0], label: fallback[1], phase, ...item?.status, ...item?.presentation?.status, ...supplied };
   }
 
   function avatar(actor) {
@@ -77,7 +82,7 @@
     const scenario = scenarioFor(vm, item);
     const original = String(item?.c?.text || '').trim().split('\n')[0];
     const excerpt = original.length > 110 ? original.slice(0, 107).trimEnd() + '…' : original;
-    return item?.title || item?.ux?.title || item?.c?.title || scenario?.title || item?.c?.reviewFlow?.title || excerpt || 'Your WinQuote feedback';
+    return item?.title || item?.presentation?.title || (vm.current?.id === item?.id ? vm.presentation?.title : '') || item?.ux?.title || item?.c?.title || scenario?.title || item?.c?.reviewFlow?.title || excerpt || 'Your WinQuote feedback';
   }
 
   function notice(vm) {
@@ -131,17 +136,17 @@
       'release-failed': 'The team is working on the release attempt.',
       published: 'The release is complete in this simulation.'
     }[status.phase];
-    return { ...status, next: ux.next || ux.timing?.next || next || '', updatedAt: ux.timing?.updatedAt || ux.updatedAt || '' };
+    return { ...status, next: status.next || ux.next || ux.timing?.next || next || '', updatedAt: status.updatedAt || ux.timing?.updatedAt || ux.updatedAt || '', nextUpdate: status.nextUpdate || ux.timing?.nextUpdateAt || ux.timing?.nextUpdate || '', overdue: status.overdue || ux.timing?.overdue || false };
   }
 
   function inbox(vm) {
     const all = array(vm.items);
-    const needsYou = item => ['awaiting-answer', 'review'].includes(item.c?.reviewFlow?.phase);
-    const complete = item => item.c?.reviewFlow?.phase === 'published';
+    const needsYou = item => ['draft', 'awaiting-answer', 'review'].includes(statusFor(item).phase);
+    const complete = item => statusFor(item).phase === 'published';
     const filter = vm.filter || 'all';
     const query = String(vm.search || '').toLowerCase().trim();
     const filtered = all.filter(item => (filter === 'all' || filter === 'needs-you' && needsYou(item) || filter === 'with-team' && !needsYou(item) && !complete(item) || filter === 'complete' && complete(item)) && (!query || (titleFor(vm, item) + ' ' + item.id + ' ' + item.c?.text).toLowerCase().includes(query)));
-    filtered.sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)));
+    filtered.sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)) || orderTime(entryStatus(b).updatedAt) - orderTime(entryStatus(a).updatedAt));
     const filters = [['all', 'All', all.length], ['needs-you', 'Needs you', all.filter(needsYou).length], ['with-team', 'With the team', all.filter(item => !needsYou(item) && !complete(item)).length], ['complete', 'Complete', all.filter(complete).length]];
     return `<section class="fs-inbox"><header class="fs-page-heading"><div><h1>My feedback</h1><p>Your requests, next steps, and the people moving them forward.</p></div>${button('start-scenario', 'Start walkthrough', { value: vm.scenarios?.[0]?.id || 'pdf-open', primary: true, icon: 'play' })}</header>
       ${notice(vm)}
@@ -149,15 +154,29 @@
       <div class="fs-list-toolbar"><div class="fs-filters" aria-label="Filter feedback">${filters.map(([id, label, count]) => `<button type="button" data-wq="filter-inbox" data-value="${id}" aria-pressed="${id === filter}">${label}<small>${count}</small></button>`).join('')}</div><label class="fs-search">${icon('search', 15)}<input type="search" data-wq="search-inbox" value="${escape(vm.search)}" placeholder="Search feedback" aria-label="Search feedback"></label></div>
       <div class="fs-ticket-list">${filtered.length ? filtered.map(item => {
         const status = entryStatus(item);
-        return `<button type="button" class="fs-ticket-row" data-wq="open-ticket" data-value="${escape(item.id)}"><span class="fs-row-icon">${icon(needsYou(item) ? 'ask' : complete(item) ? 'checks' : 'feedback', 18)}</span><span class="fs-row-main"><strong>${escape(titleFor(vm, item))}</strong><span>${escape(status.next || item.ux?.summary || item.c?.text)}</span><small>${escape(item.id)} <span aria-hidden="true">·</span> ${escape(status.owner)}${status.updatedAt ? ' · ' + escape(displayTime(status.updatedAt)) : ''}</small></span>${badge(status)}${icon('next', 14)}</button>`;
+        return `<button type="button" class="fs-ticket-row" data-wq="open-ticket" data-value="${escape(item.id)}"><span class="fs-row-icon">${icon(needsYou(item) ? 'ask' : complete(item) ? 'checks' : 'feedback', 18)}</span><span class="fs-row-main"><strong>${escape(titleFor(vm, item))}</strong><span>${escape(status.next || item.ux?.summary || item.c?.text)}</span><small>${escape(item.id)} <span aria-hidden="true">·</span> ${escape(status.owner)}</small><span class="fs-row-timing">${status.updatedAt ? `<span>Updated ${escape(displayTime(status.updatedAt))}</span>` : ''}${status.nextUpdate && !complete(item) ? `<span${status.overdue ? ' class="fs-overdue"' : ''}>${status.overdue ? 'Update overdue · ' : 'Next update · '}${escape(displayTime(status.nextUpdate))}</span>` : ''}</span></span>${badge(status)}${icon('next', 14)}</button>`;
       }).join('') : `<div class="fs-empty">${icon(filter === 'all' ? 'feedback' : 'inbox', 24)}<h2>${filter === 'all' && !query ? 'Your feedback starts here' : 'Nothing in this view'}</h2><p>${filter === 'all' && !query ? 'Start from a sample quote, describe what gets in your way, and follow the same request through to a result.' : 'Try a different filter or search.'}</p></div>`}</div>
       ${scenarioCards(vm)}
     </section>`;
   }
 
   function updates(vm) {
-    const list = array(vm.updates);
-    return `<section class="fs-inbox fs-updates"><header class="fs-page-heading"><div><h1>Updates</h1><p>Return to the next useful step in each request.</p></div>${list.length ? button('mark-read-all', 'Mark all as read', { quiet: true, icon: 'checks' }) : ''}</header>${notice(vm)}<div class="fs-update-list">${list.length ? list.slice().reverse().map(update => `<button type="button" class="fs-update${!update.read && !update.readAt ? ' fs-unread' : ''}" data-wq="open-update" data-value="${escape(update.id)}"><span class="fs-update-mark">${icon(update.kind === 'review' ? 'verify' : update.kind === 'question' ? 'ask' : 'bell', 17)}</span><span class="fs-row-main"><strong>${escape(update.title || update.label || 'Feedback updated')}</strong><span>${escape(update.body || update.summary || update.text || update.message || '')}</span><small>${escape(update.ticketId || update.recordId || '')}${update.createdAt || update.at ? ' · ' + escape(displayTime(update.createdAt || update.at)) : ''}</small></span>${icon('next', 14)}</button>`).join('') : `<div class="fs-empty">${icon('bell', 24)}<h2>You’re all caught up</h2><p>We’ll show questions, review requests, and release updates here.</p>${button('nav-inbox', 'Back to my feedback', { quiet: true, arrow: true })}</div>`}</div><p class="fs-footnote">Notifications in this workspace are simulated.</p></section>`;
+    const list = array(vm.updates).slice().sort((a, b) => orderTime(b.createdAt || b.at) - orderTime(a.createdAt || a.at));
+    const groups = new Map();
+    list.forEach(update => {
+      const id = update.ticketId || update.recordId || 'workspace';
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(update);
+    });
+    if (array(vm.updateGroups).length) {
+      groups.clear();
+      vm.updateGroups.forEach(group => groups.set(group.ticketId, array(group.events).length ? group.events : [group]));
+    }
+    const row = update => `<button type="button" class="fs-update${!update.read && !update.readAt ? ' fs-unread' : ''}" data-wq="open-update" data-value="${escape(update.id)}"><span class="fs-update-mark">${icon(update.kind === 'review' ? 'verify' : update.kind === 'question' ? 'ask' : 'bell', 17)}</span><span class="fs-row-main"><strong>${escape(update.title || update.label || 'Feedback updated')}</strong><span>${escape(update.body || update.summary || update.text || update.message || '')}</span><small>${escape(displayTime(update.createdAt || update.at) || 'Time not recorded')}</small></span>${icon('next', 14)}</button>`;
+    return `<section class="fs-inbox fs-updates"><header class="fs-page-heading"><div><h1>Updates</h1><p>The latest handoff for each request, with earlier updates close by.</p></div>${list.length ? button('mark-read-all', 'Mark all as read', { quiet: true, icon: 'checks' }) : ''}</header>${notice(vm)}<div class="fs-update-list">${list.length ? [...groups].map(([id, entries]) => {
+      const item = array(vm.items).find(item => item.id === id);
+      return `<section class="fs-update-group"><header><h2>${escape(item ? titleFor(vm, item) : entries[0].ticketTitle || 'Feedback updates')}</h2><span>${escape(id === 'workspace' ? 'Workspace' : id)}</span></header>${row(entries[0])}${entries.length > 1 ? `<details class="fs-update-history"><summary>${entries.length - 1} earlier ${entries.length === 2 ? 'update' : 'updates'} ${icon('down', 13)}</summary>${entries.slice(1).map(row).join('')}</details>` : ''}</section>`;
+    }).join('') : `<div class="fs-empty">${icon('bell', 24)}<h2>You’re all caught up</h2><p>Questions, review requests, and release updates will appear here.</p>${button('nav-inbox', 'Back to my feedback', { quiet: true, arrow: true })}</div>`}</div><p class="fs-footnote">Notifications in this workspace are simulated.</p></section>`;
   }
 
   function textField(name, label, value, options = {}) {
@@ -165,7 +184,8 @@
   }
 
   function proseList(value, className = '') {
-    return `<ul class="fs-prose-list ${escape(className)}">${lines(value).map(line => `<li>${escape(line.replace(/^[-•]\s*/, ''))}</li>`).join('')}</ul>`;
+    const values = Array.isArray(value) ? value.map(item => typeof item === 'string' ? item : item.label ? item.label + (item.value ? ' · ' + item.value : '') : textOf(item)) : lines(value);
+    return `<ul class="fs-prose-list ${escape(className)}">${values.filter(Boolean).map(line => `<li>${escape(String(line).replace(/^[-•]\s*/, ''))}</li>`).join('')}</ul>`;
   }
 
   function actions(content) {
@@ -233,14 +253,14 @@
     const status = statusFor(vm.current, vm.status);
     const summary = flow.sharedUnderstanding;
     const freshAnswer = flow.phase === 'answer-review';
-    const preparation = vm.current?.ux?.preparation;
-    const preparationStage = typeof preparation === 'string' ? preparation : preparation?.stage;
+    const artifact = vm.presentation?.preparation;
+    const preparationStage = artifact?.stage;
     const preparationLabel = {
       'context-ready': 'Context saved',
       'draft-ready': 'Simulated preparation ready',
       'team-review-pending': 'Ready for the team to review'
     }[preparationStage];
-    const preparationNote = flow.phase === 'triage' && preparationLabel ? `<div class="fs-preparation" role="status">${icon('checks', 15)}<div><span>Simulated preparation</span><strong>${escape(preparationLabel)}</strong><p>No question or decision has been sent automatically.</p></div></div>` : '';
+    const preparationNote = flow.phase === 'triage' && (preparationLabel || artifact) ? `<section class="fs-preparation" aria-label="Simulated preparation">${icon('checks', 15)}<div><span>Simulated preparation</span><strong>${escape(artifact?.title || preparationLabel)}</strong>${artifact?.summary ? `<p>${escape(artifact.summary)}</p>` : ''}${array(artifact?.facts).length ? `<ul>${artifact.facts.map(fact => `<li>${fact.label ? `<strong>${escape(fact.label)}</strong> ` : ''}${escape(textOf(fact))}${fact.source ? `<small>${escape(textOf(fact.source))}</small>` : ''}</li>`).join('')}</ul>` : ''}${array(artifact?.questions).length ? `<p class="fs-preparation-label">For the team to review</p><ul>${artifact.questions.map(question => `<li>${escape(textOf(question))}</li>`).join('')}</ul>` : ''}${array(artifact?.limitations).map(value => `<p class="fs-footnote">${escape(textOf(value))}</p>`).join('')}<p class="fs-footnote">No question or decision has been sent automatically.</p>${(preparationStage === 'context-ready' || preparationStage === 'draft-ready' && (artifact?.paused === true || vm.preparationPaused === true)) ? button('resume-preparation', 'Continue simulated preparation', { quiet: true, icon: 'next' }) : ''}</div></section>` : '';
     return `<div class="fs-waiting"><span class="fs-waiting-mark">${icon(freshAnswer ? 'checks' : 'clock', 22)}</span><h2>${freshAnswer ? 'Your answer is with the team' : status.owner === 'Site owner' ? 'Your accepted version is awaiting release approval' : status.owner === 'Requester' ? 'The requester is reviewing this step' : status.owner === 'Complete' ? 'This request is complete' : 'The website team has your request'}</h2><p class="fs-task-intro">${escape(status.next || (freshAnswer ? 'The team will review how your answer changes the plan and acceptance checks.' : 'You can keep working. We’ll show the next question or result in Updates.'))}</p>
       ${preparationNote}${delayNotice(status)}
       ${freshAnswer && (flow.detailedAnswerText || caseRecord.answer) ? `<blockquote class="fs-request-quote"><span>Your answer</span><p>${escape(flow.sentBundle?.round === 'detailed' ? flow.detailedAnswerText : caseRecord.answer)}</p></blockquote>` : ''}
@@ -250,18 +270,32 @@
       ${actions(button('keep-working', 'Keep working', { icon: 'back' }) + button('nav-updates', 'View updates', { quiet: true, icon: 'bell' }))}</div>`;
   }
 
+  function teamPreparation(vm) {
+    if (vm.actor !== 'Website team' || vm.historyVersion || vm.walkHistory?.active) return '';
+    const preparation = vm.presentation?.preparation;
+    if (!preparation || !['draft-ready', 'team-review-pending'].includes(preparation.stage)) return '';
+    const draft = preparation.teamDraft || preparation.draftPlan;
+    const facts = array(preparation.facts);
+    const brief = `<details class="fs-team-preparation"${draft ? '' : ' open'}><summary><span>${icon('file', 15)}Context brief</span><small>Saved material · simulation</small>${icon('down', 13)}</summary><div class="fs-team-preparation-body">${preparation.summary ? `<p>${escape(preparation.summary)}</p>` : ''}<dl>${facts.map(fact => `<div><dt>${escape(fact.label || 'Context')}</dt><dd>${escape(textOf(fact))}${fact.source ? `<small>${escape(textOf(fact.source))}</small>` : ''}</dd></div>`).join('')}</dl>${array(preparation.limitations).map(note => `<p class="fs-footnote">${escape(textOf(note))}</p>`).join('')}</div></details>`;
+    if (!draft) return brief;
+    return `${brief}<details class="fs-team-preparation fs-private-preparation" open><summary><span>${icon('branch', 15)}Private AI draft</span><small>Simulated · pending your review</small>${icon('down', 13)}</summary><div class="fs-team-preparation-body"><p class="fs-private-boundary">Only the website team can see this draft. Review and edit the scope below before sharing it or sending questions.</p>${draft.approach ? `<h3>Proposed approach</h3>${proseList(draft.approach)}` : ''}${array(draft.checks).length || typeof draft.checks === 'string' && draft.checks ? `<h3>Suggested acceptance checks</h3>${proseList(draft.checks)}` : ''}${array(draft.questions).length ? `<h3>Questions to review</h3>${proseList(draft.questions)}` : ''}${draft.note ? `<p>${escape(draft.note)}</p>` : ''}${draft.source ? `<p class="fs-footnote">Source: ${escape(textOf(draft.source))}</p>` : ''}<p class="fs-footnote">The draft has not been applied to the scope or sent to the requester.</p></div></details>`;
+  }
+
   function task(vm) {
     const caseRecord = vm.current?.c;
     const flow = caseRecord?.reviewFlow;
-    if (!caseRecord || !flow) return `<div class="fs-empty"><h2>This feedback needs a different view</h2><p>Open the earlier demo paths to continue this existing request.</p>${button('legacy-links', 'Open earlier paths', { primary: true })}</div>`;
+    if (!caseRecord) return '';
+    const presentation = panelPresentation(vm);
+    if (vm.historyVersion || presentation.historical || vm.walkHistory?.active) {
+      const replay = Boolean(vm.walkHistory?.active);
+      const version = presentation.viewedRev || vm.historyVersion?.rev || vm.historyVersion;
+      return `<div class="fs-readonly-banner">${icon('history', 16)}<span><strong>${replay ? 'Walkthrough replay' : 'Saved version'} · Read-only</strong><small>${replay ? 'Your current request is unchanged.' : 'The request and acceptance basis below belong to this delivery.'}</small></span></div><h2>${escape(replay ? vm.walkHistory.label || 'Earlier step' : 'Version ' + version)}</h2>${textOf(presentation.understanding) ? `<p class="fs-task-intro">${escape(textOf(presentation.understanding))}</p>` : ''}${presentation.candidate ? `<div class="fs-frozen-copy">${proseList(presentation.candidate)}</div>` : `<p class="fs-task-intro">${escape(textOf(presentation.why) || 'No candidate was saved at this step.')}</p>`}${array(presentation.checks).length || typeof presentation.checks === 'string' && presentation.checks ? `<h3>Saved acceptance checks</h3>${proseList(presentation.checks)}` : ''}${actions(button(replay ? 'walk-current' : 'current-version', 'Return to current step', { primary: true, arrow: true }))}`;
+    }
+    if (!flow) return legacyTask(vm, presentation);
     const status = statusFor(vm.current, vm.status);
     const owns = vm.actor === actorName(status.owner);
     const phase = flow.phase;
     const team = vm.actor === 'Website team';
-    if (vm.historyVersion) {
-      const version = typeof vm.historyVersion === 'object' ? vm.historyVersion : array(caseRecord.versions).find(item => item.rev === Number(vm.historyVersion));
-      return `<h2>Version ${escape(version?.rev || vm.historyVersion)}</h2><p class="fs-task-intro">A saved delivery and its acceptance criteria.</p><div class="fs-frozen-copy">${proseList(version?.candidate)}</div><h3>Acceptance checks</h3>${proseList(version?.result?.checks || version?.reviewFlow?.candidateDraft?.checks)}${actions(button('current-version', 'Return to current version', { primary: true, arrow: true }))}`;
-    }
     if (phase === 'published') return `<div class="fs-complete"><span class="fs-complete-mark">${icon('checks', 26)}</span><h2>Version ${Number(caseRecord.rev)} is released in the simulation</h2><p>No further action is needed. You can reopen the result whenever you need it.</p>${actions(button('open-result', 'View result', { primary: true, icon: 'external' }) + button('nav-inbox', 'Back to my feedback', { quiet: true }))}</div>`;
     if (!owns || !team && ['triage', 'question-draft', 'answer-review', 'spec-review', 'candidate', 'checking', 'ready'].includes(phase)) return waiting(vm, caseRecord);
     if (phase === 'question-draft') return questionEditor(flow, vm);
@@ -272,6 +306,7 @@
       return `<h2>${phase === 'answer-review' ? 'Turn the answer into a clear plan' : 'Review the request and its scope'}</h2><p class="fs-task-intro">${phase === 'answer-review' ? 'The answer may change the approach and acceptance checks. Confirm what applies before sharing the plan.' : 'Check the customer’s request against the available records. Ask only about a decision the requester can make.'}</p>
         ${phase === 'answer-review' ? `<blockquote class="fs-request-quote"><span>Latest requester answer</span><p>${escape(answer)}</p></blockquote>${scope.reason ? `<p class="fs-because">${icon('branch', 14)}${escape(scope.reason)}</p>` : ''}` : `<blockquote class="fs-request-quote"><span>Original request</span><p>${escape(caseRecord.text)}</p></blockquote>`}
         ${scope.conflict ? `<p class="fs-conflict">${icon('hold', 16)}${escape(scope.conflict)}</p>` : ''}
+        ${phase === 'triage' ? teamPreparation(vm) : ''}
         ${array(flow.understandingCorrections).length ? `<blockquote class="fs-request-quote"><span>Requester’s correction</span><p>${escape(flow.understandingCorrections.at(-1).text)}</p></blockquote>` : ''}
         <div class="fs-scope-form">${textField('understanding', 'What we’ll share with the requester', fieldValue(vm, 'understanding', scope.understanding || scope.approach), { rows: 2 })}${textField('approach', 'Proposed approach', fieldValue(vm, 'approach', scope.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', scope.checks))}${actions(button('draft-questions', 'Review questions', { quiet: true, icon: 'ask' }) + button('confirm-scope', 'Confirm scope & continue', { primary: true, arrow: true }))}</div>`;
     }
@@ -291,6 +326,29 @@
     return waiting(vm, caseRecord);
   }
 
+  function legacyTask(vm, p) {
+    const c = vm.current.c;
+    const derived = root.CaseEngine?.derive(c) || {};
+    const status = statusFor(vm.current, vm.status);
+    const owns = vm.actor === actorName(status.owner);
+    const quote = `<blockquote class="fs-request-quote"><span>Original feedback</span><p>${escape(c.text)}</p></blockquote>`;
+    const checks = p.checks || derived.checks;
+    const candidate = p.candidate !== undefined ? p.candidate : derived.candidate;
+    const result = candidate ? `<section class="fs-result"><div class="fs-result-heading"><div><h3>Version ${escape(c.rev)}</h3><p>Proposed homepage copy</p></div><span class="fs-version-tag">Simulation</span></div><div class="fs-frozen-copy">${proseList(candidate)}</div><h3>Acceptance checks</h3>${proseList(checks)}</section>` : '';
+    if (c.stage === 'published') return `<div class="fs-complete"><span class="fs-complete-mark">${icon('checks', 24)}</span><h2>Version ${escape(c.rev)} is released in the simulation</h2>${result}${actions(button('nav-inbox', 'Back to my feedback', { primary: true }))}</div>`;
+    if (!owns) return `<div class="fs-waiting"><span class="fs-waiting-mark">${icon('clock', 22)}</span><h2>${escape(status.label)}</h2><p class="fs-task-intro">${escape(status.next || 'The next step is with ' + actorName(status.owner) + '.')}</p>${result}${delayNotice(status)}<dl class="fs-waiting-details"><div><dt>With</dt><dd>${escape(actorName(status.owner))}</dd></div><div><dt>Last update</dt><dd>${escape(displayTime(status.updatedAt) || 'Time not recorded')}</dd></div><div><dt>Next update</dt><dd>${escape(displayTime(status.nextUpdate) || 'No update time has been set.')}</dd></div></dl>${actions(button('keep-working', 'Keep working') + button('nav-updates', 'View updates', { quiet: true }))}</div>`;
+    if (c.stage === 'draft') return `<h2>Submit your feedback</h2>${quote}${actions(button('legacy-submit', 'Submit feedback', { primary: true, arrow: true }))}`;
+    if (c.stage === 'clarify') {
+      const question = derived.question || p.question || {};
+      return `<h2>A little context will help</h2><p class="fs-task-intro">${escape(question.reason || textOf(p.why))}</p><fieldset class="fs-question"><legend>${escape(question.text || 'What would you like the team to change?')}</legend>${array(question.options).length ? `<div class="fs-options">${question.options.map(value => `<label class="fs-option"><input type="radio" name="answer" value="${escape(typeof value === 'string' ? value : value.label)}"><span>${escape(typeof value === 'string' ? value : value.label)}</span></label>`).join('')}</div>` : ''}${textField('answer', 'Your answer', fieldValue(vm, 'answer', ''), { rows: 2 })}</fieldset>${actions(button('legacy-answer', 'Send answer to the team', { primary: true, arrow: true }))}`;
+    }
+    if (['processing', 'blocked'].includes(c.stage)) return `<h2>Prepare version ${escape(c.rev)}</h2><p class="fs-task-intro">Review the copy and its acceptance checks before sending it.</p>${derived.reason ? `<p class="fs-soft-note">${escape(derived.reason)}</p>` : ''}${quote}${textField('candidate', 'Proposed copy', fieldValue(vm, 'candidate', candidate || ''))}<h3>Acceptance checks</h3>${proseList(checks)}${actions(button('legacy-prepare', 'Save draft & check') + button('legacy-deliver', 'Send version ' + c.rev + ' for review', { primary: true, disabled: Boolean(derived.blocked || !candidate), arrow: true }))}`;
+    if (c.stage === 'review') return `<h2>Does version ${escape(c.rev)} resolve your feedback?</h2><p class="fs-task-intro">Review the proposed copy against your request and the acceptance checks.</p>${result}${actions(button('legacy-adjust', 'Request changes') + button('legacy-accept', 'Accept version ' + c.rev, { primary: true, icon: 'check' }))}<p class="fs-footnote">Release authorization follows acceptance.</p>`;
+    if (c.stage === 'release') return `<h2>Approve version ${escape(c.rev)} for release</h2><p class="fs-task-intro">The requester accepted this exact version. Authorize its simulated release to ${escape(p.target || 'WinQuote homepage')}.</p>${result}${actions(button('legacy-authorize', 'Approve simulated release', { primary: true, icon: 'verify' }))}`;
+    if (c.stage === 'authorized') return `<h2>Run the approved release</h2><p class="fs-task-intro">Version ${escape(c.rev)} has been accepted and authorized for ${escape(p.target || 'WinQuote homepage')}.</p>${result}${actions(button('legacy-publish', 'Simulate release', { primary: true, icon: 'release' }))}`;
+    return `<h2>${escape(status.label)}</h2><p class="fs-task-intro">${escape(textOf(p.why) || 'Review the recorded request and its current basis.')}</p>${quote}`;
+  }
+
   function adjustmentEvidence(caseRecord) {
     const evidence = caseRecord.reviewFlow?.adjustmentEvidence;
     if (!evidence) return '';
@@ -303,38 +361,107 @@
       ['Reported', displayTime(context.occurredAt)],
       ['Selected area', context.element || context.selection?.label]
     ].filter(([, value]) => value);
-    return `<section class="fs-adjustment-basis"><h3>Adjustment to V${escape(evidence.rev)}</h3><span class="fs-owner">${avatar(owner)}${escape(owner)}</span>${caseRecord.adjustment ? `<p>${escape(caseRecord.adjustment)}</p>` : ''}${values.length ? `<dl class="fs-context-values">${values.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(typeof value === 'object' ? value.label || value.name || '' : value)}</dd></div>`).join('')}</dl>` : ''}${array(evidence.attachments).length ? `<div class="fs-attached-files">${evidence.attachments.map(attachment => `<button type="button" data-wq="open-attachment" data-value="${escape(attachment.id || attachment.attachmentId)}">${icon(attachment.kind === 'audio' ? 'play' : 'attach', 13)}${escape(attachment.name || attachment.filename || 'Attachment')}</button>`).join('')}</div>` : ''}<span class="fs-footnote">This evidence belongs to the adjustment.</span></section>`;
+    return `<section class="fs-adjustment-basis"><h3>Adjustment to V${escape(evidence.rev)}</h3><span class="fs-owner">${avatar(owner)}${escape(owner)}</span>${caseRecord.adjustment ? `<p>${escape(caseRecord.adjustment)}</p>` : ''}${values.length ? `<dl class="fs-context-values">${values.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(typeof value === 'object' ? value.label || value.name || '' : value)}</dd></div>`).join('')}</dl>` : ''}${array(evidence.attachments).length ? attachmentRows(evidence.attachments) : ''}<span class="fs-footnote">This evidence belongs to the adjustment.</span></section>`;
+  }
+
+  function panelPresentation(vm) {
+    if (vm.presentation) return vm.presentation;
+    if (root.FeedbackPresentation?.describe) return root.FeedbackPresentation.describe(vm.current, { rev: vm.historyVersion?.rev || vm.historyVersion, actor: vm.actor });
+    const c = vm.current?.c || {}, f = c.reviewFlow || {};
+    if (vm.historyVersion) return { historical: true, viewedRev: vm.historyVersion.rev || vm.historyVersion, basis: [], request: {}, versions: [] };
+    const understanding = f.sharedUnderstanding;
+    return { request: { text: c.text, context: vm.current?.ux?.context || f.context, attachments: vm.current?.ux?.attachments }, understanding,
+      basis: understanding?.text ? [{ text: understanding.text, status: understanding.needsRevision ? 'Awaiting team review' : 'Shared by the team', source: 'Shared understanding' }] : [],
+      answers: array(f.questionRounds), versions: array(c.versions).map(v => ({ rev: v.rev, status: 'Submitted', at: v.at })),
+      recordedDecisions: array(f.source?.history), activity: array(c.trail).filter(event => vm.actor === 'Website team' || ['submit', 'send-questions', 'answer', 'confirm-scope', 'correct-understanding', 'deliver', 'adjust', 'accept', 'authorize', 'publish', 'publish-failed', 'retry-publish'].includes(event.action)) };
+  }
+
+  function contextRows(context) {
+    const rows = Array.isArray(context) ? context.map(row => [row.label, row.value]) : [
+      ['Page', context?.page || context?.route || context?.path], ['Quote', context?.quote || context?.quoteId],
+      ['Compartment', context?.compartment || context?.compartmentId], ['Selected area', context?.element || context?.selection?.label],
+      ['Reported', displayTime(context?.occurredAt)], ['Source', context?.source]
+    ];
+    return `<dl class="fs-context-values">${rows.filter(([, value]) => value).map(([label, value]) => `<div><dt>${escape(label)}</dt><dd>${escape(typeof value === 'object' ? textOf(value) || value.name : value)}</dd></div>`).join('')}</dl>`;
+  }
+
+  function attachmentRows(items) {
+    return `<div class="fs-evidence-list">${array(items).map(file => {
+      const type = file.kind || file.mime || file.type || '';
+      const audio = /audio|recording/.test(type);
+      const thumbnail = safeMedia(file.thumbnailUrl || (/image/.test(type) ? file.blobUrl : ''));
+      const size = Number(file.size || file.bytes);
+      const duration = Number(file.duration || file.durationSeconds);
+      const meta = [audio ? 'Audio recording' : /image/.test(type) ? 'Image' : file.mime || 'Attachment', size > 0 ? size >= 1048576 ? (size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(size / 1024)) + ' KB' : '', duration > 0 ? Math.floor(duration / 60) + ':' + String(Math.floor(duration % 60)).padStart(2, '0') : ''].filter(Boolean).join(' · ');
+      return `<button type="button" class="fs-evidence-row" data-wq="open-attachment" data-value="${escape(file.id || file.attachmentId)}"><span class="fs-evidence-thumb">${thumbnail ? `<img src="${escape(thumbnail)}" alt="" loading="lazy">` : icon(audio ? 'play' : 'attach', 18)}</span><span><strong>${escape(file.name || file.filename || (audio ? 'Audio recording' : 'Attached file'))}</strong><small>${escape(meta)}</small></span>${icon('external', 13)}</button>`;
+    }).join('')}</div>`;
+  }
+
+  function panelFold(label, count, contents, options = {}) {
+    return `<details class="fs-side-fold"${options.open ? ' open' : ''}><summary><span>${escape(label)}</span>${count !== undefined ? `<small class="fs-side-count">${escape(count)}</small>` : ''}${icon('down', 13)}</summary><div class="fs-fold-content">${contents}</div></details>`;
+  }
+
+  function basisRows(p) {
+    const facts = array(p.basis);
+    return `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${p.historical ? 'Version ' + escape(p.viewedRev) + ' basis' : 'Current basis'}</h3>${p.historical ? '<span class="fs-basis-state">Read-only</span>' : ''}</div>${facts.length ? `<ul class="fs-basis-facts">${facts.map(fact => {
+      const source = typeof fact.source === 'string' ? { label: fact.source } : fact.source || {};
+      const status = String(fact.status || '').replace(/[-_]/g, ' ');
+      return `<li><p>${escape(textOf(fact))}</p><div class="fs-fact-meta">${status ? `<span>${escape(status)}</span>` : ''}${source.label || source.text ? `<details class="fs-source-detail"><summary>${icon('file', 11)}${escape(source.label || 'Source')}</summary><p>${escape(source.text || source.label)}${source.id ? `<small>${escape(source.id)}</small>` : ''}</p></details>` : ''}</div></li>`;
+    }).join('')}</ul>` : `<p class="fs-inspector-empty">${p.historical ? 'No basis was saved with this version.' : 'The team has not confirmed an approach yet.'}</p>`}</section>`;
+  }
+
+  function activityRows(entries) {
+    const sorted = array(entries).slice().sort((a, b) => orderTime(b.at || b.createdAt) - orderTime(a.at || a.createdAt));
+    return `<section class="fs-activity" aria-label="Activity history">${sorted.length ? `<ol>${sorted.map(event => `<li><div>${avatar(event.actor)}<strong>${escape(actorName(event.actor) || 'Website team')}</strong>${event.rev ? `<span class="fs-event-version">V${escape(event.rev)}</span>` : ''}</div><p>${escape(event.text || event.message || event.label || event.action)}</p><small>${escape(displayTime(event.at || event.createdAt) || 'Time not recorded')}${event.simulated ? ' · Simulated' : ''}</small>${event.detail ? `<details class="fs-event-detail"><summary>Details ${icon('down', 11)}</summary><p>${escape(textOf(event.detail))}</p></details>` : ''}</li>`).join('')}</ol>` : '<p class="fs-inspector-empty">No shared activity has been recorded.</p>'}</section>`;
+  }
+
+  function questionHistory(p) {
+    const groups = new Map();
+    array(p.questionRounds).forEach(round => groups.set(round.id || round.bundleId, { ...round, entries: [] }));
+    array(p.answers).forEach(answer => {
+      const key = answer.bundleId || answer.id || answer.round || 'initial';
+      if (!groups.has(key)) groups.set(key, { id: key, round: answer.round, scopeCycle: answer.scopeCycle, entries: [] });
+      groups.get(key).entries.push(answer);
+    });
+    for (const group of groups.values()) {
+      if (!group.entries.length) group.entries = array(group.questions).map(question => ({ question: question.text, answer: group.answers?.[question.id], note: group.answerNotes?.[question.id], at: group.answeredAt || group.sentAt, simulated: group.answerSimulated }));
+    }
+    const rows = [...groups.values()];
+    if (!rows.length) return '';
+    const answerText = value => Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? textOf(value) : String(value ?? '');
+    return panelFold('Question rounds', rows.length, rows.map((round, index) => {
+      const answered = round.entries.filter(entry => entry.answer !== null && entry.answer !== undefined && entry.answer !== '').length;
+      const label = round.title || (round.round === 'detailed' ? 'Detailed decisions' : 'Initial clarification');
+      return `<details class="fs-question-history"><summary><strong>${escape(label)}</strong><span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${icon('down', 12)}</summary>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</details>`;
+    }).join(''));
   }
 
   function details(vm) {
-    const item = vm.current;
-    const caseRecord = item.c;
-    const flow = caseRecord.reviewFlow || {};
-    const team = vm.actor === 'Website team';
-    const scope = team ? flow.suggestedScope || flow.confirmedScope || flow.scope : flow.sharedUnderstanding;
-    const context = item.ux?.context || flow.context || {};
-    const attachments = array(item.ux?.attachments);
-    const trail = array(caseRecord.trail).filter(entry => team || ['submit', 'send-questions', 'answer', 'confirm-scope', 'correct-understanding', 'deliver', 'adjust', 'accept', 'authorize', 'publish', 'publish-failed', 'retry-publish'].includes(entry.action));
-    const activity = `<section class="fs-activity"><h3>Activity</h3>${trail.length ? `<ol>${trail.slice().reverse().map(entry => `<li><div>${avatar(entry.actor)}<strong>${escape(actorName(entry.actor))}</strong></div><p>${escape(entry.text)}</p>${entry.simulated ? '<small>Simulated action</small>' : ''}</li>`).join('')}</ol>` : '<p class="fs-footnote">No activity yet.</p>'}</section>`;
-    const tab = vm.contextTab === 'activity' || vm.activityOpen ? 'activity' : 'details';
-    const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs"><button type="button" data-wq="details-tab" aria-pressed="${tab === 'details'}">Details</button><button type="button" data-wq="activity" aria-pressed="${tab === 'activity'}">Activity</button></div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
-    if (tab === 'activity') return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback activity">${heading}${activity}</aside>`;
-    return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback details">${heading}
-      <section class="fs-basis"><h3>Current basis</h3>${flow.sharedUnderstanding?.needsRevision ? '<p class="fs-footnote">A correction is awaiting team review.</p>' : ''}${scope ? `<p>${escape(scope.text || scope.understanding || scope.approach)}</p>${team && scope.reason ? `<p class="fs-basis-reason">${escape(scope.reason)}</p>` : ''}<span class="fs-footnote">${team && flow.suggestedScope ? 'Pending team review' : !team && flow.phase === 'answer-review' ? 'Confirmed basis · new answer under team review' : flow.confirmedScope ? 'Confirmed by the website team' : team ? 'Pending team review' : 'Shared by the website team'}</span>` : `<p>The team is reviewing the original request and the attached context.</p>`}${caseRecord.answer ? `<details class="fs-side-fold"><summary>Latest answer ${icon('down', 13)}</summary><p>${escape(caseRecord.answer)}</p></details>` : ''}</section>
-      ${adjustmentEvidence(caseRecord)}
-      <details class="fs-side-fold"><summary>Original request ${icon('down', 13)}</summary><p>${escape(caseRecord.text)}</p>${flow.source?.id ? `<span class="fs-footnote">${escape(flow.source.id)}</span>` : ''}${vm.scenario?.sourceNote ? `<p class="fs-footnote">${escape(vm.scenario.sourceNote)}</p>` : ''}${Object.keys(context).length ? `<dl class="fs-context-values">${[['Page', context.page || context.route || context.path], ['Quote', context.quote || context.quoteId], ['Compartment', context.compartment || context.compartmentId], ['Reported', context.occurredAt || item.ux?.timing?.occurredAt], ['Selected area', context.element || context.selection?.label]].filter(([, value]) => value).map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(typeof value === 'object' ? value.label || value.name || '' : value)}</dd></div>`).join('')}</dl>` : ''}${attachments.length ? `<div class="fs-attached-files">${attachments.map(attachment => `<button type="button" data-wq="open-attachment" data-value="${escape(attachment.id)}">${icon(attachment.kind === 'audio' ? 'play' : 'attach', 13)}${escape(attachment.name || attachment.filename || 'Attachment')}</button>`).join('')}</div>` : ''}</details>
-      <details class="fs-side-fold"><summary>Versions <span class="fs-side-count">${array(caseRecord.versions).length}</span>${icon('down', 13)}</summary>${array(caseRecord.versions).length ? caseRecord.versions.map(version => button('view-version', 'Version ' + version.rev + ' · submitted', { value: version.rev, quiet: true, icon: 'file' })).join('') : '<p class="fs-footnote">No version has been sent for review yet.</p>'}</details>
-      ${array(flow.questionRounds).length ? `<details class="fs-side-fold"><summary>Question rounds ${icon('down', 13)}</summary>${flow.questionRounds.map(round => `<details class="fs-question-history"><summary>${escape(round.round === 'detailed' ? 'Detailed decisions' : 'Initial clarification')} <span>${escape(round.answered ? 'Answered' : 'Sent')}</span></summary>${array(round.questions).map(question => `<p>${escape(question.text)}</p>`).join('')}${round.answerText ? `<blockquote>${escape(round.answerText)}</blockquote>` : ''}</details>`).join('')}</details>` : ''}
-      ${team && array(flow.source?.history).length ? `<details class="fs-side-fold"><summary>Recorded decisions ${icon('down', 13)}</summary>${flow.source.history.map(entry => `<div class="fs-history-event"><span>${escape(entry.date)}</span><p>${escape(entry.decision)}</p></div>`).join('')}</details>` : ''}
-
-    </aside>`;
+    const p = panelPresentation(vm), c = vm.current.c;
+    const tab = vm.contextTab === 'activity' ? 'activity' : 'details';
+    const request = p.request || {};
+    const attachments = array(request.attachments);
+        const decisions = array(p.recordedDecisions);
+    const versions = array(p.versions).slice().sort((a, b) => Number(b.rev) - Number(a.rev));
+    const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs" role="tablist" aria-label="Feedback context">${['details', 'activity'].map(name => `<button type="button" role="tab" id="fs-tab-${name}" data-wq="context-tab" data-value="${name}" aria-selected="${tab === name}" aria-controls="fs-inspector-content" tabindex="${tab === name ? '0' : '-1'}">${name === 'details' ? 'Details' : 'Activity'}</button>`).join('')}</div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
+    const content = tab === 'activity' ? activityRows(p.activity) : `${basisRows(p)}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+      ${panelFold('Original feedback', request.text ? 1 : 0, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${request.sourceNote ? `<p class="fs-footnote">${escape(request.sourceNote)}</p>` : ''}`)}
+      ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
+      ${questionHistory(p)}
+      ${decisions.length ? panelFold('Earlier decisions', decisions.length, decisions.map(decision => `<div class="fs-history-event"><span>${escape(displayTime(decision.date || decision.at))}${decision.superseded ? ' · Superseded' : ''}</span><p>${escape(decision.decision || decision.text || decision.summary)}</p>${decision.source ? `<small>${escape(textOf(decision.source))}</small>` : ''}</div>`).join('')) : ''}
+      ${panelFold('Versions', versions.length, versions.length ? `<div class="fs-version-list">${versions.map(version => `<button type="button" class="fs-version-row${Number(p.viewedRev) === Number(version.rev) && p.historical ? ' fs-version-viewed' : ''}" data-wq="${version.readOnly === false ? 'current-version' : 'view-version'}" data-value="${escape(version.rev)}"><span class="fs-version-icon">${icon('file', 15)}</span><span><strong>Version ${escape(version.rev)}${version.current ? '<small>Current</small>' : ''}</strong><span>${escape(version.status || 'Submitted')}</span>${array(version.statuses).filter(value => ['accepted', 'authorized', 'released'].includes(value)).length > 1 ? `<small>${version.statuses.filter(value => ['accepted', 'authorized', 'released'].includes(value)).map(value => ({accepted:'Accepted',authorized:'Authorized',released:'Released'}[value])).join(' · ')}</small>` : ''}${version.at ? `<small>${escape(displayTime(version.at))}</small>` : ''}</span>${icon('next', 12)}</button>`).join('')}</div>` : '<p class="fs-inspector-empty">No version has been sent for review.</p>', { open: Boolean(versions.length) })}`;
+    return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback ${tab}">${heading}<div id="fs-inspector-content" role="tabpanel" aria-labelledby="fs-tab-${tab}" tabindex="0" class="fs-inspector-panel">${content}</div></aside>`;
   }
 
   function ticket(vm) {
     const item = vm.current;
     if (!item) return `<div class="fs-empty"><h1>This feedback could not be found</h1><p>Return to your requests to pick up a current conversation.</p>${button('nav-inbox', 'My feedback', { primary: true })}</div>`;
     const status = statusFor(item, vm.status);
-    return `<div class="fs-ticket-layout"><article class="fs-ticket-document"><header class="fs-record-heading"><h1>${escape(titleFor(vm, item))}</h1><div class="fs-record-properties">${badge(status)}<span class="fs-property-divider"></span><span class="fs-owner">${avatar(status.owner)}${escape(status.owner)}</span><span class="fs-record-id">${escape(item.id)}</span></div></header>${notice(vm)}${vm.current.ux?.sinceLastVisit ? `<p class="fs-return-summary">${icon('history', 15)}<span><strong>Since your last visit</strong> ${escape(vm.current.ux.sinceLastVisit)}</span></p>` : ''}<section class="fs-task" aria-label="Current task">${task(vm)}</section><footer class="fs-record-footer"><span>${icon('clock', 13)}${escape(displayTime(status.updatedAt) || 'Saved on this device')}</span>${status.nextUpdate ? `<span>Next update · ${escape(displayTime(status.nextUpdate))}</span>` : ''}</footer></article>${details(vm)}</div>`;
+    const p = panelPresentation(vm);
+    const readonly = p.historical || vm.historyVersion || vm.walkHistory?.active;
+    const heading = readonly ? 'Feedback · ' + item.id : titleFor(vm, item);
+    const returned = !readonly && (p.returnSummary || vm.returnSummary || item.ux?.sinceLastVisit);
+    return `<div class="fs-ticket-layout"><article class="fs-ticket-document"><header class="fs-record-heading"><h1>${escape(heading)}</h1><div class="fs-record-properties">${readonly ? '<span class="fs-status">Read-only</span>' : badge(status) + '<span class="fs-property-divider"></span><span class="fs-owner">' + avatar(status.owner) + escape(status.owner) + '</span>'}<span class="fs-record-id">${escape(item.id)}</span></div></header>${notice(vm)}${returned ? `<div class="fs-return-summary">${icon('history', 15)}<span><strong>Since your last visit</strong> ${escape(textOf(returned))}</span>${button('dismiss-return-summary', 'Dismiss', { quiet: true, icon: 'cross' })}</div>` : ''}<section class="fs-task" aria-label="${readonly ? 'Saved task' : 'Current task'}">${task(vm)}</section>${!readonly ? `<footer class="fs-record-footer"><span>${icon('clock', 13)}${escape(displayTime(status.updatedAt) || 'Saved on this device')}</span>${status.nextUpdate ? `<span>${status.overdue ? 'Update overdue' : 'Next update'} · ${escape(displayTime(status.nextUpdate))}</span>` : ''}</footer>` : ''}</article>${details(vm)}</div>`;
   }
 
   function siteKind(vm) {
@@ -371,13 +498,18 @@
     const open = vm.console?.open;
     const status = statusFor(vm.current, vm.status);
     const scenario = vm.scenario || scenarioFor(vm);
+    const currentRecordChoice = Boolean(vm.current && !vm.current.c?.reviewFlow?.scenarioId);
+    const history = vm.walkHistory || {};
+    const replay = Boolean(history.active);
+    const why = textOf(history.why || vm.presentation?.why || status.why);
     if (!open) {
       const onSite = vm.page === 'site';
-      const headline = !onSite && vm.current ? vm.current.id + ' · ' + actorName(status.owner) : 'Walkthrough';
-      const next = onSite ? 'Start with this page' : vm.current ? status.label : '';
+      const headline = replay ? 'Replay · Read-only' : !onSite && vm.current ? vm.current.id + ' · ' + actorName(status.owner) : 'Walkthrough';
+      const next = replay ? history.label || 'Return to the current step' : onSite ? 'Start with this page' : vm.current ? status.label : '';
       return `<button type="button" class="fs-console-launcher" data-wq="open-console" aria-label="Open walkthrough controls" title="Walkthrough">${icon('play', 14)}<span class="fs-launcher-copy"><strong>${escape(headline)}</strong>${next ? `<small>${escape(next)}</small>` : ''}</span>${vm.console?.playing ? '<small>Playing</small>' : ''}</button>`;
     }
-    return `<aside class="fs-console" aria-label="Walkthrough controls"><header><span>${icon('play', 15)}Walkthrough</span>${button('close-console', 'Close', { quiet: true, icon: 'cross' })}</header><div class="fs-console-body"><label class="fs-console-field"><span>Workflow</span><select data-wq="start-scenario" aria-label="Workflow">${array(vm.scenarios).slice(0, 3).map(item => `<option value="${escape(item.id)}"${item.id === scenario?.id ? ' selected' : ''}>${escape(item.title)}</option>`).join('')}</select></label><div class="fs-console-selects"><label class="fs-console-field"><span>View as</span><select data-wq="change-role" aria-label="View as">${['Requester', 'Website team', 'Site owner'].map(actor => `<option${actor === vm.actor ? ' selected' : ''}>${actor}</option>`).join('')}</select></label><label class="fs-console-field"><span>Mode</span><select data-wq="change-mode" aria-label="Mode"><option value="practice"${vm.console?.mode !== 'watch' ? ' selected' : ''}>Practice</option><option value="watch"${vm.console?.mode === 'watch' ? ' selected' : ''}>Watch</option></select></label></div><div class="fs-console-progress"><span>${avatar(status.owner)}${escape(status.owner)}</span><strong>${escape(vm.page === 'site' ? 'Describe what gets in your way.' : status.next || status.label)}</strong></div><p class="fs-console-note">${vm.console?.mode === 'watch' ? 'Scripted roles · simulated decisions' : 'Practice · you make each decision'}</p><details class="fs-console-why" open><summary>Why this step? ${icon('down', 13)}</summary><p>${escape(status.why || 'Follow the current owner and review what changes before handing the request to the next person.')}</p></details><div class="fs-console-playback">${vm.console?.mode === 'watch' ? button('watch-toggle', vm.console.playing ? 'Pause' : 'Play', { primary: true, icon: vm.console.playing ? 'pause' : 'play' }) : button(vm.page === 'site' ? 'open-composer' : 'resume', vm.page === 'site' ? 'Give feedback' : 'Resume task', { primary: true, icon: vm.page === 'site' ? 'plus' : 'next' })}${vm.console?.mode === 'watch' ? button('watch-next', 'Next', { icon: 'next' }) : ''}</div><details class="fs-console-tools"><summary>Simulation tools ${icon('down', 13)}</summary>${button('advance-time', 'Advance time', { quiet: true, icon: 'clock' })}${button('simulate-email', 'Preview email update', { quiet: true, icon: 'send' })}${button('set-next-update', 'Set next update', { quiet: true, icon: 'edit' })}${button('legacy-links', 'Earlier demo paths', { quiet: true, icon: 'folder' })}</details></div></aside>`;
+    const playback = replay ? button('walk-current', 'Return to current step', { primary: true, icon: 'next' }) : vm.console?.mode === 'watch' ? button('watch-toggle', vm.console.playing ? 'Pause' : 'Play', { primary: true, icon: vm.console.playing ? 'pause' : 'play' }) + button('watch-next', 'Next', { icon: 'next' }) : button(vm.page === 'site' ? 'open-composer' : 'resume', vm.page === 'site' ? 'Give feedback' : 'Resume task', { primary: true, icon: vm.page === 'site' ? 'plus' : 'next' });
+    return `<aside class="fs-console" aria-label="Walkthrough controls"><header><span>${icon('play', 15)}Walkthrough</span>${button('close-console', 'Close', { quiet: true, icon: 'cross' })}</header><div class="fs-console-body">${replay ? `<div class="fs-console-replay"><strong>Read-only replay</strong><span>${escape(history.label || 'Earlier step')}${history.total ? ' · ' + (Number(history.index) + 1) + ' of ' + Number(history.total) : ''}</span></div>` : ''}<label class="fs-console-field"><span>Workflow</span><select data-wq="start-scenario" aria-label="Workflow"${replay ? ' disabled' : ''}>${currentRecordChoice ? `<option value="" selected disabled>Current feedback · ${escape(vm.presentation?.title || titleFor(vm, vm.current))}</option>` : ''}${array(vm.scenarios).slice(0, 3).map(item => `<option value="${escape(item.id)}"${!currentRecordChoice && item.id === scenario?.id ? ' selected' : ''}>${escape(item.title)}</option>`).join('')}</select></label><div class="fs-console-selects"><label class="fs-console-field"><span>View as</span><select data-wq="change-role" aria-label="View as"${replay ? ' disabled' : ''}>${['Requester', 'Website team', 'Site owner'].map(actor => `<option${actor === vm.actor ? ' selected' : ''}>${actor}</option>`).join('')}</select></label><label class="fs-console-field"><span>Mode</span><select data-wq="change-mode" aria-label="Mode"${replay ? ' disabled' : ''}><option value="practice"${vm.console?.mode !== 'watch' ? ' selected' : ''}>Practice</option><option value="watch"${vm.console?.mode === 'watch' ? ' selected' : ''}>Watch</option></select></label></div><div class="fs-console-progress"><span>${avatar(status.owner)}${escape(status.owner)}</span><strong>${escape(replay ? history.label || status.label : vm.page === 'site' ? 'Describe what gets in your way.' : status.next || status.label)}</strong></div><p class="fs-console-note">${replay ? 'Earlier steps cannot change the current request.' : vm.console?.mode === 'watch' ? 'Scripted roles · simulated decisions' : 'Practice · you make each decision'}</p><details class="fs-console-why" open><summary>Why this step? ${icon('down', 13)}</summary><p>${escape(why || (vm.page === 'site' ? 'Feedback starts from the page and quote you are working on.' : 'The current owner must complete this handoff before the next person can act.'))}</p></details><div class="fs-console-playback">${button('walk-back', 'Back', { icon: 'back', disabled: !history.canBack })}${playback}</div><div class="fs-console-history-controls">${!replay && history.total > 1 ? `<span>${Number(history.total)} saved steps</span>` : ''}${button('walk-restart', 'Restart walkthrough', { quiet: true, icon: 'replay' })}</div><details class="fs-console-tools"><summary>Simulation tools ${icon('down', 13)}</summary>${button('advance-time', 'Advance time', { quiet: true, icon: 'clock', disabled: replay })}${button('simulate-email', 'Preview email update', { quiet: true, icon: 'send', disabled: replay })}${button('set-next-update', 'Set next update', { quiet: true, icon: 'edit', disabled: replay })}${button('legacy-links', 'Earlier demo paths', { quiet: true, icon: 'folder' })}</details></div></aside>`;
   }
 
   function render(vm) {
