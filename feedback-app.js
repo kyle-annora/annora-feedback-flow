@@ -156,8 +156,8 @@
     // incomplete private edit, scoped to this version, scope cycle and round.
     if(questionsToKeep)r.item.ux.questionDrafts={...r.item.ux.questionDrafts,[priorQuestionKey]:questionsToKeep};
     if(['save-questions','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
-    const restoredQuestions=['draft-questions','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
-    r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    const restoredQuestions=['draft-questions','reopen-clarification','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
+    r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='reopen-clarification'?'Follow-up draft opened from the adjustment. Review and preview it before sending.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
   }
   function contextSnapshot(){
@@ -378,7 +378,7 @@
       case 'result-pdf':return openPDF();
       case 'result-workflow':resultState.tab='workflow';return renderResult();
       case 'result-back':resultState.tab='quote';return renderResult();
-      default:if(['draft-plan','draft-questions','begin-detailed-questions','finish-spec','deliver'].includes(action))return apply(action);return;
+      default:if(['draft-plan','draft-questions','reopen-clarification','begin-detailed-questions','finish-spec','deliver'].includes(action))return apply(action);return;
     }
     savePresentation();render();
   }

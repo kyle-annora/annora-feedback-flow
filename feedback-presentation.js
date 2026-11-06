@@ -149,7 +149,8 @@
       const q=safeView(c).question;if(q)outstanding.push({id:'legacy-question',text:q.text,reason:q.reason||'',status:'awaiting-answer',source:{type:'sent-question',label:'Current saved question',id:null},round:'initial'});
     }
     const relevantRounds=rows(f.questionRounds).filter(r=>r.answered&&(!f.journey||r.scopeCycle===f.journey.scopeCycle)),latest=relevantRounds.at(-1);
-    const answer=latest?.answerText||c.answer||'',answerSource={type:'requester-answer',label:latest?latest.id+' · '+(latest.round==='detailed'?'Detailed answer':'Initial answer'):'Requester’s answer',id:latest?.id||null};
+    const roundLabel=latest?.scopeCycle>1?'Scope revision '+Number(latest.scopeCycle):latest?.round==='detailed'?'Detailed answer':'Initial answer';
+    const answer=latest?.answerText||c.answer||'',answerSource={type:'requester-answer',label:latest?latest.id+' · '+roundLabel:'Requester’s answer',id:latest?.id||null};
     const implications=[];
     const proposed=phase==='answer-review'?f.suggestedScope:null;
     const actualApproach=submitted?snapshot.candidate??snapshot.text??'':f.candidateDraft?.approach||f.confirmedScope?.approach||f.scope?.approach||'';

@@ -69,6 +69,48 @@ test("draft and unsent preview actions produce no customer notification; only th
   assert.equal(S.status(sent.item).owner,"Requester");
 });
 
+test("the team reopens a requested change as private Q2 and delivers V2 without rewriting V1 or inventing a requester correction", () => {
+  let {data,item}=add(S.migrate(null),"refrigeration");const id=item.id;
+  const run=(actor,action,value)=>({data,item}=command(data,id,actor,action,value));
+  run("Website team","draft-questions");run("Website team","preview-questions");run("Website team","send-questions");
+  run("Requester","answer",{bundleId:"Q1",answers:{"equipment-return":"Select equipment again"}});
+  run("Website team","draft-plan");run("Website team","confirm-scope",item.c.reviewFlow.scope);
+  run("Website team","finish-spec");run("Website team","prepare-result");run("Website team","deliver");
+  const v1=clone(item.c.versions[0]),understandingHistory=clone(item.c.reviewFlow.understandingHistory);
+  const reason="Restore the previous equipment if refrigeration is needed again.";
+  run("Requester","adjust",{rev:1,reason,attachments:[{id:"restore-note",kind:"audio",name:"request.webm",mimeType:"audio/webm",size:12}]});
+  const before=JSON.stringify(data),events=clone(item.ux.events),timing=clone(item.ux.timing),adjustments=clone(item.c.adjustments);
+  for(const actor of ["Requester","Site owner"])assert.throws(()=>command(freeze(data),id,actor,"reopen-clarification"),/different role/);
+  assert.equal(JSON.stringify(data),before);
+  run("Website team","reopen-clarification");
+  const f=item.c.reviewFlow;
+  assert.equal(f.phase,"question-draft");assert.equal(item.c.owner,"Website team");assert.equal(f.journey.scopeCycle,2);
+  assert.equal(f.sentBundle,null);assert.equal(f.questionPreview,null);assert.equal(f.result,null);assert.equal(f.candidateDraft,null);
+  assert.equal(item.c.answer,"");assert.deepEqual(f.answers,{});assert.equal(f.questionRounds.length,1);
+  assert.equal(f.questionRounds[0].answers["equipment-return"],"Select equipment again");
+  assert.equal(f.understandingCorrections.length,0,"A team follow-up is not a second requester correction.");
+  assert.deepEqual(f.understandingHistory,understandingHistory);assert.equal(f.sharedUnderstanding.needsRevision,true);
+  assert.deepEqual(item.c.adjustments,adjustments);assert.equal(f.adjustmentEvidence.attachments[0].id,"restore-note");
+  assert.deepEqual(f.reopenedFor,{rev:1,reason,actor:"Website team",scopeCycle:2});
+  assert.equal(item.c.trail.at(-1).actor,"Website team");assert.match(item.c.trail.at(-1).text,/reopened questions.*V1/);
+  assert.deepEqual(item.ux.events,events);assert.deepEqual(item.ux.timing,timing,"Opening a private question draft does not claim a new customer update.");
+  run("Website team","preview-questions");assert.deepEqual(item.ux.events,events);
+  run("Website team","send-questions");
+  assert.equal(item.ux.events.length,events.length+1);assert.equal(item.ux.events.at(-1).bundleId,"Q2");
+  assert.equal(item.ux.events.at(-1).ticketId,id);assert.equal(item.c.reviewFlow.sentBundle.reopenedFor.reason,reason);
+  assert.throws(()=>command(data,id,"Requester","answer",{bundleId:"Q1",answers:{"equipment-return":"Select equipment again"}}),/current sent/);
+  run("Requester","answer",{bundleId:"Q2",answers:{"equipment-return":"Restore the previous equipment selection"}});
+  assert.match(item.c.reviewFlow.suggestedScope.conflict,/recorded/);
+  run("Website team","draft-plan");run("Website team","confirm-scope",item.c.reviewFlow.scope);
+  run("Website team","finish-spec");run("Website team","prepare-result");run("Website team","deliver");
+  const v2=item.c.versions[1];assert.equal(v2.rev,2);
+  assert.deepEqual(item.c.versions[0],v1);assert.equal(v1.reviewFlow.questionRounds.length,1);
+  assert.deepEqual(v2.reviewFlow.questionRounds.map(q=>[q.id,q.scopeCycle,q.answers["equipment-return"]]),[["Q1",1,"Select equipment again"],["Q2",2,"Restore the previous equipment selection"]]);
+  assert.match(v1.candidate,/removed equipment is not restored/);assert.match(v2.candidate,/restore that prior selection/);
+  assert.ok(v2.checks.some(q=>q.label==="Clearing the flag and saving restores the prior equipment selection and its charges."));
+  assert.equal(v2.adjustment,reason);assert.equal(v2.reviewFlow.understandingCorrections.length,0);
+});
+
 test("reading a notification does not answer, accept or authorize; answering returns to the same canonical ticket and invalidates the old question action", () => {
   const sent=sentQuestion(),id=sent.item.id,event=S.updates(sent.data)[0],before=clone(sent.item.c);
   const read=S.markRead(freeze(sent.data),event.id);

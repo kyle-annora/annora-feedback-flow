@@ -101,6 +101,44 @@ test('historical sidebar retains round identities, Other notes and provenance wi
   assert.match(sidebar,/data-wq="current-version" data-value="2"/);
   assert.equal(JSON.stringify(state),before);
 });
+test('sidebar leads with the submitted governing answer and keeps earlier rounds available without nested folds',()=>{
+  const state=vm({historyVersion:2,presentation:{historical:true,viewedRev:2,request:{text:'Saved report'},basis:[{text:'Full frozen plan.',status:'submitted-snapshot',source:{label:'Submitted V2'}}],versions:[],candidate:'Full frozen plan.',checks:[],questionRounds:[
+    {id:'Q1',scopeCycle:1,questions:[{id:'policy',text:'Return policy?'}],answers:{policy:'Select again'}},
+    {id:'Q2',scopeCycle:2,questions:[{id:'policy',text:'Return policy?'}],answers:{policy:'Restore previous selection'}}
+  ],reasoning:{state:'submitted',sourceVersion:2,implications:[{answer:'Restore previous selection',source:{type:'requester-answer',id:'Q2',label:'Q2 · Scope revision 2'},supported:true,behavior:['Restore the prior equipment on save.'],checks:['Saving restores its charge.']}]}}});
+  state.current.c.answer='PRIVATE FUTURE ANSWER';
+  const before=JSON.stringify(state),sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+  const focus=sidebar.match(/<section class="fs-version-focus"[\s\S]*?<\/section>/)[0];
+  for(const text of ['Read-only','Q2 · Scope revision 2','Answer used','Restore previous selection','Impact','Restore the prior equipment on save.','Acceptance check','Saving restores its charge.'])assert.ok(focus.includes(text),text);
+  assert.doesNotMatch(focus,/<details|Select again|Full frozen plan|PRIVATE FUTURE/);
+  assert.ok(sidebar.indexOf('fs-version-focus')<sidebar.indexOf('Full saved plan'));
+  assert.match(sidebar,/<details class="fs-side-fold"><summary><span>Full saved plan/);
+  assert.ok(sidebar.includes('Select again'));assert.equal((sidebar.match(/Used in V2/g)||[]).length,1);
+  assert.equal(JSON.stringify(state),before);
+  state.presentation.reasoning.sourceVersion=3;
+  assert.doesNotMatch(View.render(state),/fs-version-focus|Used in V2/);
+});
+test('unmapped saved answers remain explicit and cannot claim an adopted relationship or invent a missing check',()=>{
+  const state=vm({historyVersion:1,presentation:{historical:true,viewedRev:1,request:{},basis:[],versions:[],reasoning:{state:'submitted',sourceVersion:1,implications:[{answer:'An older answer',source:{type:'requester-answer',id:'Q1'},supported:false,note:'Unmapped',behavior:['An old unverified relation'],checks:[]}]}}});
+  const sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+  assert.match(sidebar,/Recorded answer|Relationship needs review/);assert.doesNotMatch(sidebar,/Answer used|An old unverified relation|Used in V1/);
+  state.presentation.reasoning.implications[0]={answer:'Supported answer',source:{type:'requester-answer',id:'Q1'},supported:true,behavior:['Exact saved behavior'],checks:[]};
+  assert.match(View.render(state),/No matching check was saved with this version/);
+});
+test('team follow-up action belongs to an adjusted candidate and preserves the adjustment context in its private question editor',()=>{
+  const state=vm({actor:'Website team',status:{owner:'Website team',label:'Preparing V2'}});
+  Object.assign(state.current.c,{rev:2,adjustment:'Please restore the old selection.',adjustments:[{rev:1,text:'Please restore the old selection.'}],versions:[{rev:1}],reviewFlow:{phase:'candidate',journey:{enabled:true,scopeCycle:1},sharedUnderstanding:{text:'Earlier shared scope'},candidateDraft:{approach:'Draft',checks:'Check'}}});
+  state.presentation={request:{text:'Report'},basis:[],versions:[]};
+  assert.match(View.render(state),/data-wq="reopen-clarification"[^>]*>[\s\S]*?Ask a follow-up/);
+  state.actor='Requester';assert.doesNotMatch(View.render(state),/data-wq="reopen-clarification"/);
+  state.actor='Website team';state.current.c.reviewFlow.phase='question-draft';state.current.c.reviewFlow.journey.scopeCycle=2;
+  state.current.c.reviewFlow.reopenedFor={rev:1,reason:state.current.c.adjustment,scopeCycle:2};
+  const html=View.render(state);assert.match(html,/Follow-up on changes requested to V1/);assert.match(html,/Please restore the old selection/);assert.doesNotMatch(html,/data-wq="send-questions"/);
+  state.actor='Requester';state.current.c.reviewFlow.sharedUnderstanding.needsRevision=true;
+  const waiting=View.render(state);assert.match(waiting,/reviewing your requested change/);assert.doesNotMatch(waiting,/Your correction|Follow-up on changes requested/);
+  state.actor='Website team';state.current.c.reviewFlow.phase='candidate';state.current.c.adjustments=[];
+  assert.doesNotMatch(View.render(state),/data-wq="reopen-clarification"/);
+});
 test('activity keeps distinct events but removes an exact repeated detail; identical check label and value render once', () => {
   const p={historical:true,viewedRev:1,request:{text:'Saved'},basis:[],versions:[],candidate:'Saved candidate',understanding:{text:'Saved candidate'},checks:[{label:'Saved check.',value:'Saved check.'},{label:'Different label',value:'Different value'}],activity:[
     {actor:'Requester',text:'Accepted version.',detail:'Accepted version.',at:'2026-11-04T13:00:00Z',rev:1},

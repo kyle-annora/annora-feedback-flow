@@ -417,6 +417,23 @@ test("asynchronous understanding corrections remain available until the candidat
   assert.equal(act(sent,"adjust",{rev:1,reason:"The quote must remain available for editing."}).reviewFlow.phase,"candidate");
 });
 
+test("team follow-up is available only on an adjusted candidate in the reviewed journey", () => {
+  assert.throws(()=>act(ready(),"reopen-clarification"),/reviewed journey/);
+  const initial = journeyPDF(), shared = sharedJourney(initial), candidate = act(shared,"finish-spec");
+  for (const c of [initial,shared]) assert.throws(()=>act(frozen(c),"reopen-clarification"),/unavailable/);
+  assert.throws(()=>act(frozen(candidate),"reopen-clarification"),/requested change/);
+  const sent = act(act(candidate,"prepare-result"),"deliver");
+  assert.throws(()=>act(frozen(sent),"reopen-clarification"),/unavailable/);
+  const adjusted = act(sent,"adjust",{rev:1,reason:"Confirm where I should go after opening the PDF."});
+  const draft = act(frozen(adjusted),"reopen-clarification");
+  assert.equal(draft.reviewFlow.phase,"question-draft");
+  assert.equal(draft.reviewFlow.journey.scopeCycle,2);
+  assert.throws(()=>act(frozen(draft),"reopen-clarification"),/unavailable/);
+  const back = act(draft,"close-questions");
+  assert.throws(()=>act(frozen(back),"reopen-clarification"),/unavailable/);
+  assert.equal(act(back,"draft-questions").reviewFlow.journey.scopeCycle,2,"Returning to the same private draft must not open another scope cycle.");
+});
+
 test("initial clarification and detailed specification questions are distinct immutable batches with explicit asynchronous handoffs", () => {
   let c = journeyPDF();
   assert.throws(()=>act(c,"begin-detailed-questions"),/unavailable/);

@@ -129,6 +129,27 @@ function submittedPolicy(policy,{withoutPolicyCheck=false}={}){
   c=E.review(c,'prepare-result');return E.review(c,'deliver');
 }
 
+test('team follow-up labels the revised scope and keeps each submitted answer-to-check relation frozen',()=>{
+  let c=submittedPolicy('Select equipment again');
+  const v1=clone(c.versions[0]),original=P.describe(customer(c),{rev:1});
+  c=E.review(c,'adjust',{rev:1,reason:'Restore our previous selection when refrigeration is needed again.'});
+  c=E.review(c,'reopen-clarification');c=E.review(c,'send-questions');
+  c=E.review(c,'answer',{answers:{'equipment-return':'Restore the previous equipment selection'}});
+  const answerReview=P.describe(customer(c),{actor:'Website team'});
+  assert.equal(answerReview.reasoning.implications[0].source.label,'Q2 · Scope revision 2');
+  c=E.review(c,'draft-plan');c=E.review(c,'confirm-scope',c.reviewFlow.scope);c=E.review(c,'finish-spec');
+  c=E.review(c,'prepare-result');c=E.review(c,'deliver');
+  const before=JSON.stringify(c),current=P.describe(customer(c)),history=P.describe(customer(c),{rev:1});
+  assert.equal(current.reasoning.implications[0].source.label,'Q2 · Scope revision 2');
+  assert.equal(current.reasoning.implications[0].answer,'Restore the previous equipment selection');
+  assert.match(current.reasoning.implications[0].checks[0],/restores the prior equipment selection and its charges/);
+  assert.equal(current.questionRounds.length,2);
+  assert.equal(history.questionRounds.length,1);
+  assert.equal(history.reasoning.implications[0].source.label,'Q1 · Initial answer');
+  for(const key of ['basis','answers','questionRounds','candidate','checks','reasoning'])assert.deepEqual(history[key],original[key]);
+  assert.deepEqual(c.versions[0],v1);assert.equal(JSON.stringify(c),before);
+});
+
 test('an older saved candidate outside the current catalog keeps its own content and cannot acquire a current policy through answer mapping',()=>{
   let c=submittedPolicy('restore');
   // A saved, older-format delivery may predate or differ from the finite catalog

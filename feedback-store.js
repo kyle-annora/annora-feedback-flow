@@ -80,7 +80,7 @@
   }
   const permitted={
     Requester:['submit','answer','correct-understanding','adjust','accept'],
-    'Website team':['draft-plan','edit-scope','draft-questions','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
+    'Website team':['draft-plan','edit-scope','draft-questions','reopen-clarification','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
     'Site owner':['authorize','request-release-changes'],
   };
   function notification(item,action,at){
@@ -150,7 +150,7 @@
     item.ux=item.ux||{events:[],drafts:{},attachments:[]};
     const owner=status(item).owner;
     const previousTiming=item.ux.timing||{};
-    const privateEdit=['draft-plan','edit-scope','draft-questions','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
+    const privateEdit=['draft-plan','edit-scope','draft-questions','reopen-clarification','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
     // A completed task consumes its return prompt; retaining it would point at the previous owner/action.
     if(!privateEdit)delete item.ux.sinceLastVisit;
     item.ux.timing={...previousTiming,updatedAt:privateEdit?previousTiming.updatedAt:at,nextUpdateAt:owner==='Website team'?(previousTiming.nextUpdateAt||new Date(Date.parse(at)+2*3600000).toISOString()):null};

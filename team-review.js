@@ -315,6 +315,31 @@
         if (hasJourney(f)) f.journey.activeRound = "initial";
         c = stage(c,"processing","question-draft");
         return done("Drafting questions privately. Customer tasks have not changed.");
+      case "reopen-clarification": {
+        if (!hasJourney(f)) fail("Enable the reviewed journey before reopening clarification.");
+        requirePhase(c,["candidate"],action);
+        const prior = c.versions.at(-1), adjustment = c.adjustments.at(-1);
+        if (!prior || prior.rev !== c.rev - 1 || !c.adjustment?.trim() || adjustment?.rev !== prior.rev || adjustment.text !== c.adjustment || !f.sharedUnderstanding) fail("Reopen clarification only for the requested change to the previous submitted version.");
+        resetPlan(f);
+        f.sharedUnderstanding = {...f.sharedUnderstanding,needsRevision:true};
+        f.journey.scopeCycle += 1; f.journey.activeRound = "initial";
+        f.reopenedFor = {rev:prior.rev,reason:c.adjustment,actor:"Website team",scopeCycle:f.journey.scopeCycle};
+        f.scope = {approach:f.sharedUnderstanding.approach,checks:f.sharedUnderstanding.checks}; f.confirmedScope = null;
+        f.questionDraft = clone(f.initialQuestionDraft); f.questionPreview = null; f.sentBundle = null; f.suggestedScope = null;
+        if(f.scenarioId && Scenarios.matchesFeedback(f.scenarioId,c.text)) {
+          const presets = Scenarios.get(f.scenarioId).initialQuestionPresets || [];
+          f.questionDraft = [...f.questionDraft,...clone(presets).filter(preset=>!f.questionDraft.some(q=>q.id === preset.id))];
+          f.initialQuestionPresetCycle = f.journey.scopeCycle;
+        }
+        // Previous answers remain in their immutable rounds and deliveries. They
+        // are not an answer to this new, still-private clarification cycle.
+        f.answers = {}; f.answerOptionIds = {}; f.answerNotes = {};
+        f.initialAnswerText = ""; f.detailedAnswerText = ""; c.answer = ""; c.answerSimulated = false;
+        f.candidateDraft = null; f.result = null; f.teamCheck = null; f.scopeDecision = null;
+        c.candidateOverride = null; c.accepted = null; c.authorization = null; c.receipt = null;
+        c = stage(c,"processing","question-draft");
+        return done("Website team reopened questions for the requested change to V" + prior.rev + ": " + c.adjustment + " No question has been sent.");
+      }
       case "begin-detailed-questions": {
         if (!hasJourney(f)) fail("Enable the reviewed journey before starting a distinct detailed question round.");
         requirePhase(c,["spec-review"],action);
@@ -357,6 +382,7 @@
           id = "Q" + nextId;
         }
         f.sentBundle = {id,rev:c.rev,questions:clone(selected),scope:clone(f.scope),simulated:true,
+          ...(f.reopenedFor && f.reopenedFor.scopeCycle === f.journey?.scopeCycle ? {reopenedFor:clone(f.reopenedFor)} : {}),
           ...(hasJourney(f)?{round:f.journey.activeRound,scopeCycle:f.journey.scopeCycle}:{})};
         if (hasJourney(f)) {
           f.questionRounds = [...f.questionRounds,{...clone(f.sentBundle),answered:false,answers:null,answerText:""}];

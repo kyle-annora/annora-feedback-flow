@@ -2082,6 +2082,21 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 #feedback-root .fs-basis-reference { display: block; margin-top: 3px; color: #737373; font-size: 10px; overflow-wrap: anywhere; }
 #feedback-root .fs-basis-source-text { margin: 8px 0 0; border-left: 2px solid #ddd; padding-left: 10px; color: #737373; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 #feedback-root .fs-panel-note { margin: 9px 0 12px; color: #737373; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+#feedback-root .fs-version-focus { padding: 20px 0; border-top: 1px solid var(--fs-line); }
+#feedback-root .fs-version-focus header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 10px; }
+#feedback-root .fs-version-focus h3 { font: 600 13px/1.5 var(--fs-sans); color: #262626; margin: 0; }
+#feedback-root .fs-version-focus header small { font: 400 10px/1.5 var(--fs-sans); color: #737373; }
+#feedback-root .fs-focus-source { margin: 7px 0 16px; font: 400 11px/1.6 var(--fs-sans); color: #595959; }
+#feedback-root .fs-version-focus dl { display: grid; gap: 16px; margin: 16px 0 0; }
+#feedback-root .fs-version-focus dt { font: 500 10px/1.5 var(--fs-sans); color: #737373; margin-bottom: 5px; }
+#feedback-root .fs-version-focus dd { margin: 0; font: 400 12px/1.65 var(--fs-sans); color: #454545; overflow-wrap: anywhere; }
+#feedback-root .fs-version-focus .fs-focus-answer { font-weight: 550; color: #262626; }
+#feedback-root .fs-version-focus .fs-prose-list { list-style: none; padding: 0; margin: 0; font: inherit; color: inherit; }
+#feedback-root .fs-version-focus .fs-prose-list li { margin: 0; padding: 0; }
+#feedback-root .fs-version-focus .fs-prose-list li + li { margin-top: 7px; }
+#feedback-root .fs-question-history .fs-round-used { display: inline-block; margin: 5px 0; padding: 2px 6px; border-radius: 4px; background: #f0f0f0; color: #454545; font-size: 10px; }
+#feedback-root .fs-followup-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: -8px 0 24px; }
+#feedback-root .fs-followup-choice p { flex: 1 1 240px; margin: 0; color: #737373; font: 400 12px/1.6 var(--fs-sans); }
 #feedback-root .fs-fact-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 9px; margin-top: 5px; color: #737373; font-size: 10px; }
 #feedback-root .fs-fact-meta > span { text-transform: none; }
 #feedback-root .fs-inspector-empty { color: #737373; font-size: 12px; line-height: 1.65; padding: 11px 0 2px; }
@@ -4136,6 +4151,31 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
         if (hasJourney(f)) f.journey.activeRound = "initial";
         c = stage(c,"processing","question-draft");
         return done("Drafting questions privately. Customer tasks have not changed.");
+      case "reopen-clarification": {
+        if (!hasJourney(f)) fail("Enable the reviewed journey before reopening clarification.");
+        requirePhase(c,["candidate"],action);
+        const prior = c.versions.at(-1), adjustment = c.adjustments.at(-1);
+        if (!prior || prior.rev !== c.rev - 1 || !c.adjustment?.trim() || adjustment?.rev !== prior.rev || adjustment.text !== c.adjustment || !f.sharedUnderstanding) fail("Reopen clarification only for the requested change to the previous submitted version.");
+        resetPlan(f);
+        f.sharedUnderstanding = {...f.sharedUnderstanding,needsRevision:true};
+        f.journey.scopeCycle += 1; f.journey.activeRound = "initial";
+        f.reopenedFor = {rev:prior.rev,reason:c.adjustment,actor:"Website team",scopeCycle:f.journey.scopeCycle};
+        f.scope = {approach:f.sharedUnderstanding.approach,checks:f.sharedUnderstanding.checks}; f.confirmedScope = null;
+        f.questionDraft = clone(f.initialQuestionDraft); f.questionPreview = null; f.sentBundle = null; f.suggestedScope = null;
+        if(f.scenarioId && Scenarios.matchesFeedback(f.scenarioId,c.text)) {
+          const presets = Scenarios.get(f.scenarioId).initialQuestionPresets || [];
+          f.questionDraft = [...f.questionDraft,...clone(presets).filter(preset=>!f.questionDraft.some(q=>q.id === preset.id))];
+          f.initialQuestionPresetCycle = f.journey.scopeCycle;
+        }
+        // Previous answers remain in their immutable rounds and deliveries. They
+        // are not an answer to this new, still-private clarification cycle.
+        f.answers = {}; f.answerOptionIds = {}; f.answerNotes = {};
+        f.initialAnswerText = ""; f.detailedAnswerText = ""; c.answer = ""; c.answerSimulated = false;
+        f.candidateDraft = null; f.result = null; f.teamCheck = null; f.scopeDecision = null;
+        c.candidateOverride = null; c.accepted = null; c.authorization = null; c.receipt = null;
+        c = stage(c,"processing","question-draft");
+        return done("Website team reopened questions for the requested change to V" + prior.rev + ": " + c.adjustment + " No question has been sent.");
+      }
       case "begin-detailed-questions": {
         if (!hasJourney(f)) fail("Enable the reviewed journey before starting a distinct detailed question round.");
         requirePhase(c,["spec-review"],action);
@@ -4178,6 +4218,7 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
           id = "Q" + nextId;
         }
         f.sentBundle = {id,rev:c.rev,questions:clone(selected),scope:clone(f.scope),simulated:true,
+          ...(f.reopenedFor && f.reopenedFor.scopeCycle === f.journey?.scopeCycle ? {reopenedFor:clone(f.reopenedFor)} : {}),
           ...(hasJourney(f)?{round:f.journey.activeRound,scopeCycle:f.journey.scopeCycle}:{})};
         if (hasJourney(f)) {
           f.questionRounds = [...f.questionRounds,{...clone(f.sentBundle),answered:false,answers:null,answerText:""}];
@@ -5998,7 +6039,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
       const q=safeView(c).question;if(q)outstanding.push({id:'legacy-question',text:q.text,reason:q.reason||'',status:'awaiting-answer',source:{type:'sent-question',label:'Current saved question',id:null},round:'initial'});
     }
     const relevantRounds=rows(f.questionRounds).filter(r=>r.answered&&(!f.journey||r.scopeCycle===f.journey.scopeCycle)),latest=relevantRounds.at(-1);
-    const answer=latest?.answerText||c.answer||'',answerSource={type:'requester-answer',label:latest?latest.id+' · '+(latest.round==='detailed'?'Detailed answer':'Initial answer'):'Requester’s answer',id:latest?.id||null};
+    const roundLabel=latest?.scopeCycle>1?'Scope revision '+Number(latest.scopeCycle):latest?.round==='detailed'?'Detailed answer':'Initial answer';
+    const answer=latest?.answerText||c.answer||'',answerSource={type:'requester-answer',label:latest?latest.id+' · '+roundLabel:'Requester’s answer',id:latest?.id||null};
     const implications=[];
     const proposed=phase==='answer-review'?f.suggestedScope:null;
     const actualApproach=submitted?snapshot.candidate??snapshot.text??'':f.candidateDraft?.approach||f.confirmedScope?.approach||f.scope?.approach||'';
@@ -6179,7 +6221,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   const permitted={
     Requester:['submit','answer','correct-understanding','adjust','accept'],
-    'Website team':['draft-plan','edit-scope','draft-questions','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
+    'Website team':['draft-plan','edit-scope','draft-questions','reopen-clarification','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
     'Site owner':['authorize','request-release-changes'],
   };
   function notification(item,action,at){
@@ -6249,7 +6291,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     item.ux=item.ux||{events:[],drafts:{},attachments:[]};
     const owner=status(item).owner;
     const previousTiming=item.ux.timing||{};
-    const privateEdit=['draft-plan','edit-scope','draft-questions','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
+    const privateEdit=['draft-plan','edit-scope','draft-questions','reopen-clarification','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
     // A completed task consumes its return prompt; retaining it would point at the previous owner/action.
     if(!privateEdit)delete item.ux.sinceLastVisit;
     item.ux.timing={...previousTiming,updatedAt:privateEdit?previousTiming.updatedAt:at,nextUpdateAt:owner==='Website team'?(previousTiming.nextUpdateAt||new Date(Date.parse(at)+2*3600000).toISOString()):null};
@@ -6923,7 +6965,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const questions = Array.isArray(vm.formDraft?.questions) ? vm.formDraft.questions : array(flow.questionDraft);
     const customerQuestions = questions.filter(question => question.disposition === 'ask');
     const returnLabel = flow.evidenceFirst && !flow.planPrepared ? 'Back to evidence' : 'Back to scope';
-    return `${questionRound(flow)}<h2>Ask only what the requester can answer</h2><p class="fs-task-intro">Review the wording, answer format, and reason for each question. Keep known facts and technical decisions with the team.</p>
+    const followup = flow.reopenedFor?.scopeCycle === flow.journey?.scopeCycle ? flow.reopenedFor : null;
+    return `${questionRound(flow)}<h2>Ask only what the requester can answer</h2><p class="fs-task-intro">Review the wording, answer format, and reason for each question. Keep known facts and technical decisions with the team.</p>${followup ? `<blockquote class="fs-request-quote"><span>Follow-up on changes requested to V${escape(followup.rev)}</span><p>${escape(followup.reason)}</p></blockquote>` : ''}
       <div class="fs-question-editors">${questions.map((question, index) => `<details class="fs-question-editor" data-question-id="${escape(question.id)}"${question.disposition === 'ask' ? ' open' : ''}><summary><span class="fs-question-number">${index + 1}</span><span>${escape(question.text)}</span><small>${escape({ ask: 'Ask requester', records: 'From records', team: 'Team decision', omit: 'Omitted' }[question.disposition] || 'Draft')}</small>${icon('down', 14)}</summary><div class="fs-question-fields"><label class="fs-field"><span>Question</span><textarea data-field="text" rows="2">${escape(question.text)}</textarea></label><div class="fs-field-pair"><label class="fs-field"><span>Answer type</span><select data-field="type">${[['single', 'Single choice'], ['multi', 'Multiple choice'], ['yes_no', 'Yes / No'], ['text', 'Written answer']].map(([id, label]) => `<option value="${id}"${question.type === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label><label class="fs-field"><span>Resolve with</span><select data-field="disposition">${[['ask', 'Ask requester'], ['records', 'Existing records'], ['team', 'Website team'], ['omit', 'Omit this question']].map(([id, label]) => `<option value="${id}"${question.disposition === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label></div><label class="fs-field"><span>Options</span><textarea data-field="options" rows="3">${escape(array(question.options).map(option => typeof option === 'string' ? option : option.label || option.text).join('\n'))}</textarea><small>One option per line, for choice questions.</small></label>${selectionRules(question)}<label class="fs-field"><span>Why this answer is needed</span><textarea data-field="reason" rows="2">${escape(question.reason)}</textarea></label><label class="fs-checkbox"><input type="checkbox" data-field="required"${question.required ? ' checked' : ''}>Answer required</label></div></details>`).join('')}</div>
       ${!customerQuestions.length ? '<p class="fs-soft-note">No customer questions are selected. Keep recorded facts and team decisions internal, then return to the review to continue.</p>' : ''}
       ${flow.questionPreview ? `<section class="fs-question-preview"><div class="fs-section-heading"><h3>What the requester will see</h3><span>Preview · not sent</span></div>${answerFields(flow.questionPreview.questions, {}, true)}</section>` : ''}
@@ -6958,7 +7001,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return `<div class="fs-waiting"><span class="fs-waiting-mark">${icon(freshAnswer ? 'checks' : 'clock', 22)}</span><h2>${freshAnswer ? 'Your answer is with the team' : flow.phase === 'awaiting-answer' ? 'Waiting for the customer’s answer' : status.owner === 'Site owner' ? 'Your accepted version is awaiting release approval' : status.owner === 'Requester' ? 'The requester is reviewing this step' : status.owner === 'Complete' ? 'This request is complete' : 'The website team has your request'}</h2><p class="fs-task-intro">${escape(status.next || (freshAnswer ? 'The team will review how your answer changes the plan and acceptance checks.' : 'You can keep working. We’ll show the next question or result in Updates.'))}</p>
       ${preparationNote}${delayNotice(status)}
       ${freshAnswer && (flow.detailedAnswerText || caseRecord.answer) ? `<blockquote class="fs-request-quote"><span>Your answer</span><p>${escape(flow.sentBundle?.round === 'detailed' ? flow.detailedAnswerText : caseRecord.answer)}</p></blockquote>` : ''}
-      ${summary ? `<div class="fs-shared-summary"><h3>${freshAnswer ? 'Current confirmed understanding' : 'Our understanding'}</h3><p>${escape(summary.text)}</p>${freshAnswer ? '<span class="fs-footnote">Your new answer is under review. The team will confirm the updated plan before preparing the result.</span>' : ''}${summary.needsRevision ? '<span class="fs-footnote">Your correction is awaiting team review.</span>' : vm.actor === 'Requester' && ['spec-review', 'candidate', 'checking', 'ready'].includes(flow.phase) ? button('correct-understanding', 'Correct our understanding', { quiet: true, icon: 'edit' }) : ''}</div>` : ''}
+      ${summary ? `<div class="fs-shared-summary"><h3>${freshAnswer ? 'Current confirmed understanding' : 'Our understanding'}</h3><p>${escape(summary.text)}</p>${freshAnswer ? '<span class="fs-footnote">Your new answer is under review. The team will confirm the updated plan before preparing the result.</span>' : ''}${summary.needsRevision ? `<span class="fs-footnote">${flow.reopenedFor?.scopeCycle === flow.journey?.scopeCycle ? 'The team is reviewing your requested change before updating this plan.' : 'Your correction is awaiting team review.'}</span>` : vm.actor === 'Requester' && ['spec-review', 'candidate', 'checking', 'ready'].includes(flow.phase) ? button('correct-understanding', 'Correct our understanding', { quiet: true, icon: 'edit' }) : ''}</div>` : ''}
       <dl class="fs-waiting-details"><div><dt>With</dt><dd>${avatar(status.owner)}${escape(status.owner)}</dd></div><div><dt>Last update</dt><dd>${escape(displayTime(status.updatedAt) || 'Request received')}</dd></div><div><dt>Next update</dt><dd>${escape(displayTime(status.nextUpdate) || 'The team will set an update after reviewing the request.')}</dd></div></dl>
       ${['review', 'accepted', 'authorized', 'release-failed'].includes(flow.phase) ? currentResult(vm, caseRecord) : ''}
       ${actions(button('keep-working', 'Keep working', { icon: 'back' }) + button('nav-updates', 'View updates', { quiet: true, icon: 'bell' }))}</div>`;
@@ -7062,8 +7105,10 @@ if (typeof module==="object" && module.exports) module.exports = api;
       const variants = array(vm.scenario?.variants);
       const authored = vm.scenario?.id && root.FlowScenarios?.preview(vm.scenario.id, { approach: fieldValue(vm, 'approach', draft.approach), checks: fieldValue(vm, 'checks', draft.checks) });
       const selectedVariant = vm.preview?.variantId || authored?.variantId || '';
+      const adjustment = array(caseRecord.adjustments).at(-1);
+      const canFollowUp = phase === 'candidate' && flow.journey?.enabled && flow.sharedUnderstanding && caseRecord.adjustment && array(caseRecord.versions).at(-1)?.rev === caseRecord.rev - 1 && adjustment?.rev === caseRecord.rev - 1 && adjustment?.text === caseRecord.adjustment;
       return `<h2>${phase === 'ready' ? 'Version ' + caseRecord.rev + ' is ready to review' : 'Prepare version ' + caseRecord.rev}</h2><p class="fs-task-intro">${phase === 'ready' ? 'Open the result, check the behavior, and send this exact version to the requester.' : 'Write the intended behavior and how you’ll check it. Then prepare a result the requester can try.'}</p>${caseRecord.adjustment ? `<blockquote class="fs-request-quote"><span>Changes requested to version ${caseRecord.rev - 1}</span><p>${escape(caseRecord.adjustment)}</p></blockquote>` : ''}
-        ${phase !== 'ready' ? `${variants.length > 1 ? `<label class="fs-field fs-variant"><span>Supported result</span><select data-wq="select-variant" aria-label="Supported result">${!selectedVariant ? '<option value="" disabled selected>Edited behavior · choose a supported result</option>' : ''}${variants.map(variant => `<option value="${escape(variant.id)}"${selectedVariant === variant.id ? ' selected' : ''}>${escape(variant.title)}</option>`).join('')}</select><small>Choosing another result updates its behavior and checks.</small></label>` : ''}${textField('approach', 'Proposed behavior', fieldValue(vm, 'approach', draft.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', draft.checks))}${actions(button('edit-candidate', 'Save draft') + button('prepare-result', 'Prepare simulated result', { primary: true, arrow: true }))}` : currentResult(vm, caseRecord) + actions(button('edit-candidate', 'Edit candidate', { quiet: true, icon: 'edit' }) + button('deliver', 'Send version ' + caseRecord.rev + ' for review', { primary: true, arrow: true }))}`;
+        ${canFollowUp ? `<div class="fs-followup-choice">${button('reopen-clarification', 'Ask a follow-up', { quiet: true, icon: 'ask' })}<p>Need a customer decision? Review and preview a question before sending it.</p></div>` : ''}${phase !== 'ready' ? `${variants.length > 1 ? `<label class="fs-field fs-variant"><span>Supported result</span><select data-wq="select-variant" aria-label="Supported result">${!selectedVariant ? '<option value="" disabled selected>Edited behavior · choose a supported result</option>' : ''}${variants.map(variant => `<option value="${escape(variant.id)}"${selectedVariant === variant.id ? ' selected' : ''}>${escape(variant.title)}</option>`).join('')}</select><small>Choosing another result updates its behavior and checks.</small></label>` : ''}${textField('approach', 'Proposed behavior', fieldValue(vm, 'approach', draft.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', draft.checks))}${actions(button('edit-candidate', 'Save draft') + button('prepare-result', 'Prepare simulated result', { primary: true, arrow: true }))}` : currentResult(vm, caseRecord) + actions(button('edit-candidate', 'Edit candidate', { quiet: true, icon: 'edit' }) + button('deliver', 'Send version ' + caseRecord.rev + ' for review', { primary: true, arrow: true }))}`;
     }
     if (phase === 'review') return `<h2>Does version ${Number(caseRecord.rev)} resolve your feedback?</h2><p class="fs-task-intro">Open the result and try the behavior you asked for. Tell the team if anything still needs to change.</p>${currentResult(vm, caseRecord)}${actions(button('adjust', 'Request changes') + button('accept', 'Accept version ' + caseRecord.rev, { primary: true, icon: 'check' }))}<p class="fs-footnote">Release authorization follows acceptance.</p>`;
     if (phase === 'accepted') return `<h2>Approve version ${Number(caseRecord.rev)} for release</h2><p class="fs-task-intro">The requester accepted this exact version. Review the destination and authorize its simulated release.</p><div class="fs-destination"><span>Release destination</span><strong>${escape(flow.target || 'WinQuote')}</strong></div>${currentResult(vm, caseRecord)}${actions(button('request-release-changes', 'Request a change') + button('authorize', 'Approve simulated release', { primary: true, icon: 'verify' }))}`;
@@ -7170,6 +7215,29 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return panelFold(p.historical ? 'Version ' + p.viewedRev + ' basis' : 'Current basis', undefined, basisContents(p), { hint: p.historical ? 'Read-only' : '' });
   }
 
+  // The summary is a view of a submitted snapshot, never the latest live answer.
+  function versionDecision(p) {
+    const reasoning = p.reasoning;
+    if (reasoning?.state !== 'submitted' || !p.viewedRev || Number(reasoning.sourceVersion) !== Number(p.viewedRev)) return null;
+    const links = array(reasoning.implications).filter(impact => impact.answer);
+    const answer = links.find(impact => impact.source?.type !== 'revision-request');
+    const change = links.find(impact => impact.source?.type === 'revision-request' && impact.supported && array(impact.behavior).length);
+    const impact = answer && answer.supported !== false && !answer.note ? answer : change || answer;
+    if (!impact) return null;
+    const linked = impact.supported !== false && !impact.note && array(impact.behavior).length > 0;
+    // Revision rows describe saved changed lines; their explanatory note is not a mismatch.
+    const changeLinked = impact.source?.type === 'revision-request' && impact.supported === true;
+    return { impact, linked: linked || changeLinked, rev: p.viewedRev, questionId: linked && impact.source?.type !== 'revision-request' ? impact.source?.id : null };
+  }
+
+  function versionFocus(p) {
+    const decision = versionDecision(p);
+    if (!decision) return '';
+    const { impact, linked, rev } = decision;
+    const requestedChange = impact.source?.type === 'revision-request';
+    return `<section class="fs-version-focus" aria-label="Version ${escape(rev)} decision basis"><header><h3>Version ${escape(rev)} basis</h3><small>${p.historical ? 'Read-only' : 'Saved at submission'}</small></header>${impact.source?.label ? `<p class="fs-focus-source">${escape(impact.source.label)}</p>` : ''}<dl><div><dt>${requestedChange ? 'Requested change' : linked ? 'Answer used' : 'Recorded answer'}</dt><dd class="fs-focus-answer">${escape(textOf(impact.answer))}</dd></div>${linked ? `<div><dt>Impact</dt><dd>${proseList(impact.behavior)}</dd></div><div><dt>Acceptance ${array(impact.checks).length === 1 ? 'check' : 'checks'}</dt><dd>${array(impact.checks).length ? proseList(impact.checks) : '<p>No matching check was saved with this version.</p>'}</dd></div>` : '<div><dt>Relationship needs review</dt><dd>The saved plan is available below. Its effect cannot be attributed to this answer automatically.</dd></div>'}</dl></section>`;
+  }
+
   function activityRows(entries) {
     const sorted = array(entries).slice().sort((a, b) => orderTime(b.at || b.createdAt) - orderTime(a.at || a.createdAt));
     return `<section class="fs-activity" aria-label="Activity history">${sorted.length ? `<ol>${sorted.map(event => {
@@ -7180,6 +7248,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
 
   function questionHistory(p) {
+    const decision = versionDecision(p);
     const groups = new Map();
     array(p.questionRounds).forEach(round => groups.set(round.id || round.bundleId, { ...round, entries: [] }));
     array(p.answers).forEach(answer => {
@@ -7196,7 +7265,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return panelFold('Question rounds', rows.length, rows.map((round, index) => {
       const answered = round.entries.filter(entry => entry.answer !== null && entry.answer !== undefined && entry.answer !== '').length;
       const label = 'Question round ' + (index + 1);
-      return `<section class="fs-question-history" aria-label="${label}"><header><h4>Round ${index + 1}</h4><span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}</header>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</section>`;
+      return `<section class="fs-question-history" aria-label="${label}"><header><h4>Round ${index + 1}</h4>${decision?.questionId === round.id ? `<small class="fs-round-used">Used in V${escape(decision.rev)}</small>` : ''}<span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}</header>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</section>`;
     }).join(''));
   }
 
@@ -7227,7 +7296,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const reviewState = phase === 'awaiting-answer' ? [requester ? 'Awaiting your answer' : 'Awaiting the customer’s answer', shared ? 'The team will review the answer and revise the shared plan before preparing the result.' : 'The team will use the answer to prepare the plan and review checks.'] : phase === 'question-draft' ? ['Questions under review', requester ? 'The team is reviewing the questions. Nothing has been sent yet.' : 'Review and preview these private questions before sending them.'] : phase === 'answer-review' ? [c.reviewFlow.planPrepared ? 'Updated plan in review' : 'Answer received', c.reviewFlow.planPrepared ? 'The team is checking the updated draft before sharing it.' : 'The team is reviewing how the answer changes the plan and checks.'] : shared ? ['Reviewing the shared plan', 'The shared plan remains on record while the team reviews the new information.'] : ['Evidence for this request', 'The team is reviewing these records before drafting a plan.'];
     const versions = array(p.versions).slice().sort((a, b) => Number(b.rev) - Number(a.rev));
     const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs" role="tablist" aria-label="Feedback context">${['details', 'activity'].map(name => `<button type="button" role="tab" id="fs-tab-${name}" data-wq="context-tab" data-value="${name}" aria-selected="${tab === name}" aria-controls="fs-inspector-content" tabindex="${tab === name ? '0' : '-1'}">${name === 'details' ? 'Details' : 'Activity'}</button>`).join('')}</div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
-    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : basisRows(p);
+    const focus = versionFocus(p);
+    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + panelFold('Full saved plan', undefined, basisContents(p), { hint: 'V' + p.viewedRev }) : basisRows(p);
     const sourceNote = request.source?.note || request.sourceNote;
     const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
       ${panelFold('Original feedback', undefined, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${sourceNote ? `<p class="fs-panel-note">${escape(sourceNote)}</p>` : ''}`)}
@@ -7581,8 +7651,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
     // incomplete private edit, scoped to this version, scope cycle and round.
     if(questionsToKeep)r.item.ux.questionDrafts={...r.item.ux.questionDrafts,[priorQuestionKey]:questionsToKeep};
     if(['save-questions','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
-    const restoredQuestions=['draft-questions','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
-    r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    const restoredQuestions=['draft-questions','reopen-clarification','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
+    r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='reopen-clarification'?'Follow-up draft opened from the adjustment. Review and preview it before sending.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
   }
   function contextSnapshot(){
@@ -7803,7 +7873,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'result-pdf':return openPDF();
       case 'result-workflow':resultState.tab='workflow';return renderResult();
       case 'result-back':resultState.tab='quote';return renderResult();
-      default:if(['draft-plan','draft-questions','begin-detailed-questions','finish-spec','deliver'].includes(action))return apply(action);return;
+      default:if(['draft-plan','draft-questions','reopen-clarification','begin-detailed-questions','finish-spec','deliver'].includes(action))return apply(action);return;
     }
     savePresentation();render();
   }
