@@ -450,7 +450,7 @@ test("initial clarification and detailed specification questions are distinct im
   c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Keep editing and place Workflow at the footer."});
   assert.throws(()=>act(c,"begin-detailed-questions"),/already been sent/);
   const noInitial = detailedJourney("Beside the PDF result",false);
-  assert.equal(noInitial.reviewFlow.questionRounds[0].id,"Q2","The detailed batch keeps a distinct identity even if initial questions were unnecessary.");
+  assert.equal(noInitial.reviewFlow.questionRounds[0].id,"Q1","The first sent batch is Q1; its detailed phase remains separate metadata.");
 });
 
 test("different detailed answers update exact placement and checks while the previously shared understanding stays unchanged until the team shares again", () => {

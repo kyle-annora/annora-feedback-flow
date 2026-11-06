@@ -74,7 +74,7 @@ test("detailed question and submitted-version updates retain distinct identities
   let c = shared(submitted());
   c = act(act(c,"begin-detailed-questions"),"send-questions");
   const detailed = C.updates([item(c)])[0];
-  assert.equal(detailed.key,"WQ-201:Q2");
+  assert.equal(detailed.key,"WQ-201:Q1","The first sent batch uses Q1 even when its purpose is a detailed decision.");
   assert.match(detailed.label,/detailed/i);
   c = act(c,"answer","At the page footer");
   c = act(c,"confirm-scope",{...c.reviewFlow.suggestedScope,understanding:"Place the optional Workflow action at the footer."});

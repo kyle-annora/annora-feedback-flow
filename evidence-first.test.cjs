@@ -84,6 +84,8 @@ test('unknown, mixed and media-only evidence stays manual after drafting rather 
     assert.deepEqual(projected.reasoning.implications,[]);
     assert.match(projected.reasoning.teamConsiderations.join(' '),/not established/);
   }
+  const unrelated=act(make('refrigeration','Please change the invoicing page.'),'draft-questions');
+  assert.equal(unrelated.reviewFlow.questionDraft.some(q=>q.id==='equipment-return'),false,'An unrelated input cannot inherit the selected reference case’s question preset.');
   const ownC=P.describe(item(draft(make('refrigeration','Please change the invoicing page.'))),{actor:'Website team'});
   assert.equal(ownC.reasoning.problem.source.type,'customer-input','A selected reference ticket must not relabel actual user input as a historical reconstruction.');
 });
@@ -199,4 +201,155 @@ test('evidence-first Create uses the actual concern to draft different candidate
   assert.deepEqual(unknown.reviewFlow.scope,{approach:'',checks:''});
   assert.equal(P.describe(item(unknown),{actor:'Website team'}).reasoning.implications[0].supported,false);
   assert.throws(()=>share(unknown),/must contain text/);
+});
+
+function initialPolicy(answer){
+  let c=act(make('refrigeration'),'draft-questions');
+  c=act(c,'preview-questions');c=act(c,'send-questions');
+  return act(c,'answer',{bundleId:c.reviewFlow.sentBundle.id,answers:{'equipment-return':answer}});
+}
+
+test('the explicit first-review Ask action offers a private equipment-return preset before any plan is shared',()=>{
+  const initial=make('refrigeration'),before=clone(initial);
+  assert.equal(initial.reviewFlow.questionDraft.some(q=>q.disposition==='ask'),false);
+  let c=act(initial,'draft-questions');
+  assert.deepEqual(initial,before);assert.deepEqual(c.reviewFlow.scope,{approach:'',checks:''});
+  const preset=c.reviewFlow.questionDraft.find(q=>q.id==='equipment-return');
+  assert.equal(preset.type,'single');assert.equal(preset.disposition,'ask');
+  assert.deepEqual(preset.optionIds,['reselect','restore','unsure']);
+  assert.equal(c.reviewFlow.sharedUnderstanding,null);assert.equal(c.reviewFlow.confirmedScope,null);
+  assert.equal(c.reviewFlow.planPrepared,false);assert.equal(c.reviewFlow.sentBundle,null);
+  assert.deepEqual(P.describe(item(c),{actor:'Requester'}).reasoning.outstanding,[]);
+  c=act(c,'preview-questions');assert.equal(c.reviewFlow.sentBundle,null);
+  assert.deepEqual(c.reviewFlow.questionPreview.questions.map(q=>q.id),['equipment-return']);
+  assert.deepEqual(P.describe(item(c),{actor:'Requester'}).questionRounds,[]);
+  assert.equal(c.trail.some(event=>event.action==='confirm-scope'),false);
+  c=act(c,'send-questions');
+  assert.equal(c.reviewFlow.sentBundle.id,'Q1');assert.equal(c.reviewFlow.sentBundle.round,'initial');
+  assert.equal(c.reviewFlow.sharedUnderstanding,null);assert.equal(c.reviewFlow.confirmedScope,null);
+  assert.equal(c.trail.some(event=>event.action==='confirm-scope'),false);
+  assert.deepEqual(c.reviewFlow.sentBundle.questions.map(q=>q.id),['equipment-return']);
+  assert.throws(()=>act(c,'answer',{bundleId:'Q2',answers:{'equipment-return':'restore'}}),/current sent question bundle/);
+  const zero=deliver(make('refrigeration'));
+  assert.equal(zero.versions[0].reviewFlow.questionRounds.length,0);
+  assert.equal(zero.versions[0].reviewFlow.sentBundle,null);
+});
+
+test('initial A and B answers produce distinct policy drafts, checks and conflict while remaining explicit team decisions',()=>{
+  const branches=[initialPolicy('reselect'),initialPolicy('restore')];
+  for(const [index,c] of branches.entries()){
+    assert.equal(c.reviewFlow.phase,'answer-review');assert.equal(c.reviewFlow.planPrepared,false);
+    assert.equal(c.reviewFlow.sharedUnderstanding,null);assert.equal(c.reviewFlow.candidateDraft,null);
+    assert.equal(c.reviewFlow.scopeDecision,undefined);
+    assert.equal(c.reviewFlow.suggestedScope.variantId,index?'restore':'reselect');
+    assert.equal(c.reviewFlow.questionRounds[0].round,'initial');
+    assert.equal(c.reviewFlow.detailedAnswerText,'');
+    assert.equal(c.answer,index?'Restore the previous equipment selection':'Select equipment again');
+    assert.throws(()=>act(c,'confirm-scope',c.reviewFlow.suggestedScope),/Prepare a current plan draft/);
+    const implication=P.describe(item(c),{actor:'Website team'}).reasoning.implications[0];
+    assert.equal(implication.supported,true);assert.equal(implication.source.id,'Q1');
+    assert.match(implication.source.label,/Initial answer/);
+    assert.equal(implication.status,'proposed-pending-team-review');
+    const prepared=draft(c);assert.equal(prepared.reviewFlow.scope.approach,c.reviewFlow.suggestedScope.approach);
+    assert.equal(prepared.reviewFlow.sharedUnderstanding,null);
+    const confirmed=share(prepared);
+    if(index)assert.equal(confirmed.reviewFlow.scopeDecision.resolvedBy,'Website team');
+  }
+  assert.notEqual(branches[0].reviewFlow.suggestedScope.approach,branches[1].reviewFlow.suggestedScope.approach);
+  assert.notEqual(branches[0].reviewFlow.suggestedScope.checks,branches[1].reviewFlow.suggestedScope.checks);
+  assert.equal(branches[0].reviewFlow.suggestedScope.conflict,null);
+  assert.match(branches[1].reviewFlow.suggestedScope.conflict,/differs from the recorded/);
+});
+
+test('Back and reopen preserve edited or removed initial presets, and manual additional questions remain available',()=>{
+  let c=act(make('refrigeration'),'draft-questions');
+  c=act(c,'save-questions',c.reviewFlow.questionDraft.map(q=>q.id==='equipment-return'?{...q,reason:'The current quote needs an explicit business preference.'}:q));
+  const saved=clone(c.reviewFlow.questionDraft);
+  c=act(c,'close-questions');assert.equal(c.reviewFlow.phase,'triage');
+  c=act(c,'draft-questions');assert.deepEqual(c.reviewFlow.questionDraft,saved);
+  c=act(c,'save-questions',c.reviewFlow.questionDraft.filter(q=>q.id!=='equipment-return'));
+  c=act(act(c,'close-questions'),'draft-questions');
+  assert.equal(c.reviewFlow.questionDraft.some(q=>q.id==='equipment-return'),false,'Reopening must not resurrect a deliberately deleted preset.');
+  const manual={id:'quote-owner',text:'Who should review this quote?',type:'text',options:[],required:true,disposition:'ask',reason:'Only the customer can identify the reviewer.'};
+  c=act(c,'save-questions',[...c.reviewFlow.questionDraft,manual]);
+  c=act(c,'send-questions');assert.deepEqual(c.reviewFlow.sentBundle.questions.map(q=>q.id),['quote-owner']);
+  c=act(c,'answer',{answers:{'quote-owner':'The purchasing manager.'}});
+  assert.equal(c.reviewFlow.suggestedScope.decisionRequired,true);
+  assert.equal(c.reviewFlow.suggestedScope.variantId,undefined);
+  assert.deepEqual(c.reviewFlow.scope,{approach:'',checks:''});
+});
+
+test('editing the preset answer contract cannot reinterpret an unrelated initial answer as a known policy',()=>{
+  let c=act(make('refrigeration'),'draft-questions');
+  c=act(c,'save-questions',c.reviewFlow.questionDraft.map(q=>q.id==='equipment-return'?{...q,type:'text',options:[],optionIds:[]}:q));
+  c=act(c,'send-questions');c=act(c,'answer',{answers:{'equipment-return':'Select equipment again'}});
+  assert.equal(c.reviewFlow.suggestedScope.variantId,undefined);
+  assert.equal(c.reviewFlow.suggestedScope.decisionRequired,true);
+  assert.match(c.reviewFlow.suggestedScope.reason,/edited sent question/);
+  assert.equal(P.describe(item(c),{actor:'Website team'}).reasoning.implications[0].supported,false);
+});
+
+test('changing the meaning of the question with the same options stays manual, while reason-only and normalized-copy edits retain the authored mapping',()=>{
+  for(const questionText of ['Which of these should we NOT do if refrigeration is needed again?','Which equipment policy does the customer reject?']){
+    let c=act(make('refrigeration'),'draft-questions');
+    c=act(c,'save-questions',c.reviewFlow.questionDraft.map(q=>q.id==='equipment-return'?{...q,text:questionText}:q));
+    c=act(c,'send-questions');c=act(c,'answer',{answers:{'equipment-return':'restore'}});
+    assert.equal(c.reviewFlow.suggestedScope.variantId,undefined);
+    assert.equal(c.reviewFlow.suggestedScope.decisionRequired,true);
+    assert.equal(P.describe(item(c),{actor:'Website team'}).reasoning.implications[0].supported,false);
+  }
+  let c=act(make('refrigeration'),'draft-questions');
+  c=act(c,'save-questions',c.reviewFlow.questionDraft.map(q=>q.id==='equipment-return'?{...q,text:'  '+q.text.toUpperCase().replace(/ /g,'  ')+'  ',reason:'We need your preference for this current quote before changing the recorded policy.'}:q));
+  c=act(c,'send-questions');c=act(c,'answer',{answers:{'equipment-return':'restore'}});
+  assert.equal(c.reviewFlow.suggestedScope.variantId,'restore');
+  assert.match(c.reviewFlow.suggestedScope.conflict,/differs from the recorded/);
+  assert.equal(P.describe(item(c),{actor:'Website team'}).reasoning.implications[0].supported,true);
+});
+
+test('the same answered initial preset becomes records in the detailed round rather than an automatic repeated customer task',()=>{
+  let c=share(draft(initialPolicy('restore'))),answer=clone(c.reviewFlow.questionRounds[0]);
+  c=act(c,'begin-detailed-questions');
+  const preset=c.reviewFlow.questionDraft.find(q=>q.id==='equipment-return');
+  assert.equal(preset.disposition,'records');assert.match(preset.reason,/Already answered in Q1: Restore/);
+  assert.throws(()=>act(c,'preview-questions'),/at least one customer question/);
+  assert.throws(()=>act(c,'send-questions'),/at least one customer question/);
+  c=act(c,'close-questions');assert.equal(c.reviewFlow.phase,'spec-review');
+  assert.deepEqual(c.reviewFlow.questionRounds[0],answer);
+  c=act(c,'correct-understanding',{text:'This is a different business requirement; please revisit the equipment-return choice.'});
+  c=act(c,'draft-questions');
+  assert.equal(c.reviewFlow.questionDraft.find(q=>q.id==='equipment-return').disposition,'ask','A genuinely revised scope cycle may reopen the decision.');
+});
+
+test('first-sent detailed Q1 and persisted old Q2 keep their true identities without renumbering history',()=>{
+  let c=act(share(draft(make('refrigeration'))),'begin-detailed-questions');
+  c=act(c,'send-questions');assert.equal(c.reviewFlow.sentBundle.id,'Q1');assert.equal(c.reviewFlow.sentBundle.round,'detailed');
+  // Represent a previously saved record whose old implementation allocated Q2.
+  c.reviewFlow.sentBundle.id='Q2';c.reviewFlow.questionRounds[0].id='Q2';
+  c=act(c,'answer',{bundleId:'Q2',answers:{'equipment-return':'restore'}});
+  c=share(draft(c));const priorRound=clone(c.reviewFlow.questionRounds[0]);
+  c=act(c,'correct-understanding',{text:'Please review whether this policy applies to the revised quote.'});
+  c=act(act(c,'draft-questions'),'send-questions');
+  assert.equal(c.reviewFlow.sentBundle.id,'Q3');
+  assert.deepEqual(c.reviewFlow.questionRounds[0],priorRound);
+  assert.equal(c.reviewFlow.questionRounds[1].round,'initial');
+});
+
+test('a version submitted from first-review clarification freezes its initial answer and exact derived acceptance basis',()=>{
+  let c=initialPolicy('restore');c=share(draft(c));
+  c=act(act(act(c,'finish-spec'),'prepare-result'),'deliver');
+  const v1=clone(c.versions[0]),basis=P.describe(item(c),{actor:'Requester',rev:1}).reasoning;
+  assert.equal(v1.reviewFlow.sharedUnderstanding.sourceAnswers.initial,'Restore the previous equipment selection');
+  assert.equal(v1.reviewFlow.sharedUnderstanding.sourceAnswers.detailed,'');
+  assert.equal(v1.reviewFlow.questionRounds[0].id,'Q1');assert.equal(v1.reviewFlow.questionRounds[0].round,'initial');
+  assert.ok(v1.checks.every(row=>row.sourceLabel==='Requester’s answer'));
+  assert.match(basis.implications[0].source.label,/Q1 · Initial answer/);
+  assert.match(basis.implications[0].behavior[0],/restore/);assert.match(basis.implications[0].checks[0],/restores/);
+  c=act(c,'adjust',{rev:1,reason:'Use the delete-and-reselect policy instead for V2.'});
+  c=act(c,'edit-candidate',C.variant('refrigeration','reselect').scope);
+  c=act(act(c,'prepare-result'),'deliver');
+  assert.deepEqual(c.versions[0],v1);
+  assert.deepEqual(P.describe(item(c),{actor:'Requester',rev:1}).reasoning,basis);
+  const current=P.describe(item(c),{actor:'Requester'}).reasoning;
+  assert.equal(current.sourceVersion,2);assert.match(current.implications[0].behavior[0],/select equipment again/);
+  assert.match(current.implications[0].note,/differs from the answer-derived suggestion/);
 });

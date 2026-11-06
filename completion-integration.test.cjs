@@ -17,7 +17,7 @@ function controller(data,{query='',getMedia=async()=>{throw Error('No media fixt
  const local=new Map([[S.key,JSON.stringify(data)]]),nodes=new Map(),renders=[],createdURLs=[],revokedURLs=[];
  function element(tag='div'){
   const node={tagName:tag.toUpperCase(),style:{},dataset:{},isConnected:true,innerHTML:'',textContent:'',open:false,attrs:{},events:{},classList:{add(){},remove(){},toggle(){}},
-   appendChild(child){child.parentElement=this;if(child.id)nodes.set(child.id,child);return child;},append(child){return this.appendChild(child);},addEventListener(name,fn){this.events[name]=fn;},setAttribute(k,v){this.attrs[k]=String(v);},getAttribute(k){return this.attrs[k]||null;},removeAttribute(k){delete this.attrs[k];},contains(){return false;},focus(){document.activeElement=this;},matches(){return false;},getClientRects(){return [{}];},remove(){this.isConnected=false;},insertAdjacentHTML(){},showModal(){this.open=true;},close(){this.open=false;this.events.close?.();},querySelectorAll(){return [];},querySelector(selector){return values[selector]??null;}};return node;
+   appendChild(child){child.parentElement=this;if(child.id)nodes.set(child.id,child);return child;},append(child){return this.appendChild(child);},addEventListener(name,fn){this.events[name]=fn;},setAttribute(k,v){this.attrs[k]=String(v);},getAttribute(k){return this.attrs[k]||null;},removeAttribute(k){delete this.attrs[k];},contains(){return false;},focus(){document.activeElement=this;},matches(){return false;},getClientRects(){return [{}];},remove(){this.isConnected=false;},insertAdjacentHTML(){},showModal(){this.open=true;},close(){this.open=false;this.events.close?.();},querySelectorAll(selector){return values[selector]??[];},querySelector(selector){return values[selector]??null;}};return node;
  }
  const document={activeElement:null,hidden:false,title:'',events:{},addEventListener(name,fn){this.events[name]=fn;},createElement:element,getElementById:id=>nodes.get(id)||null,querySelector(){return null;},querySelectorAll(){return [];}};
  document.body=element('body');document.activeElement=document.body;nodes.set('live',element());
@@ -45,6 +45,30 @@ test('legacy customer ticket deep links remain in the unified workspace and exec
  const before=clone(c),app=controller(initial,{query:'?legacy=1&ticket=WQ-201'});
  assert.equal(app.context.FeedbackWorkspace.active,true);assert.equal(app.last().page,'ticket');assert.equal(app.last().presentation.legacy,true);assert.equal(app.api.state().data.current,'WQ-201');assert.deepEqual(app.persisted().items[0].c,before);assert.equal(app.context.location.search,'?ticket=WQ-201');
  await app.api.handle('legacy-accept');assert.equal(app.persisted().items[0].c.stage,'release');assert.equal(app.persisted().items[0].c.reviewFlow,undefined);assert.deepEqual(app.persisted().items[0].c.versions,before.versions);
+});
+
+test('initial business-question preview stays private and its sent update returns to the same unanswered ticket after reload',async()=>{
+ let data=workspace('refrigeration'),id=data.current;
+ const before=clone(S.updates(data));
+ const app=controller(data,{query:'?ticket='+id});
+ await app.api.handle('change-role','Website team');
+ await app.api.handle('draft-questions');
+ assert.ok(S.get(app.persisted(),id).c.reviewFlow.questionDraft.some(q=>q.id==='equipment-return'&&q.disposition==='ask'));
+ assert.equal(S.get(app.persisted(),id).c.reviewFlow.sharedUnderstanding,null);
+ assert.deepEqual(S.updates(app.persisted()),before,'Private question preparation creates no customer update.');
+ app.api.apply('preview-questions');
+ assert.deepEqual(S.updates(app.persisted()),before,'Customer preview is still private.');
+ app.api.apply('send-questions');
+ data=app.persisted();
+ const item=S.get(data,id),event=item.ux.events.find(e=>e.action==='send-questions');
+ assert.ok(event);assert.equal(item.c.reviewFlow.sentBundle.id,'Q1');
+ assert.equal(item.c.reviewFlow.sharedUnderstanding,null,'Asking did not require or silently share a default plan.');
+ const returned=controller(data,{query:'?ticket='+id+'&event='+encodeURIComponent(event.id)});
+ assert.equal(returned.last().actor,'Requester');
+ assert.equal(returned.last().current.id,id);
+ assert.equal(returned.last().current.c.reviewFlow.phase,'awaiting-answer');
+ assert.equal(returned.last().current.c.reviewFlow.questionRounds.length,1);
+ assert.equal(returned.last().historyVersion,null);
 });
 
 test('role, Watch mode and inspector tab restore on ordinary reload; notification deep links reset only the actionable perspective',async()=>{
@@ -186,4 +210,32 @@ test('clearing a prepared plan field is validated instead of silently restoring 
  await app.api.handle('change-role','Website team');await app.api.handle('draft-plan');
  await assert.rejects(()=>app.api.handle('confirm-scope'),/approach must contain text/);
  const item=S.get(app.persisted(),app.persisted().current);assert.equal(item.c.reviewFlow.phase,'triage');assert.deepEqual(item.ux.events,[]);
+});
+
+
+test('Back preserves incomplete private question edits across reload without mixing another round or sending a customer update',async()=>{
+ const initial=workspace('refrigeration'),id=initial.current,values={};
+ const app=controller(initial,{query:'?ticket='+id,values});
+ await app.api.handle('change-role','Website team');await app.api.handle('draft-questions');
+ const questions=clone(S.get(app.persisted(),id).c.reviewFlow.questionDraft);
+ const original=clone(questions),preset=questions.find(q=>q.id==='equipment-return');
+ preset.text='';preset.reason='Please confirm the policy before we prepare a candidate.';
+ values['[data-question-id]']=questions.map(q=>({dataset:{questionId:q.id},querySelector(selector){
+  const key=/data-field="([^"\]]+)"/.exec(selector)?.[1];
+  return key==='required'?{checked:q.required}:key in q?{value:Array.isArray(q[key])?q[key].join('\n'):q[key]}:null;
+ }}));
+ const updates=clone(S.updates(app.persisted()));
+ await app.api.handle('close-questions');
+ assert.equal(S.get(app.persisted(),id).c.reviewFlow.phase,'triage');
+ assert.deepEqual(S.get(app.persisted(),id).c.reviewFlow.questionDraft,original,'Incomplete edits remain private, not a silently validated canonical question.');
+ assert.deepEqual(S.updates(app.persisted()),updates);
+ const resumed=controller(app.persisted(),{query:'?ticket='+id});
+ await resumed.api.handle('draft-questions');
+ const draft=resumed.last().formDraft.questions.find(q=>q.id==='equipment-return');
+ assert.equal(draft.text,'');assert.equal(draft.reason,preset.reason);
+ assert.equal(S.get(resumed.persisted(),id).c.reviewFlow.sharedUnderstanding,null);
+ await resumed.api.handle('close-questions');await resumed.api.handle('draft-plan');
+ await resumed.api.handle('confirm-scope');await resumed.api.handle('begin-detailed-questions');
+ assert.equal(resumed.last().formDraft?.questions,undefined,'The initial private editor cache cannot overwrite a different round.');
+ assert.ok(S.get(resumed.persisted(),id).c.reviewFlow.questionDraft[0].text);
 });

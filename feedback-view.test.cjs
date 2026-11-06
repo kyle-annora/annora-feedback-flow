@@ -151,8 +151,10 @@ test('evidence-first team review exposes records and a draft decision without a 
   assert.match(html,/capture-1/);
   assert.match(html,/Recorded decisions/);
   assert.match(html,/data-wq="draft-plan"/);
-  assert.match(html,/Draft plan from these records/);
-  assert.match(html,/Ask the requester/);
+  assert.match(html,/Use existing evidence/);
+  assert.match(html,/Confirm with the customer/);
+  assert.match(html,/The plan draft stays private/);
+  assert.match(html,/questions are reviewed and previewed before sending/);
   assert.doesNotMatch(html,/UNPREPARED SOLUTION|UNPREPARED CHECK|UNPREPARED MESSAGE|PRIVATE AUTO PLAN|name="approach"|name="checks"|data-wq="confirm-scope"/);
   assert.equal(JSON.stringify(state.current),before);
 });
@@ -244,4 +246,57 @@ test('historical version shows its frozen answer relation without current answer
   assert.match(html,/Keep my original equipment\./);
   assert.match(html,/The original choice remains selected\./);
   assert.doesNotMatch(html,/LATER ANSWER MUST STAY OUT|data-wq="accept"|data-wq="authorize"|Proposed implications/);
+});
+
+test('first saved customer question is round one even when its preserved internal bundle id is Q2', () => {
+  const state=evidenceState({actor:'Requester',status:{owner:'Requester',label:'Needs your input'}});
+  const question={id:'return',text:'How should equipment be chosen later?',type:'single',options:['Select again','Restore selection'],required:true};
+  const round={id:'Q2',round:'detailed',questions:[question],answered:false};
+  Object.assign(state.current.c.reviewFlow,{phase:'awaiting-answer',sentBundle:round,questionRounds:[round],sharedUnderstanding:{text:'Previously shared plan'}});
+  state.presentation.understanding={text:'Previously shared plan'};state.presentation.basis=[{text:'Previously shared plan'}];state.presentation.questionRounds=[round];
+  const html=View.render(state),header=html.match(/<div class="fs-round">[\s\S]*?<\/div>/)[0];
+  assert.match(header,/Question round 1/);
+  assert.doesNotMatch(header,/Q2|Detailed decisions|Question round 2/);
+  assert.match(html,/Reference Q2/);
+  assert.match(html,/Awaiting your answer/);
+  assert.match(html,/revise the shared plan/);
+  assert.match(html,/Shared plan so far/);
+  assert.doesNotMatch(html,/not drafted a plan|never drafted/);
+  const team=View.render({...state,actor:'Website team'});
+  assert.match(team,/Awaiting the customer’s answer/);
+});
+test('private question draft labels the next actual round and does not borrow the earlier bundle number', () => {
+  const state=evidenceState();
+  const earlier={id:'Q7',round:'initial',questions:[],answered:true};
+  Object.assign(state.current.c.reviewFlow,{phase:'question-draft',questionDraft:[],questionRounds:[earlier],sentBundle:earlier});
+  const html=View.render(state),header=html.match(/<div class="fs-round">[\s\S]*?<\/div>/)[0];
+  assert.match(header,/Question round 2/);
+  assert.match(header,/Draft · not sent/);
+  assert.doesNotMatch(header,/Q7/);
+  assert.match(html,/Questions under review/);
+  assert.match(html,/Review and preview these private questions before sending/);
+  state.current.c.reviewFlow.questionRounds=[];state.current.c.reviewFlow.sentBundle=null;
+  assert.match(View.render(state),/Question round 1/);
+});
+test('inspector distinguishes a new review, an answer being reviewed, and a prepared revised draft', () => {
+  const state=evidenceState();
+  assert.match(View.render(state),/reviewing these records before drafting a plan/);
+  state.current.c.reviewFlow.phase='answer-review';state.current.c.answer='An answer';
+  assert.match(View.render(state),/Answer received/);
+  assert.match(View.render(state),/reviewing how the answer changes the plan and checks/);
+  state.current.c.reviewFlow.planPrepared=true;
+  assert.match(View.render(state),/Updated plan in review/);
+  assert.doesNotMatch(View.render(state),/not drafted a plan/);
+  state.historyVersion=1;state.presentation={historical:true,viewedRev:1,request:{text:'Saved request'},basis:[],versions:[],checks:[]};
+  const historical=View.render(state);
+  assert.match(historical,/Version 1 basis/);
+  assert.doesNotMatch(historical,/Updated plan in review|Answer received|Awaiting your answer/);
+});
+test('unknown supplied material offers a team draft without suggesting it has already been interpreted', () => {
+  const state=evidenceState();state.current.c.reviewFlow.needsMaterialReview=true;
+  const html=View.render(state);
+  assert.match(html,/data-wq="draft-plan"[^>]*>[\s\S]*?Start a team draft/);
+  assert.match(html,/The supplied material needs team review/);
+  assert.match(html,/Confirm with the customer/);
+  assert.doesNotMatch(html,/Use existing evidence|name="approach"/);
 });

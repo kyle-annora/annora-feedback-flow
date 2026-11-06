@@ -171,7 +171,7 @@ test("C answers produce distinct proposed behavior, checks and executable config
   assert.equal(reselect.reviewFlow.candidateDraft,null);
   assert.equal(restore.reviewFlow.candidateDraft,null);
   assert.match(restore.reviewFlow.suggestedScope.conflict,/differs from.*recorded/);
-  assert.equal(reselect.reviewFlow.sentBundle.id,"Q2","Detailed identity remains distinct when initial questions were unnecessary.");
+  assert.equal(reselect.reviewFlow.sentBundle.id,"Q1","The first actually sent batch is Q1 even when it is a detailed question.");
   assert.equal(reselect.answer,"","A detailed answer does not overwrite or invent initial clarification.");
   assert.throws(()=>act(restore,"finish-spec"),/unavailable/);
   for (const [policy,answerReview] of [["reselect",reselect],["restore",restore]]) {

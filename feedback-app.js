@@ -141,12 +141,23 @@
     let qs=[];try{qs=readQuestions();}catch(e){error=e.message;}const answers=readAnswers();
     try{changeRecord(i=>{i.ux||={};i.ux.drafts={...i.ux.drafts,fields:values,...(qs.length?{questions:qs}:{}),...(Object.keys(answers).length?{answers,answerNotes:readAnswerNotes(),bundleId:rendered?.bundleId}:{})};});}catch(e){error='Your draft is still on this page but could not be saved: '+e.message;}
   }
+  function questionDraftKey(item){
+    const flow=item?.c.reviewFlow;
+    return flow?[item.c.rev,flow.journey?.scopeCycle||1,flow.journey?.activeRound||'initial'].join(':'):null;
+  }
   function apply(action,value,{simulated=false,quiet=false}={}){
     if(historyVersion||walkCursor!==null)throw Error('This is an earlier view. Return to the current task before taking action.');
     const item=current();if(!item)throw Error('Open a feedback item first.');
-    const fresh=read();recordScene(S.get(fresh,item.id));
+    const fresh=read(),previous=S.get(fresh,item.id),priorQuestionKey=questionDraftKey(previous);
+    const questionsToKeep=action==='close-questions'&&Array.isArray(previous?.ux.drafts?.questions)?clone(previous.ux.drafts.questions):null;
+    recordScene(previous);
     const r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
-    r.item.ux.drafts={};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    // Returning is navigation, not a send or validation boundary. Keep even an
+    // incomplete private edit, scoped to this version, scope cycle and round.
+    if(questionsToKeep)r.item.ux.questionDrafts={...r.item.ux.questionDrafts,[priorQuestionKey]:questionsToKeep};
+    if(['save-questions','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
+    const restoredQuestions=['draft-questions','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
+    r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
   }
   function contextSnapshot(){
@@ -357,6 +368,7 @@
       case 'publish-failed':return apply(action,{rev:current().c.rev,reason:'The simulated release attempt did not complete. The approved version is unchanged.'});
       case 'open-result':if(value)historyVersion=Number(value);return openResult();
       case 'add-question':{const qs=readQuestions();qs.push({id:'question-'+Date.now(),text:'What additional business detail should the team consider?',type:'text',options:[],reason:'Edit this draft to ask only for missing customer context.',required:true,disposition:'team'});return apply('save-questions',qs);}
+      case 'close-questions':saveDraft();return apply('close-questions');
       case 'result-compartment':return updateResult('select-compartment',value);
       case 'result-title':return updateResult('title',value);
       case 'result-no-refrigeration':return updateResult('toggle',el.checked);
@@ -366,7 +378,7 @@
       case 'result-pdf':return openPDF();
       case 'result-workflow':resultState.tab='workflow';return renderResult();
       case 'result-back':resultState.tab='quote';return renderResult();
-      default:if(['draft-plan','draft-questions','begin-detailed-questions','close-questions','finish-spec','deliver'].includes(action))return apply(action);return;
+      default:if(['draft-plan','draft-questions','begin-detailed-questions','finish-spec','deliver'].includes(action))return apply(action);return;
     }
     savePresentation();render();
   }

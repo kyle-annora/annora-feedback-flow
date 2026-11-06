@@ -156,8 +156,8 @@
     const implicationStatus=submitted?'submitted':proposed?'proposed-pending-team-review':f.confirmedScope?'team-confirmed':'draft';
     if(answer){
       let behavior=[],checks=[],note='',conflict=null,supported=false;
-      if(scenario?.id==='refrigeration'&&latest?.round==='detailed'){
-        const mapped=Scenarios.suggest('refrigeration',latest.answers,{round:'detailed',scope:f.scope,notes:latest.answerNotes||{}});
+      if(scenario?.id==='refrigeration'&&latest){
+        const mapped=Scenarios.suggest('refrigeration',latest.answers,{round:latest.round,scope:f.scope,notes:latest.answerNotes||{},questions:latest.questions});
         const exact=submitted?Scenarios.preview('refrigeration',{approach:actualApproach,checks:actualChecks}):null;
         const selected=exact?.interactive?Scenarios.variant('refrigeration',exact.variantId):mapped?.variantId?Scenarios.variant('refrigeration',mapped.variantId):null;
         if(selected&&mapped?.variantId){behavior=[lines(selected.scope.approach)[2]].filter(Boolean);checks=[lines(selected.scope.checks)[3]].filter(Boolean);supported=true;conflict=mapped.conflict;

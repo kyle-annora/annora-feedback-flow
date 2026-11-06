@@ -31,6 +31,7 @@
       {id:"compartment-2",number:2,type:"Freezer",baseAmount:15000,equipment:[{id:"demo-unit-2",label:"Other compartment unit",amount:3200}],noRefrigeration:false},
     ],
   });
+  const equipmentReturnQuestion={id:"equipment-return",text:"If this compartment needs refrigeration again later, how should equipment be chosen?",type:"single",options:["Select equipment again","Restore the previous equipment selection","I'm not sure"],optionIds:["reselect","restore","unsure"],required:true,disposition:"ask",reason:"Your choice determines whether you select equipment again or restore the previous selection when refrigeration is needed later."};
   const catalog = {
     pdf:{id:"pdf",title:"The generated PDF is hard to find",ticketId:"fb_2026-07-11_002",kind:"behavior",target:"WinQuote · Make PDF",
       problem:"The customer has to leave Make PDF and search Workflow for the generated file.",
@@ -78,9 +79,7 @@
       questions:[
         {id:"refrigeration-state",text:"Check the saved equipment and no-refrigeration flag in the supplied state.",type:"text",options:[],required:false,disposition:"team",reason:"The customer should not have to diagnose how saved equipment is stored."},
         {id:"refrigeration-record",text:"Reuse the recorded requirement to clear active-compartment charges after explicit save.",type:"text",options:[],required:false,disposition:"records",reason:"The existing specification already describes the symptom and expected removal."},
-      ],detailedQuestions:[
-        {id:"equipment-return",text:"If this compartment needs refrigeration again later, how should equipment be chosen?",type:"single",options:["Select equipment again","Restore the previous equipment selection","I'm not sure"],optionIds:["reselect","restore","unsure"],required:true,disposition:"ask",reason:"Your choice determines whether you select equipment again or restore the previous selection when refrigeration is needed later."},
-      ],variants:[
+      ],initialQuestionPresets:[equipmentReturnQuestion],detailedQuestions:[equipmentReturnQuestion],variants:[
         {id:"reselect",title:"Remove equipment and select again later",scope:reselectScope,configuration:refrigerationConfiguration("reselect")},
         {id:"restore",title:"Proposed restore alternative",scope:restoreScope,configuration:refrigerationConfiguration("restore")},
       ],
@@ -105,11 +104,24 @@
     };
     return aliases[id].some(raw=>normalized(raw) === normalized(value));
   }
+  function matchesQuestion(id,question){
+    if(id!=="refrigeration"||question?.id!==equipmentReturnQuestion.id||question.type!=="single"||normalized(question.text)!==normalized(equipmentReturnQuestion.text))return false;
+    const labels=question.optionSnapshots?.map(option=>option.label)||question.options;
+    const ids=question.optionSnapshots?.map(option=>option.id)||question.optionIds;
+    return Array.isArray(labels)&&labels.length===equipmentReturnQuestion.options.length&&labels.every((label,index)=>label===equipmentReturnQuestion.options[index])&&Array.isArray(ids)&&ids.length===equipmentReturnQuestion.optionIds.length&&ids.every((optionId,index)=>optionId===equipmentReturnQuestion.optionIds[index]);
+  }
   function suggest(id,answers,options={}) {
     const item = entry(id);
     if (!item) return null;
     const result = {...clone(options.scope || item.scope),reason:"The team must review this answer and explicitly confirm the current scope.",conflict:null,decisionRequired:true,scenarioId:id};
-    if (id !== "refrigeration" || options.round !== "detailed") return result;
+    if (id !== "refrigeration") return result;
+    // The business decision has the same meaning before or after a shared plan.
+    // When called from a case, only the exact sent choice contract can use the
+    // authored policy mapping; an arbitrary manually added question is not it.
+    if(options.questions!==undefined){
+      const question=Array.isArray(options.questions)&&options.questions.find(q=>q.id===equipmentReturnQuestion.id);
+      if(!matchesQuestion(id,question))return {...result,reason:"The edited sent question is outside the authored equipment-return choice. The team must interpret the actual question and answer before selecting a policy."};
+    }
     if (answers && typeof answers === "object" && Object.entries(answers).some(([key,value])=>key !== "equipment-return" && (Array.isArray(value) ? value.length : value))) return result;
     if (Object.values(options.notes || {}).some(value=>typeof value === "string" && value.trim())) return {...result,reason:"The customer added context beyond the authored choice. The team must review the complete answer before confirming scope."};
     const answer = typeof answers === "string" ? answers : answers?.["equipment-return"];
@@ -130,7 +142,7 @@
     return {interactive:true,scenarioId:id,variantId:found.id,type:id === "pdf" ? "pdf-workflow" : id,configuration:clone(found.configuration),simulated:true,implemented:false,verified:false,
       ...(id === "pdf" ? clone(found.configuration) : {}),reason:"An authored simulation of the exact candidate; not evidence that a live WinQuote feature was implemented or tested."};
   }
-  const api = {list,get,variant,suggest,preview,matchesFeedback};
+  const api = {list,get,variant,suggest,preview,matchesFeedback,matchesQuestion};
   root.FlowScenarios = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(globalThis);

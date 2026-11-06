@@ -307,6 +307,11 @@
       case "draft-questions":
         requirePhase(c,["triage"],action);
         resetPlan(f);
+        if(f.scenarioId&&Scenarios.matchesFeedback(f.scenarioId,c.text)&&f.initialQuestionPresetCycle!==(f.journey?.scopeCycle||1)){
+          const presets=Scenarios.get(f.scenarioId).initialQuestionPresets||[];
+          f.questionDraft=[...f.questionDraft,...clone(presets).filter(preset=>!f.questionDraft.some(q=>q.id===preset.id))];
+          f.initialQuestionPresetCycle=f.journey?.scopeCycle||1;
+        }
         if (hasJourney(f)) f.journey.activeRound = "initial";
         c = stage(c,"processing","question-draft");
         return done("Drafting questions privately. Customer tasks have not changed.");
@@ -317,6 +322,10 @@
         if (f.journey.activeRound !== "detailed" || f.journey.detailedDraftCycle !== f.journey.scopeCycle) {
           f.questionDraft = f.scenarioId ? clone(Scenarios.get(f.scenarioId).detailedQuestions) : f.source.id === "fb_2026-07-11_002" ? clone(pdfDetailedQuestions) : [{id:"spec-detail",text:"What specific business decision remains unresolved in this specification?",type:"text",options:[],required:true,disposition:"team",
             reason:"The team must write a specific unresolved business question before asking the customer."}];
+          if(f.scenarioId)f.questionDraft=f.questionDraft.map(question=>{
+            const answered=f.questionRounds.find(round=>round.scopeCycle===f.journey.scopeCycle&&round.answered&&round.questions.some(q=>q.id===question.id&&Scenarios.matchesQuestion(f.scenarioId,q))&&Object.prototype.hasOwnProperty.call(round.answers||{},question.id));
+            return answered?{...question,disposition:"records",reason:"Already answered in "+answered.id+": "+String(answered.answers[question.id])+". Review the saved preference; ask again only if the business requirement has changed."}:question;
+          });
         }
         f.journey.activeRound = "detailed"; f.journey.detailedDraftCycle = f.journey.scopeCycle;
         f.questionPreview = null; c = stage(c,"processing","question-draft");
@@ -344,8 +353,8 @@
         if (hasJourney(f)) {
           const detailed = f.journey.activeRound === "detailed";
           if (detailed && f.journey.detailedSentCycles.includes(f.journey.scopeCycle)) fail("This detailed question batch has already been sent for this scope cycle.");
-          const nextId = Math.max(0,...f.questionRounds.map(round=>Number(round.id.slice(1)))) + 1;
-          id = "Q" + (detailed ? Math.max(2,nextId) : nextId);
+          const nextId = Math.max(0,...f.questionRounds.map(round=>Number(/^Q(\d+)$/.exec(round.id)?.[1]||0))) + 1;
+          id = "Q" + nextId;
         }
         f.sentBundle = {id,rev:c.rev,questions:clone(selected),scope:clone(f.scope),simulated:true,
           ...(hasJourney(f)?{round:f.journey.activeRound,scopeCycle:f.journey.scopeCycle}:{})};
@@ -380,11 +389,11 @@
           f.questionRounds = f.questionRounds.map(item=>item.id === round.id ? {...item,answered:true,answers:clone(currentAnswers),answerOptionIds:clone(currentOptionIds),answerNotes:clone(currentNotes),answerText,answerSimulated:false} : item);
           if (round.round === "detailed") f.detailedAnswerText = answerText;
           else { f.initialAnswerText = answerText; c.answer = answerText; c.answerSimulated = false; }
-          f.suggestedScope = f.scenarioId ? Scenarios.suggest(f.scenarioId,currentAnswers,{round:round.round,scope:f.scope,notes:currentNotes}) : round.round === "detailed" ? detailedSuggestion(c,currentAnswers) :
+          f.suggestedScope = f.scenarioId ? Scenarios.suggest(f.scenarioId,currentAnswers,{round:round.round,scope:f.scope,notes:currentNotes,questions:qs}) : round.round === "detailed" ? detailedSuggestion(c,currentAnswers) :
             f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
         } else {
           c.answer = answerText; c.answerSimulated = false;
-          f.suggestedScope = f.scenarioId ? Scenarios.suggest(f.scenarioId,currentAnswers,{round:"initial",scope:f.scope,notes:currentNotes}) : f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
+          f.suggestedScope = f.scenarioId ? Scenarios.suggest(f.scenarioId,currentAnswers,{round:"initial",scope:f.scope,notes:currentNotes,questions:qs}) : f.source.id === "fb_2026-07-11_002" ? pdfSuggestion(c.answer) : {...fromView(adaptive(c,legacy)),reason:"Review the candidate and checks derived from this actual answer. The website team must confirm them.",conflict:null};
         }
         c = stage(c,"processing","answer-review"); return done("The requester answered. The team must review the suggested scope before preparing a candidate.","Requester");
       }
