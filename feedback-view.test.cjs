@@ -273,6 +273,44 @@ test('requester cannot see the private evidence decision or unprepared solution'
   assert.doesNotMatch(html,/PRIVATE TEAM EVIDENCE|UNPREPARED SOLUTION|PRIVATE AUTO PLAN|data-wq="draft-plan"/);
   assert.match(html,/The website team has your request/);
 });
+test('compact answer review keeps distinct implications and folds only pending adjustment context without changing saved data', () => {
+  const state=evidenceState();state.current.c.reviewFlow.phase='answer-review';state.current.c.answer='Restore the previous selection.';
+  state.current.c.versions=[{rev:1,answer:'Select again.',candidate:'V1 saved behavior',result:{checks:['V1 saved check']}}];
+  state.presentation.reasoning.implications=[
+    {answer:state.current.c.answer,behavior:['Restore on explicit save.'],checks:['Saving restores the prior charges.'],conflict:'This replaces the previously recorded policy.',source:{type:'requester-answer',label:'Q2 · Scope revision 2',id:'Q2'}},
+    {answer:'Keep the other compartment unchanged.',behavior:['Apply this to the current compartment only.'],checks:['Other compartment charges stay unchanged.'],source:{type:'requester-answer',label:'Related answer'}},
+    {answer:'Please restore the selection in V2.',behavior:[],checks:[],note:'The team has not yet updated the candidate.',source:{type:'revision-request',label:'Changes requested to V1',id:'V1'}}
+  ];
+  const before=JSON.stringify(state),html=View.render(state);
+  const review=html.split('<div class="fs-answer-review">')[1].split('<details class="fs-answer-context">')[0];
+  assert.equal((review.match(/Restore the previous selection\./g)||[]).length,1);
+  assert.match(review,/Keep the other compartment unchanged\./);
+  assert.match(review,/Restore on explicit save\./);
+  assert.match(review,/Saving restores the prior charges\./);
+  assert.match(review,/Other compartment charges stay unchanged\./);
+  assert.match(review,/This replaces the previously recorded policy\./);
+  assert.doesNotMatch(review,/Please restore the selection in V2\.|The team has not yet updated/);
+  assert.match(html,/<details class="fs-answer-context"><summary>Answer &amp; adjustment context/);
+  assert.match(html,/Q2 · Scope revision 2/);
+  assert.match(html,/Changes requested to V1/);
+  assert.match(html,/Please restore the selection in V2\./);
+  assert.match(html,/The team has not yet updated the candidate\./);
+  assert.doesNotMatch(html,/<details class="fs-answer-context" open/);
+  assert.equal(JSON.stringify(state),before);
+});
+test('compact review never hides an unsupported answer or a conflicting adjustment behind context', () => {
+  const state=evidenceState();state.current.c.reviewFlow.phase='answer-review';state.current.c.answer='A custom policy.';
+  state.presentation.reasoning.implications=[
+    {answer:state.current.c.answer,behavior:[],checks:[],note:'No supported result is inferred.',source:{type:'requester-answer',label:'Q2'}},
+    {answer:'Conflicting change.',behavior:[],checks:[],conflict:'Resolve the incompatible requirements before sharing.',source:{type:'revision-request',label:'Changes requested to V1'}}
+  ];
+  const html=View.render(state),review=html.split('<div class="fs-answer-review">')[1].split('<details class="fs-answer-context">')[0];
+  assert.match(review,/The answer needs a team decision/);
+  assert.match(review,/No supported result is inferred\./);
+  assert.match(review,/Conflicting change\./);
+  assert.match(review,/Resolve the incompatible requirements before sharing\./);
+  assert.doesNotMatch(review,/data-wq="confirm-scope"|name="approach"/);
+});
 test('unsupported answers and uncertain historical applicability remain explicit team judgments', () => {
   const state=evidenceState();state.current.c.reviewFlow.phase='answer-review';state.current.c.answer='Other: handle this differently.';
   state.presentation.reasoning.implications=[{answer:state.current.c.answer,behavior:[],checks:[],supported:false,note:'No supported behavior is inferred from this answer.',source:{label:'Requester answer'}}];

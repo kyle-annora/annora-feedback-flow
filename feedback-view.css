@@ -721,6 +721,21 @@
 #feedback-root .fs-share-message { margin-top: 5px; border-top: 1px solid #e6e6e6; }
 #feedback-root .fs-share-message .fs-field { margin-top: 8px; }
 #feedback-root .fs-answer-implications { margin: 20px 0; }
+#feedback-root .fs-answer-review-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px 24px; }
+#feedback-root .fs-answer-review-header > div:first-child { min-width: 0; }
+#feedback-root .fs-answer-review-header h2 { font-size: 27px; max-width: 28ch; }
+#feedback-root .fs-answer-review-header .fs-task-intro { margin-bottom: 0; }
+#feedback-root .fs-answer-next { display: flex; flex: none; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 3px; }
+#feedback-root .fs-answer-next > span { color: #737373; font: 400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-answer-review > .fs-request-quote { margin: 24px 0 18px; }
+#feedback-root .fs-answer-context { margin: 18px 0; border-block: 1px solid var(--fs-line); }
+#feedback-root .fs-answer-context > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; color: #595959; font: 500 11px/1.5 var(--fs-sans); list-style: none; cursor: pointer; }
+#feedback-root .fs-answer-context[open] > summary > svg { transform: rotate(180deg); }
+#feedback-root .fs-answer-context-item { padding: 12px 0; border-top: 1px solid #ededed; }
+#feedback-root .fs-answer-context-item h4 { font: 550 11px/1.5 var(--fs-sans); margin: 0 0 6px; color: #454545; }
+#feedback-root .fs-answer-context-item p { font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+#feedback-root .fs-answer-context-item small { display: block; font-size: 10px; color: #737373; margin-top: 6px; }
+#feedback-root .fs-answer-context-item .fs-footnote { margin-top: 6px; font-size: 10px; }
 #feedback-root .fs-answer-impact { padding: 10px 0 12px; border-bottom: 1px solid #e6e6e6; }
 #feedback-root .fs-answer-impact dl { margin: 0 0 9px; }
 #feedback-root .fs-answer-impact dl > div { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 12px; padding: 7px 0; }
@@ -745,6 +760,11 @@
 #feedback-root .fs-version-relation dd { margin: 0; }
 #feedback-root .fs-version-relation .fs-prose-list { margin: 0; padding-left: 15px; font-size: 12px; }
 @media (max-width:640px) {
+  #feedback-root .fs-answer-review-header { flex-direction: column; gap: 14px; }
+  #feedback-root .fs-answer-review-header h2 { font-size: 26px; }
+  #feedback-root .fs-answer-next { width: 100%; padding-top: 0; }
+  #feedback-root .fs-answer-next > .fs-button { min-height: 44px; width: 100%; justify-content: center; }
+  #feedback-root .fs-answer-review > .fs-request-quote { margin-top: 20px; }
   #feedback-root .fs-sample-entry { align-items: flex-start; flex-direction: column; gap: 12px; }
   #feedback-root .fs-sample-entry > .fs-button { margin-left: 26px; }
   #feedback-root .fs-answer-impact dl > div { grid-template-columns: 1fr; gap: 4px; }

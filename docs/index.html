@@ -2233,6 +2233,21 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 #feedback-root .fs-share-message { margin-top: 5px; border-top: 1px solid #e6e6e6; }
 #feedback-root .fs-share-message .fs-field { margin-top: 8px; }
 #feedback-root .fs-answer-implications { margin: 20px 0; }
+#feedback-root .fs-answer-review-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px 24px; }
+#feedback-root .fs-answer-review-header > div:first-child { min-width: 0; }
+#feedback-root .fs-answer-review-header h2 { font-size: 27px; max-width: 28ch; }
+#feedback-root .fs-answer-review-header .fs-task-intro { margin-bottom: 0; }
+#feedback-root .fs-answer-next { display: flex; flex: none; flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 3px; }
+#feedback-root .fs-answer-next > span { color: #737373; font: 400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-answer-review > .fs-request-quote { margin: 24px 0 18px; }
+#feedback-root .fs-answer-context { margin: 18px 0; border-block: 1px solid var(--fs-line); }
+#feedback-root .fs-answer-context > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; color: #595959; font: 500 11px/1.5 var(--fs-sans); list-style: none; cursor: pointer; }
+#feedback-root .fs-answer-context[open] > summary > svg { transform: rotate(180deg); }
+#feedback-root .fs-answer-context-item { padding: 12px 0; border-top: 1px solid #ededed; }
+#feedback-root .fs-answer-context-item h4 { font: 550 11px/1.5 var(--fs-sans); margin: 0 0 6px; color: #454545; }
+#feedback-root .fs-answer-context-item p { font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+#feedback-root .fs-answer-context-item small { display: block; font-size: 10px; color: #737373; margin-top: 6px; }
+#feedback-root .fs-answer-context-item .fs-footnote { margin-top: 6px; font-size: 10px; }
 #feedback-root .fs-answer-impact { padding: 10px 0 12px; border-bottom: 1px solid #e6e6e6; }
 #feedback-root .fs-answer-impact dl { margin: 0 0 9px; }
 #feedback-root .fs-answer-impact dl > div { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 12px; padding: 7px 0; }
@@ -2257,6 +2272,11 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 #feedback-root .fs-version-relation dd { margin: 0; }
 #feedback-root .fs-version-relation .fs-prose-list { margin: 0; padding-left: 15px; font-size: 12px; }
 @media (max-width:640px) {
+  #feedback-root .fs-answer-review-header { flex-direction: column; gap: 14px; }
+  #feedback-root .fs-answer-review-header h2 { font-size: 26px; }
+  #feedback-root .fs-answer-next { width: 100%; padding-top: 0; }
+  #feedback-root .fs-answer-next > .fs-button { min-height: 44px; width: 100%; justify-content: center; }
+  #feedback-root .fs-answer-review > .fs-request-quote { margin-top: 20px; }
   #feedback-root .fs-sample-entry { align-items: flex-start; flex-direction: column; gap: 12px; }
   #feedback-root .fs-sample-entry > .fs-button { margin-left: 26px; }
   #feedback-root .fs-answer-impact dl > div { grid-template-columns: 1fr; gap: 4px; }
@@ -7033,11 +7053,21 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return collapsed ? `<details class="fs-plan-sources"><summary>${icon('file', 15)}${escape(label)} <small>${facts.length + decisions.length}</small>${icon('down', 13)}</summary>${content}</details>` : `<section class="fs-reasoning" aria-label="Organized evidence"><header><h3>What the records tell us</h3><span>AI organized · for team review</span></header>${content}</section>`;
   }
 
-  function answerImplications(reasoning = {}) {
+  function answerImplications(reasoning = {}, { compact = false, answer = '' } = {}) {
     const impacts = array(reasoning.implications).filter(impact => array(impact.behavior).length || array(impact.checks).length || impact.note || impact.conflict);
     if (!impacts.length) return '';
     const supported = impacts.some(impact => array(impact.behavior).length || array(impact.checks).length);
-    return `<section class="fs-answer-implications" aria-label="How the answer changes the plan"><h3>${supported ? 'What this answer changes' : 'The answer needs a team decision'}</h3>${impacts.map(impact => `<div class="fs-answer-impact">${impacts.length > 1 && impact.answer ? `<p class="fs-impact-answer">${escape(textOf(impact.answer))}</p>` : ''}<dl>${array(impact.behavior).length ? `<div><dt>Behavior</dt><dd>${proseList(impact.behavior)}</dd></div>` : ''}${array(impact.checks).length ? `<div><dt>Review checks</dt><dd>${proseList(impact.checks)}</dd></div>` : ''}</dl>${impact.note ? `<p class="fs-impact-note">${escape(impact.note)}</p>` : ''}${impact.conflict ? `<p class="fs-conflict">${escape(impact.conflict)}</p>` : ''}${sourceReference(impact.source)}</div>`).join('')}${supported ? '<p class="fs-footnote">Proposed implications · confirm them before sharing the plan.</p>' : ''}</section>`;
+    // A pending adjustment is context, not a second adopted answer. Keep real
+    // consequences, unsupported-answer notes and conflicts in the visible review.
+    const contextOnly = compact ? impacts.filter(impact => impact.source?.type === 'revision-request' && !array(impact.behavior).length && !array(impact.checks).length && !impact.conflict) : [];
+    const visible = impacts.filter(impact => !contextOnly.includes(impact));
+    const sources = compact ? impacts.filter(impact => impact.source).map(impact => {
+      const source = typeof impact.source === 'string' ? { label: impact.source } : impact.source;
+      const label = source.label || source.text || source.type || 'Recorded source';
+      const answerText = textOf(impact.answer), sourceText = source.text || '';
+      return `<section class="fs-answer-context-item"><h4>${escape(label)}</h4>${answerText ? `<p>${escape(answerText)}</p>` : ''}${sourceText && !sameText(sourceText, answerText) ? `<p>${escape(sourceText)}</p>` : ''}${source.id ? `<small>${escape(source.id)}</small>` : ''}${contextOnly.includes(impact) && impact.note ? `<p class="fs-footnote">${escape(impact.note)}</p>` : ''}</section>`;
+    }).join('') : '';
+    return `<section class="fs-answer-implications" aria-label="How the answer changes the plan"><h3>${supported ? 'What this answer changes' : 'The answer needs a team decision'}</h3>${visible.map(impact => `<div class="fs-answer-impact">${impact.answer && (compact ? !sameText(textOf(impact.answer), answer) : impacts.length > 1) ? `<p class="fs-impact-answer">${escape(textOf(impact.answer))}</p>` : ''}<dl>${array(impact.behavior).length ? `<div><dt>Behavior</dt><dd>${proseList(impact.behavior)}</dd></div>` : ''}${array(impact.checks).length ? `<div><dt>Review checks</dt><dd>${proseList(impact.checks)}</dd></div>` : ''}</dl>${impact.note ? `<p class="fs-impact-note">${escape(impact.note)}</p>` : ''}${impact.conflict ? `<p class="fs-conflict">${escape(impact.conflict)}</p>` : ''}${compact ? '' : sourceReference(impact.source)}</div>`).join('')}${supported ? '<p class="fs-footnote">Proposed implications · confirm them before sharing the plan.</p>' : ''}</section>${sources ? `<details class="fs-answer-context"><summary>Answer &amp; adjustment context ${icon('down', 13)}</summary><div>${sources}</div></details>` : ''}`;
   }
 
   function teamJudgment(reasoning = {}) {
@@ -7061,6 +7091,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const answer = flow.sentBundle?.round === 'detailed' ? flow.detailedAnswerText : vm.current.c.answer;
     const draftLabel = flow.needsMaterialReview ? 'Start a team draft' : 'Use existing evidence';
     const outstanding = array(reasoning.outstanding).filter(item => !['answered', 'resolved', 'omitted'].includes(item.status));
+    if (answering) return `<div class="fs-answer-review"><header class="fs-answer-review-header"><div><h2>Review what the answer changes</h2><p class="fs-task-intro">Review the reply and its implications, then prepare a private draft.</p></div><div class="fs-answer-next">${button('draft-plan', 'Draft an updated plan', { primary: true, icon: 'branch' })}<span>Private until you confirm and share.</span></div></header>
+      <blockquote class="fs-request-quote"><span>Latest requester answer</span><p>${escape(answer || 'No answer text was recorded.')}</p></blockquote>
+      ${answerImplications(reasoning, { compact: true, answer })}${teamJudgment(reasoning)}
+      ${outstanding.length ? `<div class="fs-open-decisions"><h3>Still to decide</h3><ul>${outstanding.map(item => `<li><p>${escape(textOf(item))}</p>${item.reason ? `<small>${escape(item.reason)}</small>` : ''}</li>`).join('')}</ul></div>` : ''}
+      ${reasoningRecords(reasoning, true, 'Records reviewed with this answer')}</div>`;
     return `<h2>${answering ? 'Review what the answer changes' : 'Start with the evidence'}</h2><p class="fs-task-intro">${answering ? 'Review the requester’s reply before updating the plan.' : 'Check the recorded context, then decide whether you have enough to draft a plan.'}</p>
       <blockquote class="fs-request-quote"><span>${answering ? 'Latest requester answer' : 'Reported problem'}</span><p>${escape(answering ? answer || 'No answer text was recorded.' : presentation.request?.text || vm.current.c.text || textOf(reasoning.problem))}</p>${!answering && reasoning.problem?.source?.type === 'spec-reconstruction' ? '<small class="fs-footnote">Reconstructed from the ticket-linked specification.</small>' : ''}</blockquote>
       ${answering ? answerImplications(reasoning) : ''}${reasoningRecords(reasoning, answering, 'Records reviewed with this answer')}${teamJudgment(reasoning)}
@@ -7091,7 +7126,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       if (flow.evidenceFirst && !flow.planPrepared) return evidenceReview(vm, presentation);
       const scope = flow.suggestedScope || flow.scope || {};
       const answer = flow.sentBundle?.round === 'detailed' ? flow.detailedAnswerText : caseRecord.answer;
-      if (flow.evidenceFirst) return `<h2>${phase === 'answer-review' ? 'Review the updated plan' : 'Review the draft plan'}</h2><p class="fs-task-intro">Edit the proposed behavior and checks, then share the plan with the requester.</p>${phase === 'answer-review' ? `<blockquote class="fs-request-quote"><span>Latest requester answer</span><p>${escape(answer)}</p></blockquote>${answerImplications(presentation.reasoning)}` : ''}${reasoningRecords(presentation.reasoning, true)}${teamJudgment(presentation.reasoning)}${scope.conflict && !array(presentation.reasoning?.implications).some(impact => impact.conflict === scope.conflict) ? `<p class="fs-conflict">${icon('hold', 16)}${escape(scope.conflict)}</p>` : ''}${array(flow.understandingCorrections).length ? `<blockquote class="fs-request-quote"><span>Requester’s correction</span><p>${escape(flow.understandingCorrections.at(-1).text)}</p></blockquote>` : ''}<div class="fs-scope-form">${textField('approach', 'Proposed behavior', fieldValue(vm, 'approach', scope.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', scope.checks))}<details class="fs-share-message"><summary>Message to the requester ${icon('down', 14)}</summary>${textField('understanding', 'What we’ll share when you confirm', fieldValue(vm, 'understanding', scope.understanding || scope.approach), { rows: 2 })}</details>${actions((phase === 'answer-review' ? '' : button('draft-questions', 'Ask the requester', { quiet: true, icon: 'ask' })) + button('confirm-scope', 'Confirm & share plan', { primary: true, arrow: true }))}</div>`;
+      if (flow.evidenceFirst) return `<h2>${phase === 'answer-review' ? 'Review the updated plan' : 'Review the draft plan'}</h2><p class="fs-task-intro">Edit the proposed behavior and checks, then share the plan with the requester.</p>${phase === 'answer-review' ? `<blockquote class="fs-request-quote"><span>Latest requester answer</span><p>${escape(answer)}</p></blockquote>${answerImplications(presentation.reasoning, { compact: true, answer })}` : ''}${reasoningRecords(presentation.reasoning, true)}${teamJudgment(presentation.reasoning)}${scope.conflict && !array(presentation.reasoning?.implications).some(impact => impact.conflict === scope.conflict) ? `<p class="fs-conflict">${icon('hold', 16)}${escape(scope.conflict)}</p>` : ''}${array(flow.understandingCorrections).length ? `<blockquote class="fs-request-quote"><span>Requester’s correction</span><p>${escape(flow.understandingCorrections.at(-1).text)}</p></blockquote>` : ''}<div class="fs-scope-form">${textField('approach', 'Proposed behavior', fieldValue(vm, 'approach', scope.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', scope.checks))}<details class="fs-share-message"><summary>Message to the requester ${icon('down', 14)}</summary>${textField('understanding', 'What we’ll share when you confirm', fieldValue(vm, 'understanding', scope.understanding || scope.approach), { rows: 2 })}</details>${actions((phase === 'answer-review' ? '' : button('draft-questions', 'Ask the requester', { quiet: true, icon: 'ask' })) + button('confirm-scope', 'Confirm & share plan', { primary: true, arrow: true }))}</div>`;
       return `<h2>${phase === 'answer-review' ? 'Turn the answer into a clear plan' : 'Review the request and its scope'}</h2><p class="fs-task-intro">${phase === 'answer-review' ? 'The answer may change the approach and acceptance checks. Confirm what applies before sharing the plan.' : 'Check the customer’s request against the available records. Ask only about a decision the requester can make.'}</p>
         ${phase === 'answer-review' ? `<blockquote class="fs-request-quote"><span>Latest requester answer</span><p>${escape(answer)}</p></blockquote>${scope.reason ? `<p class="fs-because">${icon('branch', 14)}${escape(scope.reason)}</p>` : ''}` : `<blockquote class="fs-request-quote"><span>Original request</span><p>${escape(caseRecord.text)}</p></blockquote>`}
         ${scope.conflict ? `<p class="fs-conflict">${icon('hold', 16)}${escape(scope.conflict)}</p>` : ''}
