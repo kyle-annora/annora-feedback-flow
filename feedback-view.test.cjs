@@ -48,7 +48,8 @@ test('versions keep newest first, accurate status, and an unsent draft cannot op
   const html=View.render(state);
   assert.ok(html.indexOf('Version 2') < html.indexOf('Version 1'));
   assert.match(html,/data-wq="current-version" data-value="2"/);
-  assert.match(html,/Accepted · Authorized · Released/);
+  assert.match(html,/Accepted · Release approved/);
+  assert.equal((html.match(/Released in simulation/g)||[]).length,1);
 });
 test('updates group the latest event per ticket with older events disclosed', () => {
   const state=vm({page:'updates',updates:[{id:'old',ticketId:'WQ-TEST',title:'Older update',at:'2026-11-04T12:00:00Z'},{id:'new',ticketId:'WQ-TEST',title:'Newest update',at:'2026-11-05T12:00:00Z'}]});
@@ -71,6 +72,49 @@ test('question-round count groups answers by bundle and includes sent unanswered
   assert.match(html,/2 of 2 answered/);
   assert.match(html,/0 of 1 answered/);
   assert.match(html,/Next decision/);
+});
+test('sidebar grouping preserves distinct source identities and all saved plan lines without repeated source disclosures', () => {
+  const state=vm({actor:'Website team',presentation:{request:{text:'Feedback'},understanding:{text:'Shared'},versions:[],basis:[
+    {text:'First saved behavior.',status:'team-confirmed',source:{id:'U1',label:'Shared understanding'}},
+    {text:'Second saved behavior.',status:'team-confirmed',source:{id:'U1',label:'Shared understanding'}},
+    {text:'Different saved source.',status:'team-confirmed',source:{id:'U2',label:'Shared understanding',text:'Distinct source context.'}}
+  ]}});
+  state.current.c.reviewFlow={evidenceFirst:true,phase:'awaiting-answer',planPrepared:true,sharedUnderstanding:{text:'Shared'}};
+  const before=JSON.stringify(state),sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+  assert.match(sidebar,/Shared plan so far/);
+  assert.doesNotMatch(sidebar,/Current basis|fs-source-detail/);
+  assert.equal((sidebar.match(/class="fs-basis-group"/g)||[]).length,2);
+  assert.equal((sidebar.match(/Shared understanding/g)||[]).length,2);
+  for(const text of ['First saved behavior.','Second saved behavior.','Different saved source.','Distinct source context.','Reference U1','Reference U2'])assert.ok(sidebar.includes(text),text);
+  assert.equal(JSON.stringify(state),before);
+});
+test('historical sidebar retains round identities, Other notes and provenance without borrowing live answers', () => {
+  const state=vm({historyVersion:1,presentation:{historical:true,viewedRev:1,request:{text:'Saved feedback',source:{note:'Reconstructed from an earlier record; not a new customer report.'}},basis:[],versions:[{rev:2,status:'Draft',readOnly:false,current:true},{rev:1,status:'Submitted',readOnly:true}],questionRounds:[
+    {id:'Q1',questions:[{id:'a',text:'Same question?'}]},
+    {id:'Q2',scopeCycle:2,questions:[{id:'b',text:'Same question?'}],at:'2026-11-05T13:00:00Z'}
+  ],answers:[{bundleId:'Q1',question:'Same question?',answer:['Other'],note:'Saved custom answer.',at:'2026-11-04T13:00:00Z'}]}});
+  state.current.c.answer='LATER ANSWER';state.current.c.reviewFlow={source:{note:'LATER SOURCE'},sharedUnderstanding:{text:'LATER PLAN'}};
+  const before=JSON.stringify(state),sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+  for(const text of ['Reference Q1','Reference Q2','Scope revision 2','Saved custom answer.','Awaiting an answer','Reconstructed from an earlier record','Nov 5','Statuses below reflect current progress','Viewing'])assert.ok(sidebar.includes(text),text);
+  assert.equal((sidebar.match(/Same question\?/g)||[]).length,2);
+  assert.doesNotMatch(sidebar,/LATER ANSWER|LATER SOURCE|LATER PLAN/);
+  assert.match(sidebar,/data-wq="current-version" data-value="2"/);
+  assert.equal(JSON.stringify(state),before);
+});
+test('activity keeps distinct events but removes an exact repeated detail; identical check label and value render once', () => {
+  const p={historical:true,viewedRev:1,request:{text:'Saved'},basis:[],versions:[],candidate:'Saved candidate',understanding:{text:'Saved candidate'},checks:[{label:'Saved check.',value:'Saved check.'},{label:'Different label',value:'Different value'}],activity:[
+    {actor:'Requester',text:'Accepted version.',detail:'Accepted version.',at:'2026-11-04T13:00:00Z',rev:1},
+    {actor:'Site owner',text:'Accepted version.',detail:'Separate authorization detail.',at:'2026-11-05T13:00:00Z',rev:1}
+  ]};
+  const state=vm({historyVersion:1,contextTab:'activity',presentation:p}),before=JSON.stringify(state),html=View.render(state),sidebar=html.match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+  assert.equal((html.match(/Saved candidate/g)||[]).length,1);
+  assert.equal((html.match(/Saved check\./g)||[]).length,1);
+  assert.match(html,/Different label · Different value/);
+  assert.equal((sidebar.match(/Accepted version\./g)||[]).length,2);
+  assert.match(sidebar,/Separate authorization detail\./);
+  assert.match(sidebar,/Recorded through version 1 submission/);
+  assert.doesNotMatch(sidebar,/<details|<summary/);
+  assert.equal(JSON.stringify(state),before);
 });
 test('team triage displays the later private preparation without adopting or sharing it', () => {
   const state=vm({actor:'Website team',status:{owner:'Website team',label:'Reviewing the scope'}});

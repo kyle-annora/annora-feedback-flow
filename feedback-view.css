@@ -563,18 +563,22 @@
 #feedback-root .fs-basis-facts > li { position: relative; padding: 9px 0 9px 13px; }
 #feedback-root .fs-basis-facts > li::before { content: ''; position: absolute; width: 4px; height: 4px; background: #959595; border-radius: 50%; left: 0; top: 17px; }
 #feedback-root .fs-basis-facts p { font-size: 12px; line-height: 1.65; color: #454545; }
+#feedback-root .fs-basis-group { padding-top: 6px; }
+#feedback-root .fs-basis-group + .fs-basis-group { border-top: 1px solid #ededed; margin-top: 12px; padding-top: 14px; }
+#feedback-root .fs-basis-provenance { display: flex; flex-wrap: wrap; gap: 3px 9px; color: #737373; font-size: 10px; line-height: 1.6; }
+#feedback-root .fs-basis-provenance > span + span { border-left: 1px solid #ddd; padding-left: 9px; }
+#feedback-root .fs-basis-reference { display: block; margin-top: 3px; color: #737373; font-size: 10px; overflow-wrap: anywhere; }
+#feedback-root .fs-basis-source-text { margin: 8px 0 0; border-left: 2px solid #ddd; padding-left: 10px; color: #737373; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+#feedback-root .fs-panel-note { margin: 9px 0 12px; color: #737373; font-size: 11px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 #feedback-root .fs-fact-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 9px; margin-top: 5px; color: #737373; font-size: 10px; }
 #feedback-root .fs-fact-meta > span { text-transform: none; }
-#feedback-root .fs-source-detail { min-width: 0; max-width: 100%; }
-#feedback-root .fs-source-detail > summary { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; overflow-wrap: anywhere; color: #596b78; font-size: 10px; list-style: none; text-decoration: underline; text-decoration-color: #c5ced4; text-underline-offset: 3px; cursor: pointer; }
-#feedback-root .fs-source-detail > p { border-left: 1px solid #d8d8d8; padding-left: 9px; margin: 8px 0 3px; font-size: 11px; color: #737373; }
-#feedback-root .fs-source-detail small { display: block; overflow-wrap: anywhere; }
 #feedback-root .fs-inspector-empty { color: #737373; font-size: 12px; line-height: 1.65; padding: 11px 0 2px; }
 #feedback-root .fs-side-fold { border-top: 1px solid #e6e6e6; border-bottom: 0; padding: 0; margin: 0; }
 #feedback-root .fs-side-fold > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 11px 0; color: #454545; font: 500 12px/1.5 var(--fs-sans); cursor: pointer; list-style: none; }
 #feedback-root .fs-side-fold > summary > svg { margin-left: auto; color: #8b8b8b; transition: transform .15s; }
 #feedback-root .fs-side-fold[open] > summary > svg { transform: rotate(180deg); }
 #feedback-root .fs-side-count { min-width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 4px; background: #efefef; color: #737373; font: 400 10px/1 var(--fs-sans); }
+#feedback-root .fs-side-hint { color: #737373; font: 400 10px/1.5 var(--fs-sans); }
 #feedback-root .fs-fold-content { padding: 0 0 15px; }
 #feedback-root .fs-original-quote { margin: 2px 0 14px; border-left: 2px solid #ddd; padding: 0 0 0 11px; font-size: 12px; line-height: 1.75; color: #595959; white-space: pre-wrap; overflow-wrap: anywhere; }
 #feedback-root .fs-context-values { margin: 7px 0 0; }
@@ -593,6 +597,7 @@
 #feedback-root .fs-answer-history > div { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 11px; }
 #feedback-root .fs-answer-history strong { font-weight: 500; }
 #feedback-root .fs-answer-history > div > span, #feedback-root .fs-answer-history small { color: #737373; font-size: 10px; }
+#feedback-root .fs-answer-history > small { display: block; margin-top: 5px; line-height: 1.5; }
 #feedback-root .fs-answer-history > p { font-size: 11px; margin: 8px 0; color: #737373; }
 #feedback-root .fs-answer-history blockquote { margin: 8px 0; padding-left: 10px; border-left: 2px solid #d8d8d8; font-size: 12px; color: #454545; white-space: pre-wrap; }
 #feedback-root .fs-answer-history .fs-answer-effect { color: #595959; }
@@ -612,8 +617,7 @@
 #feedback-root .fs-activity p { color: #595959; font-size: 12px; }
 #feedback-root .fs-activity small { font-size: 10px; }
 #feedback-root .fs-event-version { margin-left: auto; color: #737373; font-size: 10px; }
-#feedback-root .fs-event-detail { margin-top: 8px; }
-#feedback-root .fs-event-detail > summary { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; cursor: pointer; }
+#feedback-root .fs-activity .fs-event-detail { margin: 8px 0; padding-left: 10px; border-left: 2px solid #ddd; color: #737373; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
 #feedback-root .fs-readonly-banner { display: flex; align-items: flex-start; gap: 9px; padding: 12px 14px; border: 1px solid #dfe3e6; border-radius: 6px; margin-bottom: 20px; background: #fafbfc; color: #595959; }
 #feedback-root .fs-readonly-banner svg { margin-top: 2px; }
 #feedback-root .fs-readonly-banner strong { display: block; font-size: 12px; font-weight: 550; }

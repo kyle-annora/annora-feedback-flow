@@ -120,6 +120,65 @@ test('the current submitted V2 basis is identical for team and customer after an
   assert.deepEqual(c.versions[0],v1);
 });
 
+function submittedPolicy(policy,{withoutPolicyCheck=false}={}){
+  let c=E.createReviewedCase(C.get('refrigeration').feedback,{scenarioId:'refrigeration',journey:true,evidenceFirst:true});
+  c=E.review(c,'draft-questions');c=E.review(c,'send-questions');
+  c=E.review(c,'answer',{answers:{'equipment-return':policy}});c=E.review(c,'draft-plan');
+  c=E.review(c,'confirm-scope',c.reviewFlow.scope);c=E.review(c,'finish-spec');
+  if(withoutPolicyCheck)c=E.review(c,'edit-candidate',{checks:c.reviewFlow.candidateDraft.checks.split('\n').filter((_,index)=>index!==3).join('\n')});
+  c=E.review(c,'prepare-result');return E.review(c,'deliver');
+}
+
+test('an older saved candidate outside the current catalog keeps its own content and cannot acquire a current policy through answer mapping',()=>{
+  let c=submittedPolicy('restore');
+  // A saved, older-format delivery may predate or differ from the finite catalog
+  // shipped today. Its persisted candidate remains the historical authority.
+  const oldCandidate='Earlier saved approach: the team investigates the refrigeration state before changing equipment.';
+  const oldCheck='Earlier saved check: reproduce the saved flag and charge mismatch for the team.';
+  const v=c.versions[0];v.candidate=oldCandidate;v.text=oldCandidate;v.checks=[{id:'old-check',value:oldCheck,label:oldCheck}];
+  v.result.approach=oldCandidate;v.result.steps=[oldCandidate];v.result.checks=oldCheck;
+  v.reviewFlow.candidateDraft={approach:oldCandidate,checks:oldCheck};
+  v.view.candidate=oldCandidate;v.view.checks=clone(v.checks);
+  c.reviewFlow=clone(v.reviewFlow);c.reviewFlow.phase='review';
+  const saved=clone(c.versions[0]),before=JSON.stringify(c);
+  for(const actor of ['Requester','Website team','Site owner'])for(const options of [{actor},{actor,rev:1}]){
+    const p=P.describe(customer(freeze(c)),options),relation=p.reasoning.implications[0];
+    assert.equal(p.candidate,oldCandidate);assert.deepEqual(p.checks,saved.checks);
+    assert.equal(p.basis[0].text,oldCandidate);assert.equal(relation.answer,'Restore the previous equipment selection');
+    assert.deepEqual(relation.behavior,[oldCandidate]);assert.deepEqual(relation.checks,[oldCheck]);
+    assert.equal(relation.supported,false);assert.equal(relation.status,'submitted-unmapped');
+    assert.match(relation.note,/cannot be inferred automatically/);
+    assert.equal(relation.conflict,null);
+    assert.ok(!relation.behavior.join(' ').includes('restore that prior selection'));
+    assert.equal(p.preview.interactive,false);
+  }
+  assert.equal(JSON.stringify(c),before);
+  const earlier=P.describe(customer(c),{rev:1,actor:'Requester'});
+  c=E.review(c,'adjust',{rev:1,reason:'Use the supported re-selection proposal for the next version.'});
+  c=E.review(c,'edit-candidate',C.variant('refrigeration','reselect').scope);
+  c.answer='Select equipment again';c.reviewFlow.context={quote:'NEWER-LIVE-QUOTE'};
+  c.reviewFlow.questionRounds[0].answers['equipment-return']='Select equipment again';
+  c.reviewFlow.questionRounds[0].answerText='Select equipment again';
+  c=E.review(c,'prepare-result');c=E.review(c,'deliver');
+  const history=P.describe(customer(c),{rev:1,actor:'Requester'});
+  for(const key of ['request','answers','questionRounds','basis','candidate','checks','reasoning'])assert.deepEqual(history[key],earlier[key],key+' must remain version-bound.');
+  assert.deepEqual(c.versions[0],saved);
+  assert.equal(P.describe(customer(c)).reasoning.sourceVersion,2);
+});
+
+test('exact submitted authored policies retain their saved answer relation and never invent an omitted acceptance check',()=>{
+  for(const policy of ['reselect','restore']){
+    const c=submittedPolicy(policy),p=P.describe(customer(c),{rev:1}),relation=p.reasoning.implications[0],variant=C.variant('refrigeration',policy);
+    assert.equal(relation.supported,true);assert.equal(relation.status,'submitted');
+    assert.deepEqual(relation.behavior,[variant.scope.approach.split('\n')[2]]);
+    assert.deepEqual(relation.checks,[variant.scope.checks.split('\n')[3]]);
+    assert.equal(p.candidate,c.versions[0].candidate);
+  }
+  const c=submittedPolicy('restore',{withoutPolicyCheck:true}),relation=P.describe(customer(c),{rev:1}).reasoning.implications[0];
+  assert.equal(relation.supported,true);assert.deepEqual(relation.checks,[]);
+  assert.ok(!c.versions[0].result.checks.includes('saving restores'));
+});
+
 test('question-round projection includes only sent batches, pending and answered, with real trail times but no frozen private scope',()=>{
   let c=E.createReviewedCase(E.hesitationFeedback,{journey:true});c=E.review(c,'draft-questions');
   assert.deepEqual(P.describe(customer(c)).questionRounds,[]);

@@ -7,6 +7,7 @@
   const clone=value=>value===undefined?null:JSON.parse(JSON.stringify(value));
   const rows=value=>Array.isArray(value)?value:[];
   const lines=value=>Array.isArray(value)?value.flatMap(row=>lines(typeof row==='string'?row:row?.value||row?.label||'')):String(value||'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const normalized=value=>String(value||'').trim().replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').toLowerCase();
   const actorName=value=>value==='Reviewer'?'Requester':value;
   const publicActions=new Set(['submit','answer','send-questions','confirm-scope','edit-understanding','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish','request-release-changes']);
   const checked=value=>typeof value==='string'&&value.trim()?value:null;
@@ -151,16 +152,20 @@
     const answer=latest?.answerText||c.answer||'',answerSource={type:'requester-answer',label:latest?latest.id+' · '+(latest.round==='detailed'?'Detailed answer':'Initial answer'):'Requester’s answer',id:latest?.id||null};
     const implications=[];
     const proposed=phase==='answer-review'?f.suggestedScope:null;
-    const actualApproach=submitted?snapshot.candidate||snapshot.text||'':f.candidateDraft?.approach||f.confirmedScope?.approach||f.scope?.approach||'';
-    const actualChecks=submitted?snapshot.result?.checks||snapshot.reviewFlow?.candidateDraft?.checks||'':f.candidateDraft?.checks||f.confirmedScope?.checks||f.scope?.checks||'';
+    const actualApproach=submitted?snapshot.candidate??snapshot.text??'':f.candidateDraft?.approach||f.confirmedScope?.approach||f.scope?.approach||'';
+    const actualChecks=submitted?snapshot.result?.checks??snapshot.reviewFlow?.candidateDraft?.checks??snapshot.checks??snapshot.view?.checks??'':f.candidateDraft?.checks||f.confirmedScope?.checks||f.scope?.checks||'';
     const implicationStatus=submitted?'submitted':proposed?'proposed-pending-team-review':f.confirmedScope?'team-confirmed':'draft';
     if(answer){
       let behavior=[],checks=[],note='',conflict=null,supported=false;
       if(scenario?.id==='refrigeration'&&latest){
         const mapped=Scenarios.suggest('refrigeration',latest.answers,{round:latest.round,scope:f.scope,notes:latest.answerNotes||{},questions:latest.questions});
         const exact=submitted?Scenarios.preview('refrigeration',{approach:actualApproach,checks:actualChecks}):null;
-        const selected=exact?.interactive?Scenarios.variant('refrigeration',exact.variantId):mapped?.variantId?Scenarios.variant('refrigeration',mapped.variantId):null;
-        if(selected&&mapped?.variantId){behavior=[lines(selected.scope.approach)[2]].filter(Boolean);checks=[lines(selected.scope.checks)[3]].filter(Boolean);supported=true;conflict=mapped.conflict;
+        const selected=submitted?(exact?.interactive?Scenarios.variant('refrigeration',exact.variantId):null):mapped?.variantId?Scenarios.variant('refrigeration',mapped.variantId):null;
+        if(selected&&mapped?.variantId){
+          const policy=lines(selected.scope.approach)[2],policyCheck=lines(selected.scope.checks)[3];
+          behavior=submitted?lines(actualApproach).filter(line=>normalized(line)===normalized(policy)):[policy].filter(Boolean);
+          checks=submitted?lines(actualChecks).filter(line=>normalized(line)===normalized(policyCheck)):[policyCheck].filter(Boolean);
+          supported=!!behavior.length;conflict=mapped.conflict;
           if(exact?.interactive&&exact.variantId!==mapped.variantId)note='The team-selected submitted policy differs from the answer-derived suggestion. This row describes the actual submitted version, not an automatic interpretation.';
         }
       }else if(source.id==='fb_2026-07-11_002'&&/^(Keep editing this quote|Move on to next workflow step)$/.test(answer)){
@@ -171,8 +176,11 @@
         const proposal=submitted?snapshot.view?.proposal:original?.proposal;
         if(proposal?.items?.length&&!original?.blocked){behavior=proposal.items.map(item=>[item.label,item.detail].filter(Boolean).join(' — '));checks=[proposal.reviewQuestion].filter(Boolean);supported=true;}
       }
-      if(!supported)note='The answer is retained. The team must determine its effect; no supported automatic behavior or acceptance check is inferred.';
-      implications.push({answer,behavior,checks,source:answerSource,status:supported?implicationStatus:'team-review-required',supported,note,conflict});
+      if(!supported){
+        if(submitted){behavior=lines(actualApproach);checks=lines(actualChecks);conflict=null;note='The actual saved candidate and checks are shown. Their relationship to this answer cannot be inferred automatically from the current authored examples.';}
+        else note='The answer is retained. The team must determine its effect; no supported automatic behavior or acceptance check is inferred.';
+      }
+      implications.push({answer,behavior,checks,source:answerSource,status:supported?implicationStatus:submitted?'submitted-unmapped':'team-review-required',supported,note,conflict});
     }
     const requested=submitted?snapshot.adjustment:c.adjustment;
     if(requested){

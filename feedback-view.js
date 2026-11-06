@@ -10,6 +10,7 @@
   const lines = value => String(value || '').split('\n').map(line => line.trim()).filter(Boolean);
   const actorName = value => value === 'Reviewer' ? 'Requester' : value;
   const textOf = value => typeof value === 'string' ? value : value?.text || value?.summary || value?.label || '';
+  const sameText = (a, b) => String(a ?? '').trim().replace(/\s+/g, ' ') === String(b ?? '').trim().replace(/\s+/g, ' ');
   const safeMedia = value => /^(blob:|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(String(value || '')) ? value : '';
   const orderTime = value => Number.isFinite(Date.parse(value)) ? Date.parse(value) : 0;
   const phases = {
@@ -185,7 +186,7 @@
   }
 
   function proseList(value, className = '') {
-    const values = Array.isArray(value) ? value.map(item => typeof item === 'string' ? item : item.label ? item.label + (item.value ? ' · ' + item.value : '') : textOf(item)) : lines(value);
+    const values = Array.isArray(value) ? value.map(item => typeof item === 'string' ? item : item.label ? item.label + (item.value && !sameText(item.label, item.value) ? ' · ' + item.value : '') : textOf(item)) : lines(value);
     return `<ul class="fs-prose-list ${escape(className)}">${values.filter(Boolean).map(line => `<li>${escape(String(line).replace(/^[-•]\s*/, ''))}</li>`).join('')}</ul>`;
   }
 
@@ -344,7 +345,7 @@
     if (vm.historyVersion || presentation.historical || vm.walkHistory?.active) {
       const replay = Boolean(vm.walkHistory?.active);
       const version = presentation.viewedRev || vm.historyVersion?.rev || vm.historyVersion;
-      return `<div class="fs-readonly-banner">${icon('history', 16)}<span><strong>${replay ? 'Walkthrough replay' : 'Saved version'} · Read-only</strong><small>${replay ? 'Your current request is unchanged.' : 'The request and acceptance basis below belong to this delivery.'}</small></span></div><h2>${escape(replay ? vm.walkHistory.label || 'Earlier step' : 'Version ' + version)}</h2>${textOf(presentation.understanding) ? `<p class="fs-task-intro">${escape(textOf(presentation.understanding))}</p>` : ''}${presentation.candidate ? `<div class="fs-frozen-copy">${proseList(presentation.candidate)}</div>` : `<p class="fs-task-intro">${escape(textOf(presentation.why) || 'No candidate was saved at this step.')}</p>`}${array(presentation.checks).length || typeof presentation.checks === 'string' && presentation.checks ? `<h3>Saved acceptance checks</h3>${proseList(presentation.checks)}` : ''}${versionBasis(presentation, version)}${actions(button(replay ? 'walk-current' : 'current-version', 'Return to current step', { primary: true, arrow: true }))}`;
+      return `<div class="fs-readonly-banner">${icon('history', 16)}<span><strong>${replay ? 'Walkthrough replay' : 'Saved version'} · Read-only</strong><small>${replay ? 'Your current request is unchanged.' : 'The request and acceptance basis below belong to this delivery.'}</small></span></div><h2>${escape(replay ? vm.walkHistory.label || 'Earlier step' : 'Version ' + version)}</h2>${textOf(presentation.understanding) && !sameText(textOf(presentation.understanding), presentation.candidate) ? `<p class="fs-task-intro">${escape(textOf(presentation.understanding))}</p>` : ''}${presentation.candidate ? `<div class="fs-frozen-copy">${proseList(presentation.candidate)}</div>` : `<p class="fs-task-intro">${escape(textOf(presentation.why) || 'No candidate was saved at this step.')}</p>`}${array(presentation.checks).length || typeof presentation.checks === 'string' && presentation.checks ? `<h3>Saved acceptance checks</h3>${proseList(presentation.checks)}` : ''}${versionBasis(presentation, version)}${actions(button(replay ? 'walk-current' : 'current-version', 'Return to current step', { primary: true, arrow: true }))}`;
     }
     if (!flow) return legacyTask(vm, presentation);
     const status = statusFor(vm.current, vm.status);
@@ -455,21 +456,39 @@
   }
 
   function panelFold(label, count, contents, options = {}) {
-    return `<details class="fs-side-fold"${options.open ? ' open' : ''}><summary><span>${escape(label)}</span>${count !== undefined ? `<small class="fs-side-count">${escape(count)}</small>` : ''}${icon('down', 13)}</summary><div class="fs-fold-content">${contents}</div></details>`;
+    return `<details class="fs-side-fold"${options.open ? ' open' : ''}><summary><span>${escape(label)}</span>${count !== undefined ? `<small class="fs-side-count">${escape(count)}</small>` : ''}${options.hint ? `<small class="fs-side-hint">${escape(options.hint)}</small>` : ''}${icon('down', 13)}</summary><div class="fs-fold-content">${contents}</div></details>`;
+  }
+
+  function basisContents(p) {
+    const groups = [];
+    for (const fact of array(p.basis)) {
+      const source = typeof fact.source === 'string' ? { label: fact.source } : fact.source || {};
+      const key = JSON.stringify({ source, status: fact.status || '' });
+      if (groups.at(-1)?.key === key) groups.at(-1).facts.push(fact);
+      else groups.push({ key, source, status: fact.status || '', facts: [fact] });
+    }
+    if (!groups.length) return `<p class="fs-inspector-empty">${p.historical ? 'No basis was saved with this version.' : 'The team has not confirmed an approach yet.'}</p>`;
+    const statusLabels = { 'submitted-snapshot': 'Saved at submission', 'pending-team-review': 'Awaiting team review', 'team-draft': 'Team draft', 'team-confirmed': 'Team confirmed', unconfirmed: 'Not yet confirmed' };
+    return groups.map(({ source, status, facts }) => {
+      const label = source.label || '';
+      const sourceText = source.text && !sameText(source.text, label) && !facts.some(fact => sameText(source.text, textOf(fact))) ? source.text : '';
+      const idShown = source.id && [label, sourceText].some(text => String(text).split(/\s+/).includes(String(source.id)));
+      const meta = [label, statusLabels[status] || String(status).replace(/[-_]/g, ' ')].filter(Boolean);
+      return `<section class="fs-basis-group">${meta.length ? `<div class="fs-basis-provenance">${meta.map(text => `<span>${escape(text)}</span>`).join('')}</div>` : ''}${source.id && !idShown ? `<small class="fs-basis-reference">Reference ${escape(source.id)}</small>` : ''}<ul class="fs-basis-facts">${facts.map(fact => `<li><p>${escape(textOf(fact))}</p></li>`).join('')}</ul>${sourceText ? `<p class="fs-basis-source-text">${escape(sourceText)}</p>` : ''}</section>`;
+    }).join('');
   }
 
   function basisRows(p) {
-    const facts = array(p.basis);
-    return `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${p.historical ? 'Version ' + escape(p.viewedRev) + ' basis' : 'Current basis'}</h3>${p.historical ? '<span class="fs-basis-state">Read-only</span>' : ''}</div>${facts.length ? `<ul class="fs-basis-facts">${facts.map(fact => {
-      const source = typeof fact.source === 'string' ? { label: fact.source } : fact.source || {};
-      const status = String(fact.status || '').replace(/[-_]/g, ' ');
-      return `<li><p>${escape(textOf(fact))}</p><div class="fs-fact-meta">${status ? `<span>${escape(status)}</span>` : ''}${source.label || source.text ? `<details class="fs-source-detail"><summary>${icon('file', 11)}${escape(source.label || 'Source')}</summary><p>${escape(source.text || source.label)}${source.id ? `<small>${escape(source.id)}</small>` : ''}</p></details>` : ''}</div></li>`;
-    }).join('')}</ul>` : `<p class="fs-inspector-empty">${p.historical ? 'No basis was saved with this version.' : 'The team has not confirmed an approach yet.'}</p>`}</section>`;
+    return panelFold(p.historical ? 'Version ' + p.viewedRev + ' basis' : 'Current basis', undefined, basisContents(p), { hint: p.historical ? 'Read-only' : '' });
   }
 
   function activityRows(entries) {
     const sorted = array(entries).slice().sort((a, b) => orderTime(b.at || b.createdAt) - orderTime(a.at || a.createdAt));
-    return `<section class="fs-activity" aria-label="Activity history">${sorted.length ? `<ol>${sorted.map(event => `<li><div>${avatar(event.actor)}<strong>${escape(actorName(event.actor) || 'Website team')}</strong>${event.rev ? `<span class="fs-event-version">V${escape(event.rev)}</span>` : ''}</div><p>${escape(event.text || event.message || event.label || event.action)}</p><small>${escape(displayTime(event.at || event.createdAt) || 'Time not recorded')}${event.simulated ? ' · Simulated' : ''}</small>${event.detail ? `<details class="fs-event-detail"><summary>Details ${icon('down', 11)}</summary><p>${escape(textOf(event.detail))}</p></details>` : ''}</li>`).join('')}</ol>` : '<p class="fs-inspector-empty">No shared activity has been recorded.</p>'}</section>`;
+    return `<section class="fs-activity" aria-label="Activity history">${sorted.length ? `<ol>${sorted.map(event => {
+      const message = event.text || event.message || event.label || event.action;
+      const detail = textOf(event.detail);
+      return `<li><div>${avatar(event.actor)}<strong>${escape(actorName(event.actor) || 'Website team')}</strong>${event.rev ? `<span class="fs-event-version">V${escape(event.rev)}</span>` : ''}</div><p>${escape(message)}</p>${detail && !sameText(detail, message) ? `<p class="fs-event-detail">${escape(detail)}</p>` : ''}<small>${escape(displayTime(event.at || event.createdAt) || 'Time not recorded')}${event.simulated ? ' · Simulated' : ''}</small></li>`;
+    }).join('')}</ol>` : '<p class="fs-inspector-empty">No shared activity has been recorded.</p>'}</section>`;
   }
 
   function questionHistory(p) {
@@ -481,7 +500,7 @@
       groups.get(key).entries.push(answer);
     });
     for (const group of groups.values()) {
-      if (!group.entries.length) group.entries = array(group.questions).map(question => ({ question: question.text, answer: group.answers?.[question.id], note: group.answerNotes?.[question.id], at: group.answeredAt || group.sentAt, simulated: group.answerSimulated }));
+      if (!group.entries.length) group.entries = array(group.questions).map(question => ({ question: question.text, answer: group.answers?.[question.id], note: group.answerNotes?.[question.id], at: group.answeredAt || group.sentAt || group.at, simulated: group.answerSimulated ?? group.simulated }));
     }
     const rows = [...groups.values()];
     if (!rows.length) return '';
@@ -491,6 +510,18 @@
       const label = 'Question round ' + (index + 1);
       return `<section class="fs-question-history" aria-label="${label}"><header><h4>Round ${index + 1}</h4><span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}</header>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</section>`;
     }).join(''));
+  }
+
+  function versionList(versions, p) {
+    if (!versions.length) return '<p class="fs-inspector-empty">No version has been sent for review.</p>';
+    const milestoneLabels = { accepted: 'Accepted', authorized: 'Release approved', released: 'Released' };
+    return `${p.historical ? '<p class="fs-panel-note">Statuses below reflect current progress. Each version opens its saved content.</p>' : ''}<div class="fs-version-list">${versions.map(version => {
+      const viewing = Number(p.viewedRev) === Number(version.rev) && p.historical;
+      const milestones = array(version.statuses).filter(status => milestoneLabels[status]);
+      const primary = version.statusKey || milestones.at(-1);
+      const earlier = milestones.filter(status => status !== primary);
+      return `<button type="button" class="fs-version-row${viewing ? ' fs-version-viewed' : ''}" data-wq="${version.readOnly === false ? 'current-version' : 'view-version'}" data-value="${escape(version.rev)}"${viewing ? ' aria-current="true"' : ''}><span class="fs-version-icon">${icon('file', 15)}</span><span><strong>Version ${escape(version.rev)}${viewing ? '<small>Viewing</small>' : version.current ? '<small>Current</small>' : ''}</strong><span>${escape(version.status || 'Submitted')}</span>${earlier.length ? `<small>${earlier.map(status => milestoneLabels[status]).join(' · ')}</small>` : ''}${version.at ? `<small>${escape(displayTime(version.at))}</small>` : ''}</span>${icon('next', 12)}</button>`;
+    }).join('')}</div>`;
   }
 
   function details(vm) {
@@ -508,13 +539,14 @@
     const reviewState = phase === 'awaiting-answer' ? [requester ? 'Awaiting your answer' : 'Awaiting the customer’s answer', shared ? 'The team will review the answer and revise the shared plan before preparing the result.' : 'The team will use the answer to prepare the plan and review checks.'] : phase === 'question-draft' ? ['Questions under review', requester ? 'The team is reviewing the questions. Nothing has been sent yet.' : 'Review and preview these private questions before sending them.'] : phase === 'answer-review' ? [c.reviewFlow.planPrepared ? 'Updated plan in review' : 'Answer received', c.reviewFlow.planPrepared ? 'The team is checking the updated draft before sharing it.' : 'The team is reviewing how the answer changes the plan and checks.'] : shared ? ['Reviewing the shared plan', 'The shared plan remains on record while the team reviews the new information.'] : ['Evidence for this request', 'The team is reviewing these records before drafting a plan.'];
     const versions = array(p.versions).slice().sort((a, b) => Number(b.rev) - Number(a.rev));
     const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs" role="tablist" aria-label="Feedback context">${['details', 'activity'].map(name => `<button type="button" role="tab" id="fs-tab-${name}" data-wq="context-tab" data-value="${name}" aria-selected="${tab === name}" aria-controls="fs-inspector-content" tabindex="${tab === name ? '0' : '-1'}">${name === 'details' ? 'Details' : 'Activity'}</button>`).join('')}</div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
-    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p>${phase === 'triage' ? contextRows(request.context) : ''}${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisRows(p)) : ''}</section>` : evidenceFirst && array(p.basis).length ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>Current basis</h3></div><p class="fs-inspector-empty">${p.understanding ? 'Shared plan and recorded decisions' : 'Draft plan · awaiting confirmation'}</p>${panelFold('Plan and sources', p.basis.length, basisRows(p))}</section>` : basisRows(p);
-    const content = tab === 'activity' ? activityRows(p.activity) : `${currentBasis}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
-      ${panelFold('Original feedback', request.text ? 1 : 0, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${request.sourceNote ? `<p class="fs-footnote">${escape(request.sourceNote)}</p>` : ''}`)}
+    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : basisRows(p);
+    const sourceNote = request.source?.note || request.sourceNote;
+    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+      ${panelFold('Original feedback', undefined, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${sourceNote ? `<p class="fs-panel-note">${escape(sourceNote)}</p>` : ''}`)}
       ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
       ${questionHistory(p)}
       ${decisions.length ? panelFold('Earlier decisions', decisions.length, decisions.map(decision => `<div class="fs-history-event"><span>${escape(displayTime(decision.date || decision.at))}${decision.superseded ? ' · Superseded' : ''}</span><p>${escape(decision.decision || decision.text || decision.summary)}</p>${decision.source ? `<small>${escape(textOf(decision.source))}</small>` : ''}</div>`).join('')) : ''}
-      ${panelFold('Versions', versions.length, versions.length ? `<div class="fs-version-list">${versions.map(version => `<button type="button" class="fs-version-row${Number(p.viewedRev) === Number(version.rev) && p.historical ? ' fs-version-viewed' : ''}" data-wq="${version.readOnly === false ? 'current-version' : 'view-version'}" data-value="${escape(version.rev)}"><span class="fs-version-icon">${icon('file', 15)}</span><span><strong>Version ${escape(version.rev)}${version.current ? '<small>Current</small>' : ''}</strong><span>${escape(version.status || 'Submitted')}</span>${array(version.statuses).filter(value => ['accepted', 'authorized', 'released'].includes(value)).length > 1 ? `<small>${version.statuses.filter(value => ['accepted', 'authorized', 'released'].includes(value)).map(value => ({accepted:'Accepted',authorized:'Authorized',released:'Released'}[value])).join(' · ')}</small>` : ''}${version.at ? `<small>${escape(displayTime(version.at))}</small>` : ''}</span>${icon('next', 12)}</button>`).join('')}</div>` : '<p class="fs-inspector-empty">No version has been sent for review.</p>', { open: Boolean(versions.length) })}`;
+      ${panelFold('Versions', versions.length, versionList(versions, p), { open: Boolean(versions.length) })}`;
     return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback ${tab}">${heading}<div id="fs-inspector-content" role="tabpanel" aria-labelledby="fs-tab-${tab}" tabindex="0" class="fs-inspector-panel">${content}</div></aside>`;
   }
 
