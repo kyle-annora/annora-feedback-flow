@@ -1760,8 +1760,10 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 :is(#feedback-root, #feedback-modal-root) .fs-history-event > span { font-size: 10px; color: #737373; }
 :is(#feedback-root, #feedback-modal-root) .fs-history-event > p { margin-top: 3px; font-size: 12px; color: #595959; line-height: 1.7; }
 :is(#feedback-root, #feedback-modal-root) .fs-question-history { padding-top: 12px; }
-:is(#feedback-root, #feedback-modal-root) .fs-question-history > summary { font-size: 11px; line-height: 1.7; }
-:is(#feedback-root, #feedback-modal-root) .fs-question-history > summary > span { font-size: 9px; color: #737373; display: block; }
+:is(#feedback-root, #feedback-modal-root) .fs-question-history + .fs-question-history { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e6e6e6; }
+:is(#feedback-root, #feedback-modal-root) .fs-question-history > header { display: grid; gap: 3px; }
+:is(#feedback-root, #feedback-modal-root) .fs-question-history > header > h4 { margin: 0; font: 550 11px/1.7 var(--fs-sans); color: #454545; }
+:is(#feedback-root, #feedback-modal-root) .fs-question-history > header > span { font-size: 10px; line-height: 1.5; color: #737373; }
 :is(#feedback-root, #feedback-modal-root) .fs-question-history p, :is(#feedback-root, #feedback-modal-root) .fs-question-history blockquote { color: #737373; font-size: 11px; line-height: 1.7; margin: 8px 0; }
 :is(#feedback-root, #feedback-modal-root) .fs-question-history blockquote { border-left: 1px solid #ccc; padding-left: 9px; }
 :is(#feedback-root, #feedback-modal-root) .fs-activity ol { list-style: none; margin: 15px 0 0; padding: 0; }
@@ -2165,12 +2167,7 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 }
 #feedback-root .fs-return-summary > span { flex: 1; min-width: 0; }
 #feedback-root .fs-return-summary > .fs-button { flex: none; padding: 1px 3px; min-height: 24px; font-size: 10px; }
-#feedback-root .fs-question-history > summary { display: grid; grid-template-columns: minmax(0,1fr) 12px; gap: 3px 8px; cursor: pointer; }
-#feedback-root .fs-question-history > summary > strong { font-size: 11px; font-weight: 500; }
-#feedback-root .fs-question-history > summary > span { grid-column: 1; }
-#feedback-root .fs-question-history > summary > svg { grid-column: 2; grid-row: 1/3; align-self: center; }
-#feedback-root .fs-question-history[open] > summary > svg { transform: rotate(180deg); }
-#feedback-root .fs-round-reference { display: block; margin-top: 8px; color: #737373; font-size: 10px; }
+#feedback-root .fs-round-reference { display: block; color: #737373; font-size: 10px; overflow-wrap: anywhere; }
 @media (max-width:640px) {
   #feedback-root .fs-return-summary { flex-wrap: wrap; }
   #feedback-root .fs-return-summary > .fs-button { margin-left: auto; min-height: 34px; }
@@ -7168,7 +7165,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return panelFold('Question rounds', rows.length, rows.map((round, index) => {
       const answered = round.entries.filter(entry => entry.answer !== null && entry.answer !== undefined && entry.answer !== '').length;
       const label = 'Question round ' + (index + 1);
-      return `<details class="fs-question-history"><summary><strong>${label}</strong><span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${icon('down', 12)}</summary>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</details>`;
+      return `<section class="fs-question-history" aria-label="${label}"><header><h4>Round ${index + 1}</h4><span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}</header>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</section>`;
     }).join(''));
   }
 

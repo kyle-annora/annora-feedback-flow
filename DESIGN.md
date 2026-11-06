@@ -79,6 +79,8 @@ Express that first decision as **Use existing evidence** and **Confirm with the 
 
 Use actual sent order for customer-facing question rounds, independently of internal initial/detailed categories or older saved IDs. Waiting copy must distinguish a first plan from a revision to an already shared plan. These are targeted refinements to the existing task hierarchy and typed question editor, not new navigation or a new visual direction.
 
+In Details, Question rounds has one disclosure only. Opening it reveals static Round N sections with answer counts, saved references, questions, answers and timestamps. Separate rounds with a thin divider; do not nest another accordion or add an inner chevron. This applies equally to current and historical version context.
+
 After a customer reply, lead with that actual reply and its proposed implications for behavior and acceptance. Confirming and sharing remains a separate team action. A known historical answer can legitimately eliminate a clarification; do not ask again to make the demo appear intelligent. Unsupported answers or materials stay visible for human review. Submitted versions retain their own sources and answers.
 
 Apply the existing Cycle task/context layout, Attio's focused current decision and collapsed history, and the established Intercom teammate-screening pattern. Use compact evidence rows and a small source disclosure; avoid repeating the full approach in the customer message, editor and inspector. Preserve the approved serif/sans roles, neutral reading text and navy action color. The visible process should connect report → evidence → team judgment → optional answer → candidate/checks → exact-version acceptance → separate release approval.
