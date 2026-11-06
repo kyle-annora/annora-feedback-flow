@@ -537,3 +537,10 @@
   #feedback-root .fs-task-actions, #feedback-root .fs-site-report { scroll-margin-bottom: 105px; }
 }
 #feedback-root .fs-console-launcher[inert], #feedback-root .fs-console[inert] { visibility: hidden; pointer-events: none; }
+
+/* Submission acknowledgement: decoration stays inside the existing receipt. */
+#feedback-modal-root .fs-receipt-mark { display: grid; place-items: center; width: 40px; height: 40px; margin: 0 0 18px; border-radius: 50%; background: #eef5f1; color: #43796b; }
+#feedback-modal-root .fs-receipt-mark svg { width: 24px; height: 24px; }
+#feedback-modal-root .fs-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+#feedback-modal-root .fs-confetti i { position: absolute; top: 36px; display: block; border-radius: 1px; will-change: transform, opacity; }
+@media (prefers-reduced-motion: reduce) { #feedback-modal-root .fs-confetti { display: none; } }

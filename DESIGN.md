@@ -203,3 +203,9 @@ The reference lock remains Cycle for the task and context hierarchy, Attio for a
 - The requester accepts a named version; the site owner authorizes that accepted version; the team runs a separate simulated release. Failures have no success receipt. User comprehension/sign-off and actual feature implementation remain unproven by this demo.
 
 Changed components live in `feedback-view.css` / `capture-composer.css` and are scoped to their own roots. Small motion is optional; reduced motion does not remove information. The current release requires actual browser checks at 1440px and 390px, keyboard drawer/modal checks, source and bundled-route checks, and independent target verification.
+
+## Submission celebration · customer correction
+
+A newly persisted customer feedback submission retains its success receipt and gets one brief confetti burst. The acknowledgement celebrates reporting; it does not claim the issue has been resolved. A retry returning an existing capture, failed persistence, Watch submission, notification visit or page reload does not replay it. Reduced-motion users receive the static check and identical receipt actions.
+
+Reference lock: retain the existing Cycle/Attio layout and WinQuote typography/palette. Borrow the narrow success-feedback pattern from [Sunsama](https://refero.design/pages/7ce3603d-48e5-4dd7-a343-32e7ff9a88a1) and [ManyChat](https://refero.design/pages/f44ba6ff-b03a-4437-8366-4fc68dae4818): durable action acknowledgement with an optional celebratory layer. Do not import their canvas or typography. Navy, pale blue, the existing success green and neutral gray are confined to small decorative particles. The burst lasts roughly one second, blocks no input, cleans up on close/leave, and adds no dependency or artificial wait.

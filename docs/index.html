@@ -2050,6 +2050,13 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 }
 #feedback-root .fs-console-launcher[inert], #feedback-root .fs-console[inert] { visibility: hidden; pointer-events: none; }
 
+/* Submission acknowledgement: decoration stays inside the existing receipt. */
+#feedback-modal-root .fs-receipt-mark { display: grid; place-items: center; width: 40px; height: 40px; margin: 0 0 18px; border-radius: 50%; background: #eef5f1; color: #43796b; }
+#feedback-modal-root .fs-receipt-mark svg { width: 24px; height: 24px; }
+#feedback-modal-root .fs-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+#feedback-modal-root .fs-confetti i { position: absolute; top: 36px; display: block; border-radius: 1px; will-change: transform, opacity; }
+@media (prefers-reduced-motion: reduce) { #feedback-modal-root .fs-confetti { display: none; } }
+
 </style><style>
 .feedback-composer{--fc-ink:#262626;--fc-muted:#737373;--fc-rule:#e6e6e6;--fc-blue:#153e5c;box-sizing:border-box;width:min(600px,calc(100vw - 40px));max-height:calc(100dvh - 64px);margin:auto;padding:0;border:1px solid var(--fc-rule);border-radius:10px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 18px 64px #0002;overflow:hidden}
 .feedback-composer::backdrop,.fc-viewer::backdrop{background:#17171755}
@@ -6638,12 +6645,36 @@ if (typeof module==="object" && module.exports) module.exports = api;
   async function submitPayload(payload,simulated=false){
     const r=S.add(read(),scenario(),payload,{example:simulated});persist(r.data);page='ticket';actor='Requester';historyVersion=null;syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
-    if(!simulated)showModal('<div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');
+    if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');if(!r.duplicate)celebrateSubmission();}
     clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
     const preparation=(stage)=>{if(page!=='ticket'||current()?.id!==r.item.id||current().c.reviewFlow.phase!=='triage')return;changeRecord(i=>{i.ux.preparation={stage,at:S.now(data),simulated:true};});const message=stage==='draft-ready'?'Simulated preparation is ready. The website team still owns the decision.':'Evidence is ready for team review. No customer question has been sent.';notice=message;if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else{document.getElementById('live').textContent=message;}};
     preparationTimer=setTimeout(()=>preparation('draft-ready'),2000);
     backgroundTimer=setTimeout(()=>preparation('team-review-pending'),40000);
     return r.item;
+  }
+  // A durable, new customer submission is the only celebration boundary.
+  function celebrateSubmission(){
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches||typeof Element.prototype.animate!=='function')return;
+    const layer=document.createElement('div');layer.className='fs-confetti';layer.setAttribute('aria-hidden','true');modal.appendChild(layer);
+    const animations=[],colors=['#153e5c','#8ab7cc','#4f8b75','#b7c3cc'];let stopped=false;
+    const cleanup=()=>{if(stopped)return;stopped=true;animations.forEach(animation=>animation.cancel());layer.remove();modal.removeEventListener('close',cleanup);document.removeEventListener('visibilitychange',onVisibility);};
+    const onVisibility=()=>{if(document.hidden)cleanup();};
+    modal.addEventListener('close',cleanup,{once:true});document.addEventListener('visibilitychange',onVisibility);
+    requestAnimationFrame(()=>{
+      if(!modal.open||!layer.isConnected||document.hidden){cleanup();return;}
+      const spread=Math.min(modal.clientWidth*.38,230);
+      for(let i=0;i<32;i++){
+        const piece=document.createElement('i'),direction=i%2?1:-1,x=direction*(35+Math.random()*spread),y=65+Math.random()*125,angle=Math.random()*240;
+        piece.style.cssText='left:'+(i%2?62:38)+'%;background:'+colors[i%colors.length]+';width:'+(4+i%3)+'px;height:'+(7+i%5)+'px;';layer.appendChild(piece);
+        animations.push(piece.animate([
+          {transform:'translate3d(0,0,0) rotate('+angle+'deg)',opacity:0},
+          {offset:.12,opacity:1},
+          {offset:.45,transform:'translate3d('+(x*.65)+'px,'+(y*.12-24)+'px,0) rotate('+(angle+90)+'deg)',opacity:1},
+          {transform:'translate3d('+x+'px,'+y+'px,0) rotate('+(angle+260)+'deg)',opacity:0}
+        ],{duration:900+i%5*45,delay:i%4*16,easing:'cubic-bezier(.2,.65,.4,1)',fill:'both'}));
+      }
+      Promise.allSettled(animations.map(animation=>animation.finished)).then(cleanup);
+    });
   }
   function openComposer(){stopWatch();composer=root.FeedbackComposer.open({scenarioId,context:contextSnapshot(),feedback:scenario().feedback,draftKey:'winquote:'+scenarioId,selectionRoot:app.querySelector('[data-feedback-surface]')||app,onSubmit:payload=>submitPayload(payload),onClose:()=>{composer=null;}});}
   function showModal(html){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;modal.innerHTML=html;if(!modal.open)modal.showModal();}
