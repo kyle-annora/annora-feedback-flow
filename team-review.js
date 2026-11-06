@@ -27,6 +27,16 @@
     if (!value || typeof value !== "object") fail(name + " needs an approach and acceptance checks.");
     return {approach:text(value.approach,name + " approach"),checks:text(value.checks,name + " checks")};
   }
+  // Preparing a plan records what was actually reviewed. Editable proposal copy
+  // is deliberately excluded; changing evidence or an answer requires a new draft.
+  function planBasis(c) {
+    const f=c.reviewFlow;
+    return {rev:c.rev,text:c.text,source:clone(f.source),context:clone(f.context||null),attachments:clone(f.attachments||[]),evidence:clone(f.evidence||null),
+      answer:c.answer,answers:clone(f.answers),answerNotes:clone(f.answerNotes||{}),answerOptionIds:clone(f.answerOptionIds||{}),sentBundle:clone(f.sentBundle),
+      questionRounds:clone(f.questionRounds||[]),corrections:clone(f.understandingCorrections||[]),scopeCycle:f.journey?.scopeCycle||null};
+  }
+  const planBasisKey = c => JSON.stringify(planBasis(c));
+  function resetPlan(f) { if(f.evidenceFirst){f.planPrepared=false;f.planPreparation=null;} }
   function log(c,action,actor,message,simulated=false) {
     return {...c,trail:[...c.trail,{action,actor,text:message,rev:c.rev,simulated,at:new Date().toISOString()}]};
   }
@@ -59,6 +69,7 @@
     const questions = scenario ? clone(scenario.questions) : isPDF ? clone(pdfQuestions) : view.question ? [{id:"clarification",text:view.question.text,type:view.question.type === "hesitation" ? "text" : view.question.options.length > 1 ? "single" : "text",
       options:clone(view.question.options),required:true,disposition:"ask",reason:view.question.reason || "Ask only for missing customer context."}] : [];
     const flow = {schema:1,phase:"triage",kind:scenario?.kind || (isPDF ? "behavior" : options.kind || (view.kind === "hesitation" ? "button" : view.kind)),
+      ...(options.evidenceFirst===true ? {evidenceFirst:true,planPrepared:false,planPreparation:null} : {}),
       ...(scenario ? {scenarioId:scenario.id} : {}),
       ...(needsMaterialReview ? {needsMaterialReview:true,materialReason:"This feedback is not an exact supported scenario input. The team must review the original text and materials and write a specific scope; the sample outcome is not assumed."} : {}),
       target:options.target || scenario?.target || (isPDF ? "WinQuote · Make PDF" : "WinQuote homepage"),
@@ -66,7 +77,7 @@
         ...(needsMaterialReview ? {referenceTicketId:scenario.ticketId} : {}),
         ...(scenario ? {note:scenario.sourceNote,evidence:scenario.feedbackEvidence,revision:scenario.sourceRevision} : {}),
         history:clone(options.sourceHistory || scenario?.history || (isPDF ? [{date:"2026-07-16",decision:"Open the saved PDF and navigate to Workflow."},{date:"2026-08-05",decision:"Keep Make PDF open; navigate to Workflow only through an explicit action."}] : []))},
-      scope:needsMaterialReview ? {approach:"",checks:""} : scenario ? clone(scenario.scope) : isPDF ? clone(pdfScope) : fromView(view),confirmedScope:null,questionDraft:questions,questionPreview:null,
+      scope:needsMaterialReview||options.evidenceFirst===true ? {approach:"",checks:""} : scenario ? clone(scenario.scope) : isPDF ? clone(pdfScope) : fromView(view),confirmedScope:null,questionDraft:questions,questionPreview:null,
       sentBundle:null,answers:{},suggestedScope:null,candidateDraft:null,result:null,teamCheck:null};
     if (options.journey === true) Object.assign(flow,{
       journey:{enabled:true,scopeCycle:1,activeRound:"initial",detailedSentCycles:[]},
@@ -242,7 +253,7 @@
       return {...base,question:{type:q.type,text:q.text,options:clone(q.options),source:c.text,reason:"The team sent this reviewed question bundle."},reason:"Waiting for the requester’s answer."};
     }
     const draft = f.candidateDraft;
-    if (!draft) return {...base,candidate:f.scope.approach,manual:true};
+    if (!draft) return {...base,candidate:f.evidenceFirst&&!f.planPrepared&&["triage","answer-review"].includes(f.phase)?"":f.scope.approach,manual:true};
     let built = {...base,candidate:draft.approach,blocked:false,reason:"",wordCount:(draft.approach.match(/[A-Za-z]+(?:[-’'][A-Za-z]+)*/g) || []).length};
     if (f.kind !== "behavior") {
       const original = adaptive(c,legacy), edited = adaptive(c,legacy,draft.approach);
@@ -271,12 +282,31 @@
     const done = (message,actor="Website team",simulated=false) => log(c,action,actor,message,simulated);
     switch (action) {
       case "submit": return input;
+      case "draft-plan": {
+        if(!f.evidenceFirst)fail("Use the evidence-first workflow before preparing a separate plan draft.");
+        requirePhase(c,["triage","answer-review"],action);
+        if(f.planPrepared&&f.planPreparation?.basisKey===planBasisKey(c))return input;
+        let selected=f.planPrepared&&f.planPreparation?f.scope:f.phase==="answer-review"&&f.suggestedScope?f.suggestedScope:f.scope;
+        const hasDraft=selected?.approach?.trim()||selected?.checks?.trim();
+        if(!hasDraft&&f.phase!=="answer-review"&&!f.needsMaterialReview){
+          if(f.scenarioId)selected=Scenarios.get(f.scenarioId).scope;
+          else if(f.source.id==="fb_2026-07-11_002")selected=pdfScope;
+          else selected=fromView(adaptive(c,legacy,typeof c.candidateOverride==="string"?c.candidateOverride:undefined));
+        }
+        // Unresolved/unsupported answers remain visible team work. Drafting is
+        // allowed, but it never resolves their conflict or confirms their scope.
+        f.scope={approach:text(selected?.approach||"","Draft approach",false),checks:text(selected?.checks||"","Draft checks",false)};
+        f.planPrepared=true;f.planPreparation={basisKey:planBasisKey(c),basis:planBasis(c),fromPhase:f.phase,at:new Date().toISOString(),simulated:true,
+          decisionRequired:f.suggestedScope?.decisionRequired===true,conflict:f.suggestedScope?.conflict||null,confirmed:false};
+        return done("Prepared a simulated plan draft from the supplied evidence and actual answers. The team must still edit and confirm it; no question, shared plan or delivery was sent.","Website team",true);
+      }
       case "edit-scope":
         requirePhase(c,hasJourney(f) ? ["triage","question-draft","answer-review","spec-review"] : ["triage","question-draft","answer-review"],action);
         for (const key of ["approach","checks"]) if (value?.[key] !== undefined) f.scope[key] = text(value[key],"Scope " + key,false);
         return done("Saved a private scope draft. No customer question was sent.");
       case "draft-questions":
         requirePhase(c,["triage"],action);
+        resetPlan(f);
         if (hasJourney(f)) f.journey.activeRound = "initial";
         c = stage(c,"processing","question-draft");
         return done("Drafting questions privately. Customer tasks have not changed.");
@@ -309,6 +339,7 @@
         requirePhase(c,["question-draft"],action); const selected = questions(f.questionDraft,f.questionDraft).filter(q=>q.disposition === "ask");
         if (!selected.length) fail("Select at least one customer question, or confirm scope without asking.");
         checkQuestionLimit(f,selected);
+        resetPlan(f);
         let id = "Q1";
         if (hasJourney(f)) {
           const detailed = f.journey.activeRound === "detailed";
@@ -331,6 +362,7 @@
         const supplied = typeof value === "string" ? {[qs[0].id]:value} : value?.answers || value;
         if (!supplied || typeof supplied !== "object" || Array.isArray(supplied)) fail("Answers must identify the sent questions.");
         if (Object.keys(supplied).some(id=>!qs.some(q=>q.id === id))) fail("Do not answer a private question that was not sent.");
+        resetPlan(f);
         const suppliedNotes = value?.answerNotes || value?.notes || {};
         if (Object.keys(suppliedNotes).some(id=>!qs.some(q=>q.id === id))) fail("Do not add an answer note for a private question that was not sent.");
         const currentAnswers = {}, currentOptionIds = {}, currentNotes = {};
@@ -358,7 +390,9 @@
       }
       case "confirm-scope": {
         requirePhase(c,hasJourney(f) ? ["triage","answer-review","spec-review"] : ["triage","answer-review"],action);
+        if(f.evidenceFirst&&(!f.planPrepared||(f.planPreparation?.basisKey&&f.planPreparation.basisKey!==planBasisKey(c))))fail("Prepare a current plan draft from the latest evidence and answer before confirming scope. Earlier drafts cannot confirm new materials.");
         f.scope = scope(value,"Explicit team-selected scope"); f.confirmedScope = clone(f.scope);
+        if(f.evidenceFirst&&f.planPreparation)f.planPreparation={...f.planPreparation,confirmed:true,confirmedScope:clone(f.scope)};
         if (f.needsMaterialReview) { f.needsMaterialReview = false; f.materialReviewed = true; }
         if (f.suggestedScope?.conflict) f.scopeDecision = {conflict:f.suggestedScope.conflict,resolvedBy:"Website team",selectedScope:clone(f.scope),sourceAnswer:hasJourney(f) && f.journey.activeRound === "detailed" ? f.detailedAnswerText : c.answer};
         f.result = null; f.teamCheck = null;
@@ -381,6 +415,7 @@
         if (!f.sharedUnderstanding) fail("The team must share an understanding before it can be corrected.");
         const correction = {id:"C" + (f.understandingCorrections.length + 1),text:text(value?.text,"Understanding correction"),scopeCycle:f.journey.scopeCycle,understanding:clone(f.sharedUnderstanding)};
         f.understandingCorrections = [...f.understandingCorrections,correction];
+        resetPlan(f);
         f.sharedUnderstanding = {...f.sharedUnderstanding,needsRevision:true};
         f.journey.scopeCycle += 1; f.journey.activeRound = "initial";
         f.scope = {approach:f.sharedUnderstanding.approach,checks:f.sharedUnderstanding.checks}; f.confirmedScope = null;

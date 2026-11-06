@@ -50,6 +50,15 @@ function controller({workspace,session={},local={},url='https://demo.test/annora
 }
 function workspace(items,current=items[0].id) { return {current,serial:200,items}; }
 
+
+function assertAdoptedWithoutBusinessChanges(actual,before,prepared){
+  const adopted=clone(actual);
+  assert.equal(adopted.reviewFlow.evidenceFirst,true);
+  assert.equal(adopted.reviewFlow.planPrepared,prepared);
+  delete adopted.reviewFlow.evidenceFirst;delete adopted.reviewFlow.planPrepared;
+  assert.deepEqual(adopted,before,'Only the new review gate may be added; original input, answers, versions and approvals remain unchanged');
+}
+
 test("a workspace containing only another client gets an actual local fallback and never restores that client’s cached walkthrough", () => {
   const other = record("OTHER-201",undefined,{clientId:"other-client"});
   const before = clone(other);
@@ -108,7 +117,7 @@ test("opening a notification parks the old example and returns to the exact cust
   app.render();app.openWalkthrough();
   assert.equal(app.state().data.current,own.id);
   assert.equal(app.state().tour,null);
-  assert.deepEqual(clone(app.state().data.items.find(item=>item.id===own.id).c),before);
+  assertAdoptedWithoutBusinessChanges(clone(app.state().data.items.find(item=>item.id===own.id).c),before,false);
 });
 
 test("continuing a same-ticket parked walkthrough rebases to a newer saved version instead of restoring stale frames", () => {
@@ -203,7 +212,7 @@ test('old customer capture receipt opens the exact ticket in the unified workspa
   assert.equal(target.pathname,'/annora-feedback-flow/');
   assert.equal(target.search,'?ticket=WQ-220');assert.equal(target.hash,'');
   const persisted=app.persisted(),saved=persisted.items.find(item=>item.id===own.id);
-  assert.equal(persisted.current,own.id);assert.deepEqual(saved.c,before);
+  assert.equal(persisted.current,own.id);assertAdoptedWithoutBusinessChanges(saved.c,before,false);
   assert.equal(saved.ux.walk.role,'Requester');assert.equal(saved.ux.walk.cursor,null);assert.equal(saved.ux.walk.historyRev,null);
   assert.deepEqual(saved.ux.walk.scenes,own.ux.walk.scenes,'Presentation handoff retains saved history');
   assert.equal(app.state().captureState.onSite,false);
@@ -240,7 +249,7 @@ test('old customer question update binds the migrated requester event and the cu
   assert.ok(target.searchParams.get('event'),'Use a real migrated event, not the former capture-only key');
   const saved=app.persisted(),resolved=Store.resolve(saved,own.id,target.searchParams.get('event'));
   assert.equal(resolved.event.recipient,'Requester');assert.equal(resolved.event.bundleId,c.reviewFlow.sentBundle.id);
-  assert.equal(resolved.stale,false);assert.deepEqual(resolved.item.c,before);
+  assert.equal(resolved.stale,false);assertAdoptedWithoutBusinessChanges(resolved.item.c,before,false);
   assert.equal(app.state().captureState.seen[update.key],true);
 });
 
@@ -255,7 +264,7 @@ test('a customer accepted-version notification does not hand the requester the s
   assert.equal(target.searchParams.get('ticket'),own.id);
   assert.equal(target.searchParams.has('event'),false,'The acceptance event belongs to the site owner; keep this customer return read-only');
   const saved=app.persisted().items.find(item=>item.id===own.id);
-  assert.equal(saved.ux.walk.role,'Requester');assert.deepEqual(saved.c,before);
+  assert.equal(saved.ux.walk.role,'Requester');assertAdoptedWithoutBusinessChanges(saved.c,before,true);
 });
 
 test('old demo and explicit legacy fallbacks stay on their original controller and cannot navigate another client', () => {

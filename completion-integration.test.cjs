@@ -12,7 +12,7 @@ function workspace(scenario='pdf'){
  const entry=C.get(scenario);return S.add(S.migrate(null),entry,{text:entry.feedback,captureId:'fixture-'+scenario,context:{page:entry.target,quote:'QUOTE-ONE'},attachments:[]}).data;
 }
 function commit(data,actor,action,value){return S.commit(data,data.current,{expectedSequence:S.get(data,data.current).sequence,actor,action,value}).data;}
-function submitted(){let data=workspace();data=commit(data,'Website team','confirm-scope',S.get(data,data.current).c.reviewFlow.scope);for(const action of ['finish-spec','prepare-result','deliver'])data=commit(data,'Website team',action);return data;}
+function submitted(){let data=workspace();data=commit(data,'Website team','draft-plan');data=commit(data,'Website team','confirm-scope',S.get(data,data.current).c.reviewFlow.scope);for(const action of ['finish-spec','prepare-result','deliver'])data=commit(data,'Website team',action);return data;}
 function controller(data,{query='',getMedia=async()=>{throw Error('No media fixture');},values={}}={}){
  const local=new Map([[S.key,JSON.stringify(data)]]),nodes=new Map(),renders=[],createdURLs=[],revokedURLs=[];
  function element(tag='div'){
@@ -56,7 +56,7 @@ test('role, Watch mode and inspector tab restore on ordinary reload; notificatio
 
 test('walkthrough back/current/restart changes presentation only and rejects business actions while replaying',async()=>{
  const data=workspace(),id=data.current,app=controller(data,{query:'?ticket='+id});await app.api.handle('change-role','Website team');
- await app.api.handle('confirm-scope');await app.api.handle('finish-spec');const before=clone(S.get(app.persisted(),id)),caseBefore=JSON.stringify(before.c),sequence=before.sequence;
+ await app.api.handle('draft-plan');await app.api.handle('confirm-scope');await app.api.handle('finish-spec');const before=clone(S.get(app.persisted(),id)),caseBefore=JSON.stringify(before.c),sequence=before.sequence;
  await app.api.handle('walk-back');assert.equal(app.last().walkHistory.active,true);assert.equal(app.last().presentation.phase,'spec-review');assert.equal(JSON.stringify(S.get(app.persisted(),id).c),caseBefore);assert.equal(S.get(app.persisted(),id).sequence,sequence);
  await assert.rejects(app.api.handle('prepare-result'),/earlier view/);
  await app.api.handle('walk-current');assert.equal(app.last().walkHistory.active,false);assert.equal(app.last().presentation.phase,'candidate');assert.equal(JSON.stringify(S.get(app.persisted(),id).c),caseBefore);
@@ -115,7 +115,7 @@ test('a media adjustment records the same prior review scene as a text-only adju
  assert.equal(app.last().presentation.adjustmentEvidence,null);
 });
 
-test('2s and 40s preparation produces material-specific private drafts without answering, accepting or moving the case',async()=>{
+test('2s and 40s preparation organizes materials without prematurely drafting a plan or moving the case',async()=>{
  const app=controller(workspace(),{query:'?workflow=pdf'});
  const item=await app.api.submitPayload({text:C.get('pdf').feedback,captureId:'timed-capture',context:{page:'Make PDF',quote:'Q-TIMED',selection:{label:'Generate PDF result'}},attachments:[{id:'timed-image',kind:'image'},{id:'timed-audio',kind:'audio'}]},true);
  const initial=clone(S.get(app.persisted(),item.id));
@@ -128,7 +128,10 @@ test('2s and 40s preparation produces material-specific private drafts without a
  assert.equal(state.ux.preparation.stage,'team-review-pending');assert.deepEqual(state.c,initial.c);assert.equal(state.sequence,initial.sequence);assert.deepEqual(state.ux.events,[]);
  assert.equal(app.last().presentation.preparation.teamDraft,undefined,'requester must not receive the private AI/team draft');
  await app.api.handle('change-role','Website team');
- assert.equal(app.last().presentation.preparation.teamDraft.status,'pending-team-review');assert.equal(app.last().presentation.preparation.teamDraft.shared,false);assert.ok(app.last().presentation.preparation.teamDraft.checks.length>0);
+ assert.equal(app.last().presentation.preparation.teamDraft,undefined,'elapsed time must not create a complete proposal for either role');
+ assert.deepEqual(S.get(app.persisted(),item.id).c.reviewFlow.scope,{approach:'',checks:''});
+ await app.api.handle('draft-plan');
+ const prepared=S.get(app.persisted(),item.id);assert.equal(prepared.c.reviewFlow.planPrepared,true);assert.ok(prepared.c.reviewFlow.scope.checks.length>0);assert.equal(prepared.c.reviewFlow.phase,'triage');assert.deepEqual(prepared.ux.events,[]);
 });
 
 test('leaving preparation pauses local timers and does not invent a completed background draft on return',async()=>{
@@ -161,4 +164,26 @@ test('delay, return summary and revised checkpoints stay per-ticket and appear i
  await app.api.handle('nav-updates');html=View.render(app.last());assert.equal((html.match(/class="fs-update-group"/g)||[]).length,2);assert.match(html,/earlier update/);assert.match(html,/The team set the next update/);
  const firstGroup=app.last().updateGroups.find(group=>group.ticketId===first);await app.api.handle('open-update',firstGroup.latestEventId);
  assert.equal(app.last().current.id,first);assert.equal(app.last().actor,'Requester');assert.deepEqual(S.get(app.persisted(),first).c,original.c);
+});
+
+test('each sample uses the same Watch handoffs and known records do not fabricate a customer question',async()=>{
+ for(const scenario of ['pdf','compartment','refrigeration']){
+  const app=controller(S.migrate(null),{query:'?workflow='+scenario});
+  await app.api.handle('watch-next');assert.equal(app.last().page,'site');
+  await app.api.handle('watch-next');const id=app.persisted().current;
+  let item=S.get(app.persisted(),id);assert.equal(item.c.reviewFlow.phase,'triage');assert.equal(item.c.reviewFlow.planPrepared,false);assert.deepEqual(item.c.reviewFlow.scope,{approach:'',checks:''});
+  if(scenario==='refrigeration'){assert.equal(item.ux.context.state.savedNoRefrigeration,true);assert.equal(item.ux.context.state.cost,2400);}
+  await app.api.handle('watch-next');item=S.get(app.persisted(),id);assert.equal(item.c.reviewFlow.planPrepared,true);assert.equal(item.c.reviewFlow.phase,'triage');assert.deepEqual(item.ux.events,[]);
+  for(let i=0;i<8&&S.get(app.persisted(),id).c.stage!=='published';i++)await app.api.handle('watch-next');
+  item=S.get(app.persisted(),id);assert.equal(item.c.stage,'published');assert.equal(item.c.reviewFlow.questionRounds.length,0);
+  assert.equal(item.id,id);assert.equal(item.c.accepted.rev,item.c.authorization.rev);assert.equal(item.c.receipt.rev,item.c.accepted.rev);
+ }
+});
+
+
+test('clearing a prepared plan field is validated instead of silently restoring a previous suggestion',async()=>{
+ const app=controller(workspace(),{values:{'[name="approach"]':{value:''},'[name="checks"]':{value:'An explicit team check'}}});
+ await app.api.handle('change-role','Website team');await app.api.handle('draft-plan');
+ await assert.rejects(()=>app.api.handle('confirm-scope'),/approach must contain text/);
+ const item=S.get(app.persisted(),app.persisted().current);assert.equal(item.c.reviewFlow.phase,'triage');assert.deepEqual(item.ux.events,[]);
 });

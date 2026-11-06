@@ -11,6 +11,7 @@ const command = (data,id,actor,action,value,extra={}) => S.commit(data,id,{expec
 function review(scenario="pdf") {
   let {data,item} = add(S.migrate(null),scenario);
   const id = item.id;
+  ({data,item}=command(data,id,"Website team","draft-plan"));
   ({data,item}=command(data,id,"Website team","confirm-scope",item.c.reviewFlow.scope));
   ({data,item}=command(data,id,"Website team","finish-spec"));
   ({data,item}=command(data,id,"Website team","prepare-result"));
@@ -27,7 +28,7 @@ function sentQuestion() {
 test("canonical commits mutate only the specified ticket, increment a sequence independently of the business version and reject stale/role actions", () => {
   const a = add(), b = add(a.data,"compartment","capture-b"), untouched = clone(b.item);
   const before = JSON.stringify(b.data), first = S.get(b.data,a.item.id);
-  const changed = command(freeze(b.data),first.id,"Website team","confirm-scope",first.c.reviewFlow.scope);
+  const changed = command(freeze(b.data),first.id,"Website team","draft-plan");
   assert.equal(JSON.stringify(b.data),before);
   assert.equal(changed.data.current,first.id);
   assert.equal(changed.item.id,first.id);
@@ -187,7 +188,8 @@ test("Watch decisions retain their simulated provenance in answers, frozen versi
   assert.equal(item.c.answerSimulated,true);
   assert.equal(item.c.reviewFlow.questionRounds[0].answerSimulated,true);
   assert.equal(item.c.trail.at(-1).simulated,true);
-  ({data,item}=command(data,id,"Website team","confirm-scope",item.c.reviewFlow.scope,{simulated:true}));
+  ({data,item}=command(data,id,"Website team","draft-plan"));
+  ({data,item}=command(data,id,"Website team","confirm-scope",C.get("pdf").scope,{simulated:true}));
   ({data,item}=command(data,id,"Website team","finish-spec",undefined,{simulated:true}));
   ({data,item}=command(data,id,"Website team","prepare-result",undefined,{simulated:true}));
   ({data,item}=command(data,id,"Website team","deliver",undefined,{simulated:true}));
@@ -205,7 +207,8 @@ test("a scripted detailed answer does not relabel an earlier personally supplied
   ({data,item}=command(data,id,"Website team","save-questions",[businessQuestion]));
   ({data,item}=command(data,id,"Website team","send-questions"));
   ({data,item}=command(data,id,"Requester","answer",{bundleId:item.c.reviewFlow.sentBundle.id,answers:{business:"a"}}));
-  ({data,item}=command(data,id,"Website team","confirm-scope",item.c.reviewFlow.scope));
+  ({data,item}=command(data,id,"Website team","draft-plan"));
+  ({data,item}=command(data,id,"Website team","confirm-scope",C.get("refrigeration").scope));
   ({data,item}=command(data,id,"Website team","begin-detailed-questions"));
   ({data,item}=command(data,id,"Website team","send-questions"));
   ({data,item}=command(data,id,"Requester","answer",{bundleId:item.c.reviewFlow.sentBundle.id,answers:{"equipment-return":"reselect"}},{simulated:true}));
@@ -213,4 +216,17 @@ test("a scripted detailed answer does not relabel an earlier personally supplied
   assert.equal(item.c.answerSimulated,false);
   assert.equal(item.c.reviewFlow.questionRounds[0].answerSimulated,false);
   assert.equal(item.c.reviewFlow.questionRounds[1].answerSimulated,true);
+});
+
+test('existing review tickets adopt evidence-first review without replacing manual drafts or frozen versions',()=>{
+  const E=require('./engine.js');
+  const original=E.createReviewedCase(C.get('pdf').feedback,{scenarioId:'pdf',sourceId:C.get('pdf').ticketId,journey:true});
+  original.reviewFlow.scope={approach:'An existing team-authored draft.',checks:'Check the original manually selected behavior.'};
+  const legacy={items:[{id:'WQ-280',clientId:'winquote',c:original,ux:{drafts:{fields:{approach:'Unsaved typed draft'}}}}],current:'WQ-280',serial:280};
+  const input=clone(legacy),migrated=S.migrate(freeze(legacy)),item=S.get(migrated,'WQ-280');
+  assert.deepEqual(legacy,input);assert.equal(item.c.reviewFlow.evidenceFirst,true);assert.equal(item.c.reviewFlow.planPrepared,false);
+  assert.deepEqual(item.c.reviewFlow.scope,original.reviewFlow.scope);assert.deepEqual(item.ux.drafts.fields,{approach:'Unsaved typed draft'});
+  const prepared=command(migrated,item.id,'Website team','draft-plan');
+  assert.deepEqual(prepared.item.c.reviewFlow.scope,original.reviewFlow.scope);assert.deepEqual(prepared.item.c.versions,original.versions);
+  assert.deepEqual(S.updates(prepared.data),[]);assert.deepEqual(S.migrate(prepared.data),prepared.data);
 });

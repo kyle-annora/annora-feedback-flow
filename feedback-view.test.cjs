@@ -135,3 +135,113 @@ test('a paused context brief can resume before the private plan stage', () => {
   state.presentation.preparation.paused=true;
   assert.doesNotMatch(View.render(state),/data-wq="resume-preparation"/);
 });
+
+function evidenceState(overrides={}) {
+  const state=vm({actor:'Website team',status:{owner:'Website team',label:'Review the evidence'},...overrides});
+  state.current.c.reviewFlow={phase:'triage',evidenceFirst:true,planPrepared:false,scope:{approach:'UNPREPARED SOLUTION',checks:'UNPREPARED CHECK',understanding:'UNPREPARED MESSAGE'}};
+  state.presentation={request:{text:'The quote page sent me somewhere unexpected.',context:{page:'Make PDF'}},basis:[{text:'UNPREPARED SOLUTION'}],versions:[{rev:1,status:'Draft',readOnly:false}],preparation:{stage:'team-review-pending',teamDraft:{approach:'PRIVATE AUTO PLAN'}},reasoning:{problem:{text:'The quote page sent me somewhere unexpected.'},facts:[{text:'The customer was on Make PDF.',source:{label:'Captured page',id:'capture-1'}}],decisions:[{text:'Keep the quote workflow available.',source:{label:'Recorded discussion',id:'discussion-1'},status:'recorded'}],outstanding:[],implications:[]}};
+  return state;
+}
+test('evidence-first team review exposes records and a draft decision without a premature plan', () => {
+  const state=evidenceState(),before=JSON.stringify(state.current);
+  const html=View.render(state);
+  assert.match(html,/Start with the evidence/);
+  assert.match(html,/The customer was on Make PDF\./);
+  assert.match(html,/Captured page/);
+  assert.match(html,/capture-1/);
+  assert.match(html,/Recorded decisions/);
+  assert.match(html,/data-wq="draft-plan"/);
+  assert.match(html,/Draft plan from these records/);
+  assert.match(html,/Ask the requester/);
+  assert.doesNotMatch(html,/UNPREPARED SOLUTION|UNPREPARED CHECK|UNPREPARED MESSAGE|PRIVATE AUTO PLAN|name="approach"|name="checks"|data-wq="confirm-scope"/);
+  assert.equal(JSON.stringify(state.current),before);
+});
+test('an explicit prepared plan exposes editable behavior and checks with folded provenance and shared message', () => {
+  const state=evidenceState();state.current.c.reviewFlow.planPrepared=true;
+  const html=View.render(state);
+  assert.match(html,/<textarea name="approach"[^>]*>UNPREPARED SOLUTION<\/textarea>/);
+  assert.match(html,/<textarea name="checks"[^>]*>UNPREPARED CHECK<\/textarea>/);
+  assert.match(html,/<details class="fs-share-message"><summary>Message to the requester/);
+  assert.match(html,/<details class="fs-plan-sources">/);
+  assert.match(html,/data-wq="confirm-scope"/);
+  assert.doesNotMatch(html,/data-wq="draft-plan"|PRIVATE AUTO PLAN/);
+});
+test('answer review makes the actual answer and its behavior/check implications visible before drafting', () => {
+  const state=evidenceState();state.current.c.reviewFlow.phase='answer-review';state.current.c.answer='Keep me on Make PDF.';
+  state.presentation.reasoning.implications=[{answer:'Keep me on Make PDF.',behavior:['Stay on the current page after generation.'],checks:['After generating, Make PDF remains visible.'],source:{label:'Requester answer',id:'answer-1'}}];
+  const html=View.render(state);
+  assert.match(html,/Keep me on Make PDF\./);
+  assert.match(html,/What this answer changes/);
+  assert.match(html,/Stay on the current page after generation\./);
+  assert.match(html,/After generating, Make PDF remains visible\./);
+  assert.ok(html.indexOf('Keep me on Make PDF.')<html.indexOf('What this answer changes'));
+  assert.match(html,/Draft an updated plan/);
+  assert.doesNotMatch(html,/name="approach"|name="checks"|UNPREPARED SOLUTION|data-wq="draft-questions"/);
+  state.current.c.reviewFlow.planPrepared=true;
+  const prepared=View.render(state);
+  assert.match(prepared,/data-wq="confirm-scope"/);
+  assert.doesNotMatch(prepared,/data-wq="draft-questions"/);
+});
+test('requester cannot see the private evidence decision or unprepared solution', () => {
+  const state=evidenceState({actor:'Requester'});
+  state.presentation.reasoning.facts[0].text='PRIVATE TEAM EVIDENCE';
+  const html=View.render(state);
+  assert.doesNotMatch(html,/PRIVATE TEAM EVIDENCE|UNPREPARED SOLUTION|PRIVATE AUTO PLAN|data-wq="draft-plan"/);
+  assert.match(html,/The website team has your request/);
+});
+test('unsupported answers and uncertain historical applicability remain explicit team judgments', () => {
+  const state=evidenceState();state.current.c.reviewFlow.phase='answer-review';state.current.c.answer='Other: handle this differently.';
+  state.presentation.reasoning.implications=[{answer:state.current.c.answer,behavior:[],checks:[],supported:false,note:'No supported behavior is inferred from this answer.',source:{label:'Requester answer'}}];
+  state.presentation.reasoning.teamConsiderations=['These records are reference material; applicability is not confirmed.'];
+  const html=View.render(state);
+  assert.match(html,/The answer needs a team decision/);
+  assert.match(html,/No supported behavior is inferred from this answer/);
+  assert.match(html,/applicability is not confirmed/);
+  assert.doesNotMatch(html,/What this answer changes|name="approach"/);
+});
+test('inbox offers one feedback workspace and keeps sample ticket selection in the walkthrough', () => {
+  const scenarios=[{id:'pdf',title:'PDF navigation feedback'},{id:'compartment',title:'Panel title feedback'},{id:'refrigeration',title:'Equipment removal feedback'}];
+  const html=View.render(vm({page:'inbox',scenarios,console:{open:true}}));
+  assert.match(html,/One conversation from your first report to an accepted result/);
+  assert.match(html,/Try the same flow with a sample ticket/);
+  assert.match(html,/<span>Sample ticket<\/span><select data-wq="start-scenario" aria-label="Sample ticket"/);
+  assert.doesNotMatch(html,/class="fs-scenario"|Three real WinQuote cases|Explore a feedback journey/);
+});
+test('evidence source text is escaped and original compartment page does not pretend the proposed title exists', () => {
+  const state=evidenceState();state.presentation.reasoning.facts[0]={text:'<script>unsafe()</script>',source:{label:'<b>Source</b>',id:'"bad'}};
+  const html=View.render(state);
+  assert.match(html,/&lt;script&gt;unsafe\(\)&lt;\/script&gt;/);
+  assert.doesNotMatch(html,/<script>|<b>Source<\/b>/);
+  const site=View.render(vm({page:'site',scenario:{id:'compartment'},site:{compartment:'2'}}));
+  assert.match(site,/name="site-title" value="Freezer"/);
+  assert.doesNotMatch(site,/name="site-title" value="Section 2"/);
+});
+
+test('submitted result links the saved answer to its exact version without proposed-plan language', () => {
+  const state=vm({preview:{interactive:true}});
+  state.current.c.rev=1;state.current.c.reviewFlow={phase:'review'};
+  state.current.c.versions=[{rev:1,candidate:'Saved behavior',result:{checks:['Saved check']}}];
+  state.presentation={request:{text:'Original feedback'},basis:[],versions:[],reasoning:{state:'submitted',sourceVersion:1,implications:[{answer:'Restore my earlier selection.',behavior:['Restore the earlier equipment.'],checks:['Saving restores its charge.'],source:{type:'requester-answer',label:'Q2 · Detailed answer',id:'Q2'}}]}};
+  let html=View.render(state);
+  assert.match(html,/<details class="fs-version-basis"><summary><span>Why this version<\/span><small>Version 1 basis/);
+  assert.match(html,/Restore my earlier selection\./);
+  assert.match(html,/Restore the earlier equipment\./);
+  assert.match(html,/Saving restores its charge\./);
+  assert.match(html,/Saved with version 1\. Later answers do not change this record\./);
+  assert.doesNotMatch(html,/Proposed implications|confirm them before sharing/);
+  state.presentation.reasoning.sourceVersion=2;
+  assert.doesNotMatch(View.render(state),/Why this version|Restore my earlier selection/);
+  state.presentation.reasoning.sourceVersion=1;state.presentation.reasoning.implications=[];
+  assert.doesNotMatch(View.render(state),/Why this version|Requester answer/);
+});
+test('historical version shows its frozen answer relation without current answer or mutable actions', () => {
+  const state=vm({historyVersion:1});state.current.c.rev=2;state.current.c.answer='LATER ANSWER MUST STAY OUT';
+  state.current.c.reviewFlow={phase:'review'};
+  state.presentation={historical:true,viewedRev:1,request:{text:'Original feedback'},basis:[],versions:[],candidate:'Earlier candidate',checks:[],reasoning:{state:'submitted',sourceVersion:1,implications:[{answer:'Keep my original equipment.',behavior:['Retain the recorded selection.'],checks:['The original choice remains selected.'],source:{label:'Saved V1 answer'}}]}};
+  const html=View.render(state);
+  assert.match(html,/Why this version/);
+  assert.match(html,/Version 1 basis/);
+  assert.match(html,/Keep my original equipment\./);
+  assert.match(html,/The original choice remains selected\./);
+  assert.doesNotMatch(html,/LATER ANSWER MUST STAY OUT|data-wq="accept"|data-wq="authorize"|Proposed implications/);
+});

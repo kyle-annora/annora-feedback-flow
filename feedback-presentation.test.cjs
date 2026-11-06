@@ -8,7 +8,7 @@ const customer=(c,id='WQ-101')=>({id,c,clientId:'winquote',captureSubmission:tru
 const run=(data,id,actor,action,value,extra={})=>S.commit(data,id,{expectedSequence:S.get(data,id).sequence,actor,action,value,...extra});
 function plain(){let c=E.transition(E.createCase('Change the homepage button label to "Start a quote".'),'submit');return E.transition(c,'deliver');}
 function added(scenario='compartment'){const s=C.get(scenario);return S.add(S.migrate(null),s,{text:s.feedback,context:{page:s.target,quote:'DEMO-102'},captureId:'capture-'+scenario,attachments:[]});}
-function submitted(){let {data,item}=added();const id=item.id;for(const [action,value] of [['confirm-scope',item.c.reviewFlow.scope],['finish-spec'],['prepare-result'],['deliver']])({data,item}=run(data,id,'Website team',action,value));return {data,item};}
+function submitted(){let {data,item}=added();const id=item.id;({data,item}=run(data,id,'Website team','draft-plan'));for(const [action,value] of [['confirm-scope',item.c.reviewFlow.scope],['finish-spec'],['prepare-result'],['deliver']])({data,item}=run(data,id,'Website team',action,value));return {data,item};}
 
 test('metadata migration preserves legacy CaseEngine records, raw answers, versions and approvals byte for byte without assigning a scenario',()=>{
   let c=plain();c=E.transition(c,'accept');c=E.transition(c,'authorize');
@@ -20,7 +20,8 @@ test('metadata migration preserves legacy CaseEngine records, raw answers, versi
   assert.equal(S.status(item).owner,'Website team');assert.deepEqual(migrated.unknownMetadata,{keep:true});
   const reviewed=E.createReviewedCase(E.pdfFeedback,{journey:true});
   const noScenario=S.migrate({items:[customer(reviewed,'WQ-102')]}).items[0];
-  assert.deepEqual(noScenario.c,reviewed);assert.equal(P.describe(noScenario).legacy,true);assert.equal(noScenario.c.reviewFlow.scenarioId,undefined);
+  const retained=clone(noScenario.c);delete retained.reviewFlow.evidenceFirst;delete retained.reviewFlow.planPrepared;
+  assert.deepEqual(retained,reviewed,'The new workspace may add its opt-in gate metadata without rewriting original evidence, draft values or versions.');assert.equal(P.describe(noScenario).legacy,true);assert.equal(noScenario.c.reviewFlow.scenarioId,undefined);
 });
 
 test('a historical projection binds its original evidence, answer and candidate even after the live draft changes',()=>{
@@ -144,8 +145,10 @@ test('preliminary simulation names the actual supplied material and quote while 
 
 test('two-second context brief and forty-second team draft have different useful outputs without sharing private plans or inferring media',()=>{
   const item=added('pdf').item;
-  const early=P.preparation(item,'draft-ready'),later=P.preparation(item,'team-review-pending');
+  const early=P.preparation(item,'draft-ready'),concealed=P.preparation(item,'team-review-pending');
   assert.equal(early.title,'Context brief ready');assert.equal(early.teamDraft,undefined);
+  assert.equal(concealed.teamDraft,undefined,'Elapsed time alone must not materialize a full plan before the evidence-first team action.');
+  item.c=E.review(item.c,'draft-plan');const later=P.preparation(item,'team-review-pending');
   assert.equal(later.teamDraft.kind,'plan');assert.equal(later.teamDraft.approach,C.get('pdf').scope.approach);
   assert.ok(later.teamDraft.checks.length>=3);assert.equal(later.teamDraft.shared,false);
   item.ux.preparation=later;
@@ -203,6 +206,7 @@ test('visit cursors are per ticket, count only public updates, and reading/openi
   const beforeCase=clone(item.c);
   ({data,item}=run(data,id,'Website team','edit-scope',{approach:item.c.reviewFlow.scope.approach}));
   v=S.visit(data,id);data=v.data;assert.equal(v.summary,null);assert.equal(S.updates(data).length,0);
+  ({data,item}=run(data,id,'Website team','draft-plan'));
   for(const [action,value] of [['confirm-scope',item.c.reviewFlow.scope],['finish-spec'],['prepare-result'],['deliver']])({data,item}=run(data,id,'Website team',action,value));
   const before=clone(item.c),readBefore=clone(data.feedbackExperience.read);
   v=S.visit(freeze(data),id);assert.match(v.summary.text,/V1 is ready/);assert.equal(v.summary.newVersionIds[0],'V1');
@@ -216,7 +220,8 @@ test('visit cursors are per ticket, count only public updates, and reading/openi
 test('ticket digests are new-first and combine public events without exposing other clients or private edits',()=>{
   let {data,item}=submitted(),first=item.id;
   data=S.advance(data,1);const other=C.get('pdf');let r=S.add(data,other,{text:other.feedback,captureId:'other',context:{},attachments:[]});data=r.data;
-  ({data,item}=run(data,r.item.id,'Website team','confirm-scope',r.item.c.reviewFlow.scope));
+  ({data,item}=run(data,r.item.id,'Website team','draft-plan'));
+  ({data,item}=run(data,item.id,'Website team','confirm-scope',item.c.reviewFlow.scope));
   const foreign=clone(item);foreign.clientId='other';foreign.id='FOREIGN';foreign.ux.events=[{id:'PRIVATE-FOREIGN',ticketId:'FOREIGN',at:'2099-01-01',title:'SECRET'}];data.items.push(foreign);
   const groups=S.digest(freeze(data));assert.equal(groups.length,2);assert.equal(groups[0].ticketId,item.id);
   assert.equal(groups[1].ticketId,first);assert.ok(groups[1].count>=2);assert.equal(groups[1].events[0].action,'deliver');

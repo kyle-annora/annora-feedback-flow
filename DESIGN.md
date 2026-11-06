@@ -69,6 +69,16 @@ assets:
 # Feedback Flow · original artifact iteration
 This iteration applies the approved `winquote-feedback-visuals-v2` direction to the original Annora artifact. It preserves the existing record, task, history, player and state structure. It does not replace the application with a new homepage or a gallery of standalone mockups.
 
+## One feedback process, different sample tickets
+
+PDF, compartment and refrigeration are sample inputs to one shared customer workspace. Keep sample selection in the floating Walkthrough console, while My feedback and Updates remain the customer navigation. The original business page provides the problem context; the proposed result appears later as evidence for version-specific acceptance.
+
+The initial team task leads with the original complaint, source-labeled facts and recorded decisions. AI organization is simulated and provisional. The team chooses whether the evidence is sufficient to draft a plan or whether a customer question is genuinely needed. New requests start with no complete scope or acceptance checklist. The explicit draft-plan action prepares a private editable draft; it neither shares the plan nor sends a question. Existing manually edited drafts and historical versions remain intact.
+
+After a customer reply, lead with that actual reply and its proposed implications for behavior and acceptance. Confirming and sharing remains a separate team action. A known historical answer can legitimately eliminate a clarification; do not ask again to make the demo appear intelligent. Unsupported answers or materials stay visible for human review. Submitted versions retain their own sources and answers.
+
+Apply the existing Cycle task/context layout, Attio's focused current decision and collapsed history, and the established Intercom teammate-screening pattern. Use compact evidence rows and a small source disclosure; avoid repeating the full approach in the customer message, editor and inspector. Preserve the approved serif/sans roles, neutral reading text and navy action color. The visible process should connect report → evidence → team judgment → optional answer → candidate/checks → exact-version acceptance → separate release approval.
+
 Primary composition lock: [Cycle’s light feedback document](https://refero.design/pages/2b8f8897-0054-472f-8cf3-eb5b57582e87). Cycle owns the current-task column and supporting history pane. The previously researched Attio direction owns the compact, resumable walkthrough and precise controls. The user-approved serif/sans role split governs typography: Source Serif Pro for page/task/section headings, Inter for body, fields, navigation and controls. No new visual research direction supersedes that lock.
 
 The approved V2 palette replaces the earlier indigo/lavender reading treatment. Text and broad surfaces are neutral; navy belongs to primary buttons, selected controls and small status marks. Existing green/rust evidence marks remain small and semantic. Font files are copied from the approved candidate; their licenses and original provenance are in `assets/`.

@@ -32,9 +32,10 @@
     ],
   });
   const catalog = {
-    pdf:{id:"pdf",title:"Open the generated PDF",ticketId:"fb_2026-07-11_002",kind:"behavior",target:"WinQuote · Make PDF",
+    pdf:{id:"pdf",title:"The generated PDF is hard to find",ticketId:"fb_2026-07-11_002",kind:"behavior",target:"WinQuote · Make PDF",
+      problem:"The customer has to leave Make PDF and search Workflow for the generated file.",
       feedback:"Generate PDF should automatically open the PDF once generated.",
-      summary:"Use the later navigation decision; open the saved PDF without losing the original quote.",
+      summary:"After generation, the customer has to search another page for the file.",
       sourceNote:"Historical ticket quoted in the July specification. The August 5 record supersedes the earlier Workflow redirect. This is an Annora demo reconstruction, not a live bug report or historical Annora review.",
       sourceRevision:revision,feedbackEvidence:"source-derived summary",history:[
         {date:"2026-07-16",decision:"Open the saved PDF and navigate to Workflow.",status:"superseded",source:"specs/20260716_cadillac_fixes/01_open_cadillac_pdf_after_generate.md"},
@@ -46,9 +47,10 @@
       ],detailedQuestions:[],
       variants:[{id:"default",title:"Open PDF and retain Make PDF",scope:pdfScope,configuration:{opens:"sample-pdf-new-tab",retains:"make-pdf",workflow:"explicit",placement:"separate-action"}}],
     },
-    compartment:{id:"compartment",title:"Know which compartment you’re editing",ticketId:"fb_2026-07-11_001",kind:"behavior",target:"WinQuote · Edit quote",
+    compartment:{id:"compartment",title:"Compartment sections look alike",ticketId:"fb_2026-07-11_001",kind:"behavior",target:"WinQuote · Edit quote",
+      problem:"Repeated specification titles make it hard to tell which compartment is being edited.",
       feedback:"Please default the specification titles to “Compartment 1 - Cooler” and so on, and still allow someone to edit them.",
-      summary:"Clear titles and grouping show which compartment every editable section belongs to.",
+      summary:"Repeated titles make the active compartment and its sections difficult to identify.",
       sourceNote:"Paraphrase of a customer quotation in the July specification. Grouping all editable sections is separately recorded owner direction. Annora delivery and revision interactions are proposed demo experiences.",
       sourceRevision:revision,feedbackEvidence:"paraphrase of quoted customer feedback",history:[
         {date:"2026-07-16",decision:"Customer requested numbered, editable default specification titles.",status:"current-record",source:"specs/20260716_cadillac_fixes/02_compartment_labeled_edit_sections.md:21"},
@@ -64,9 +66,10 @@
         {id:"loading-bay-title",title:"Name the second specification card Loading bay freezer",scope:{approach:compartmentScope.approach+"\nSet the second specification title to “Loading bay freezer”; retain its compartment number and type in the section grouping.",checks:compartmentScope.checks+"\nThe second specification preview reads “Loading bay freezer” and its sections remain identified as Compartment 2 - Freezer."},configuration:{compartments:[compartments[0],{...compartments[1],title:"Loading bay freezer"}],grouped:true,repeatLabels:false,editableTitles:true,persistence:"preview-session"}},
       ],
     },
-    refrigeration:{id:"refrigeration",title:"Remove refrigeration from the quote",ticketId:"fb_2026-09-23_001",kind:"behavior",target:"WinQuote · Refrigeration",
+    refrigeration:{id:"refrigeration",title:"Still charged for refrigeration",ticketId:"fb_2026-09-23_001",kind:"behavior",target:"WinQuote · Refrigeration",
+      problem:"Equipment and charges remain after No Refrigeration Required is selected and saved.",
       feedback:"No Refrigeration Required is selected and saved, but the quote still includes previously selected equipment and charges.",
-      summary:"Use the saved state to investigate; check equipment, charges, totals and other compartments together.",
+      summary:"Saving No Refrigeration Required leaves equipment and charges in the quote.",
       sourceNote:"Reconstructed from a specification with the ticket ID and diagnosis, not an original customer quotation. D2 selected deletion and later re-selection without asking; a new business question or restore alternative is a proposed Annora demo branch, not a recorded customer approval or known current unanswered request.",
       sourceRevision:revision,feedbackEvidence:"reconstructed from ticket-linked specification",history:[
         {date:"2026-09-23",decision:"An existing compartment retained saved equipment and costs after saving only the no-refrigeration flag.",status:"source-diagnosis",source:"specs/20260923_small_fixes/00_cadillac_surcharge_and_skip_refrigeration.md"},

@@ -56,7 +56,7 @@
     await Promise.all(pending.map(async a=>{const token={loading:true};mediaCache.set(a.id,token);try{const result=await root.FeedbackMediaStore.get(a.id);if(mediaCache.get(a.id)!==token||!visibleMediaIds.has(a.id))return;mediaCache.set(a.id,result?.blob?{url:URL.createObjectURL(result.blob)}:{missing:true});changed=true;}catch{if(mediaCache.get(a.id)===token){mediaCache.set(a.id,{missing:true});changed=true;}}}));
     if(changed)render();
   }
-  function initialSite(){return {compartment:'1',title:'Compartment 1 · Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
+  function initialSite(){return {compartment:'1',title:'Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
   function persist(next){
     if(brokenStorage)throw Error('The existing saved data needs recovery before it can be changed.');
     localStorage.setItem(S.key,JSON.stringify(next));data=next;
@@ -130,7 +130,11 @@
   });}
   function readAnswers(){const answers={};for(const el of app.querySelectorAll('[data-answer-id]')){const id=el.dataset.answerId;if(el.type==='checkbox'){answers[id]||=[];if(el.checked)answers[id].push(el.value);}else if(el.type==='radio'){if(el.checked)answers[id]=el.value;}else answers[id]=el.value;}return answers;}
   function readAnswerNotes(){return Object.fromEntries([...app.querySelectorAll('[data-answer-other]')].map(el=>[el.dataset.answerOther,el.value]));}
-  function formScope(){const f=current()?.c.reviewFlow;return {approach:field('approach')||f?.suggestedScope?.approach||f?.scope?.approach||'',checks:field('checks')||f?.suggestedScope?.checks||f?.scope?.checks||'',understanding:field('understanding')||undefined};}
+  function formScope(){
+    const f=current()?.c.reviewFlow,baseline=f?.planPrepared?f.scope:f?.suggestedScope||f?.scope;
+    const value=(name,fallback)=>{const input=(modal.open?modal.querySelector('[name="'+name+'"]'):null)||app.querySelector('[name="'+name+'"]');return input?input.value:fallback;};
+    return {approach:value('approach',baseline?.approach||''),checks:value('checks',baseline?.checks||''),understanding:value('understanding',undefined)};
+  }
   function saveDraft(){
     if(page!=='ticket'||!current()||historyVersion||walkCursor!==null)return;
     const values={};for(const el of app.querySelectorAll('[name]'))if(['INPUT','TEXTAREA','SELECT'].includes(el.tagName))values[el.name]=el.type==='checkbox'?el.checked:el.value;
@@ -142,10 +146,13 @@
     const item=current();if(!item)throw Error('Open a feedback item first.');
     const fresh=read();recordScene(S.get(fresh,item.id));
     const r=S.commit(fresh,rendered?.ticketId||item.id,{expectedSequence:rendered?.sequence,action,value,actor,simulated});
-    r.item.ux.drafts={};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
+    r.item.ux.drafts={};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
   }
-  function contextSnapshot(){return {page:scenario().target,route:location.pathname+'?workflow='+scenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-workspace-v3',state:{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration},simulated:true};}
+  function contextSnapshot(){
+    const state=scenarioId==='refrigeration'?{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration}:scenarioId==='pdf'?{pdfGenerated:site.pdfGenerated,currentStep:site.section,pdfOpened:false}:{specificationTitle:site.title,compartment:site.compartment,sectionsLabeled:false};
+    return {page:scenario().target,route:location.pathname+'?workflow='+scenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-workspace-v4',state,simulated:true};
+  }
   function pausePreparation(){
     const running=preparationTimer||backgroundTimer;clearTimeout(preparationTimer);clearTimeout(backgroundTimer);preparationTimer=backgroundTimer=null;
     if(running&&current()?.c.reviewFlow?.phase==='triage'&&current().ux?.preparation?.stage!=='team-review-pending')changeRecord(i=>{i.ux.preparation={...i.ux.preparation,paused:true};});
@@ -196,7 +203,16 @@
   function openEmail(event){if(!event)throw Error('There is no customer update yet. Send a reviewed question or result first.');const url=location.origin+location.pathname+'?ticket='+encodeURIComponent(event.ticketId)+'&event='+encodeURIComponent(event.id);showModal('<div class="fs-eyebrow">Email preview · not sent</div><h2>'+esc(event.title)+'</h2><p>WinQuote · '+esc(event.ticketId)+'</p><p>'+esc(event.cta)+'. Your feedback and its history are kept together.</p><a class="fs-button fs-primary" href="'+esc(url)+'">'+esc(event.cta)+'</a><p class="fs-muted">This is a simulated notification. No email has been sent.</p><button class="fs-button" data-wq="close-dialog">Close preview</button>');}
   function stopWatch(){clearTimeout(watchTimer);watchTimer=null;consoleState.playing=false;}
   async function watchNext(){
-    if(page==='site'){await submitPayload({text:scenario().feedback,occurredAt:'Just now',context:contextSnapshot(),attachments:[],captureId:'watch-'+Date.now()},true);return;}
+    if(page==='site'){
+      if(!site.walkProblemShown){
+        site.walkProblemShown=true;
+        if(scenarioId==='refrigeration'){site.noRefrigeration=true;site.savedNoRefrigeration=true;site.notice='Saved, but the equipment and charges remain. This is the problem the requester will report.';}
+        else if(scenarioId==='pdf'){site.pdfGenerated=true;site.notice='The PDF was generated, but it did not open. The requester can report it here.';}
+        else site.notice='The specification title and section labels do not identify their compartment. The requester can point this out here.';
+        notice='Walkthrough simulation · the reported problem is visible on the original page.';render();return;
+      }
+      await submitPayload({text:scenario().feedback,occurredAt:'Just now',context:contextSnapshot(),attachments:[],captureId:'watch-'+Date.now()},true);return;
+    }
     const item=current();if(!item)return startScenario(scenarioId);
     if(!item.c.reviewFlow){
       actor=roleOwner(item);const p=item.c.stage,answer=E.derive(item.c)?.clarification?.options?.[0]||'I want the button to say Start a new quote.';
@@ -208,11 +224,11 @@
     const f=item.c.reviewFlow,p=f.phase;actor=roleOwner(item);if(actor==='Complete'){stopWatch();render();return;}
     let action,value;
     switch(p){
-      case 'triage':action='confirm-scope';value=f.scope;break;
-      case 'spec-review':action=scenarioId==='refrigeration'&&!f.questionRounds?.some(r=>r.round==='detailed')?'begin-detailed-questions':'finish-spec';break;
+      case 'triage':action=f.evidenceFirst&&!f.planPrepared?'draft-plan':'confirm-scope';value=action==='confirm-scope'?f.scope:undefined;break;
+      case 'spec-review':action='finish-spec';break;
       case 'question-draft':action=f.questionPreview?'send-questions':'preview-questions';break;
       case 'awaiting-answer':action='answer';value={bundleId:f.sentBundle.id,answers:Object.fromEntries(f.sentBundle.questions.map(q=>[q.id,q.type==='multi'?[q.options[0]]:q.options?.[0]||'Please keep this focused on the current quote.']))};break;
-      case 'answer-review':if((f.suggestedScope?.decisionRequired||f.suggestedScope?.conflict))throw Error('This answer needs a team decision. Continue in Practice.');action='confirm-scope';value=f.suggestedScope||f.scope;break;
+      case 'answer-review':if((f.suggestedScope?.decisionRequired||f.suggestedScope?.conflict))throw Error('This answer needs a team decision. Continue in Practice.');action=f.evidenceFirst&&!f.planPrepared?'draft-plan':'confirm-scope';value=action==='confirm-scope'?(f.suggestedScope||f.scope):undefined;break;
       case 'candidate':case 'checking':action='prepare-result';break;
       case 'ready':action='deliver';break;
       case 'review':action='accept';value={rev:item.c.rev};break;
@@ -314,10 +330,10 @@
       case 'legacy-adjust':{const reason=field('reason').trim();if(!reason){showModal('<h2>What needs to change?</h2><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="legacy-adjust">Send to the team</button></div>');return;}const result=apply('adjust',{rev:rendered.rev,reason});closeModal();return result;}
       case 'keep-working':closeModal();return go('site');
       case 'close-dialog':return closeModal();
-      case 'site-select-compartment':site.compartment=value;site.title='Compartment '+value+(value==='1'?' · Cooler':' · Freezer');break;
+      case 'site-select-compartment':site.compartment=value;site.title=value==='1'?'Cooler':'Freezer';break;
       case 'site-title':site.title=value;return;
       case 'site-no-refrigeration':site.noRefrigeration=el.checked;return;
-      case 'site-save':site.savedNoRefrigeration=site.noRefrigeration;site.notice='Saved. The selected equipment and amount are still visible — this is the issue to report.';break;
+      case 'site-save':site.savedNoRefrigeration=site.noRefrigeration;site.notice=scenarioId==='compartment'?'Saved. The section labels still do not identify which compartment they belong to.':site.noRefrigeration?'Saved. The selected equipment and amount are still visible — this is the issue to report.':'Saved. Refrigeration is included in this quote.';break;
       case 'site-make-pdf':site.pdfGenerated=true;site.notice='PDF generated. It did not open automatically — this is the issue to report.';break;
       case 'site-workflow':site.section='workflow';break;
       case 'site-back':site.section='make-pdf';break;
@@ -350,7 +366,7 @@
       case 'result-pdf':return openPDF();
       case 'result-workflow':resultState.tab='workflow';return renderResult();
       case 'result-back':resultState.tab='quote';return renderResult();
-      default:if(['draft-questions','begin-detailed-questions','close-questions','finish-spec','deliver'].includes(action))return apply(action);return;
+      default:if(['draft-plan','draft-questions','begin-detailed-questions','close-questions','finish-spec','deliver'].includes(action))return apply(action);return;
     }
     savePresentation();render();
   }

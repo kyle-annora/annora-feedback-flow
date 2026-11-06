@@ -4,21 +4,21 @@
 
 A hands-on demo of feedback from its original page through team screening, optional clarification, a versioned result, customer acceptance and separate release authorization. It uses the existing Annora records and CaseEngine, with WinQuote as the business example.
 
-## Three workflows
+## One feedback process, three sample tickets
 
-- **Open the generated PDF** — the latest recorded requirements already establish a separate PDF tab, retained Make PDF page and an explicit Workflow action. The main path needs no customer question.
-- **Identify each compartment** — a complete V1 includes numbered/type-aware editable titles and grouped sections. Try a new title or an additional section-label requirement as a meaningful V2 adjustment.
-- **Remove refrigeration from the quote** — explicitly save No Refrigeration Required, inspect equipment and totals, and compare the later reselect/restore policies. This case comes from a historical diagnostic. The alternative restore conversation is a proposed demo branch, not an actual historical customer approval.
+- **The generated PDF does not open** — the team checks the complaint against the later navigation record before drafting a plan. The recorded requirements make another customer question unnecessary.
+- **Compartment titles are hard to identify** — the team separates the customer's editable-title request from the owner's grouping decision. A later title or section-label adjustment can produce V2.
+- **Refrigeration charges remain after saving** — the team compares the reported saved state with historical findings. If the team explicitly revisits how equipment should be chosen later, the customer's reselect/restore answer changes both the plan and the checks. The restore conversation is a proposed demo branch, not a historical customer approval.
 
 These cases have different evidence labels. Historical requests, recorded decisions, diagnostic reconstruction and proposed dialogue are not interchangeable. The source notes remain in Details.
 
 ## How to try it
 
-1. Choose a workflow, use its sample business page and select **Give feedback**. Keep the supplied text or write your own. Add real images or an audio recording, or select a page region to attach allowed DOM context.
+1. Open **Walkthrough**, choose a **Sample ticket**, use its business page and select **Give feedback**. All examples enter the same feedback workspace. Keep the supplied text or write your own. Add real images or an audio recording, or select a page region to attach allowed DOM context.
 2. Submit and keep working, or open the saved feedback. **My feedback** and **Updates** show only the current local customer's records. Images, audio and drafts stay on this device; a submitted attachment is not uploaded to a service.
 3. Open the floating **Walkthrough** console when you need to change perspective. **Practice** waits for your decisions. **Watch** runs explicitly labelled scripted decisions. Starting a watched example does not add it to the customer's feedback count.
-4. As **Website team**, screen AI-labelled suggestions privately. Edit or omit questions, answer from records, or keep technical decisions with the team. Only an explicitly sent batch reaches the requester. Initial clarification and later detailed questions are optional, separate rounds.
-5. As **Requester**, answer yes/no, single choice, multiple choice or text questions. Other can include an explanation; uncertainty is not consent. The team reviews how the answer changes the proposed behavior and checks before confirming the plan.
+4. As **Website team**, start with the complaint, sourced facts and earlier decisions. New feedback has no prefilled complete plan. Choose **Draft plan from these records** to prepare a private editable plan, then review and explicitly share it. Or screen questions: edit or omit them, answer from records, and keep technical decisions with the team. Only an explicitly sent batch reaches the requester. Initial clarification and later detailed questions are optional, separate rounds.
+5. As **Requester**, answer yes/no, single choice, multiple choice or text questions. Other can include an explanation; uncertainty is not consent. The team first sees the actual reply and its proposed behavior/check implications, then chooses **Draft an updated plan** before confirming and sharing it.
 6. Prepare and try an authored result, then send that exact version. A requested adjustment can include text, images or audio. The team must change the candidate or checks and prepare V2 before sending it again. Unsupported edits remain a draft until an appropriate result is authored.
 7. Customer acceptance hands the exact version to **Site owner**. The owner can request changes or authorize release. The team then runs the simulated release; failure and retry have separate states and no success receipt is created on failure.
 
@@ -26,7 +26,7 @@ The collapsed walkthrough names the current ticket, owner and task. It resumes t
 
 ## Waiting and returning
 
-A submission has an immediate durable receipt. While that screen remains open, short local timers show a material-specific context brief and then an explicitly simulated draft for team review. They never send questions or confirm a human decision. Leaving stops those timers; preparation can be resumed locally and there is no background worker.
+A submission has an immediate durable receipt. While that screen remains open, short local timers organize a material-specific context brief for team review. Elapsed time never creates a complete plan, sends a question or confirms a human decision. The team explicitly drafts the plan from the reviewed evidence. Leaving stops those timers; preparation can be resumed locally and there is no background worker.
 
 Waiting screens show the current owner, last meaningful update, next update time and what you can do. **Advance time** moves a local simulation clock without performing the work. Overdue updates create one delay notice per checkpoint and remain overdue until the team explicitly sets another expectation. Updates are grouped by ticket while preserving individual event links. Returning shows public changes since the previous visit; visiting alone does not mark every notification read. Simulated email links and Updates return to the same canonical ticket; old question and version links explain that they have been answered or superseded.
 

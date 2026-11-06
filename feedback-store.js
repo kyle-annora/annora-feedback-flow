@@ -22,6 +22,14 @@
   function migrate(value){
     const base=value&&Array.isArray(value.items)?clone(value):{items:[],serial:20,current:null};
     const migrated=WS.migrate(base);
+    for(const item of migrated.items){
+      const flow=item.c?.reviewFlow;
+      if(flow&&flow.evidenceFirst===undefined){
+        flow.evidenceFirst=true;
+        // Historical deliveries stay frozen; only the current unscreened task gains the new decision step.
+        flow.planPrepared=!['triage','answer-review','question-draft','awaiting-answer'].includes(flow.phase);
+      }
+    }
     return {...migrated,serial:Math.max(20,Number(base.serial)||0,...base.items.map(i=>/^WQ-\d+$/.test(i.id)?Number(i.id.slice(3)):0)),feedbackExperience:{schema:1,read:[],clockOffset:0,...base.feedbackExperience},items:migrated.items.map(i=>({...i,sequence:i.sequence||0,ux:{...i.ux,events:Array.isArray(i.ux?.events)?i.ux.events:publicTrailEvents(i),drafts:i.ux?.drafts||{},walk:i.ux?.walk||{mode:'practice',role:'Requester',open:false},timing:i.ux?.timing||{updatedAt:i.c?.trail?.at(-1)?.at||null,nextUpdateAt:null}}}))};
   }
   const now=data=>new Date(Date.now()+(data.feedbackExperience?.clockOffset||0)).toISOString();
@@ -29,7 +37,7 @@
   const customerItems=data=>WS.items(data.items,client);
   const phase=item=>item?.c?.reviewFlow?.phase||(item?.c?.stage==='authorized'&&item.ux?.releaseAttempt?.status==='failed'?'release-failed':item?.c?.stage);
   function status(item,clock){
-    if(!item)return {owner:'Requester',label:'Ready when you are',next:'Choose a workflow to try.',why:'Start with a real business problem, in the page where it happens.'};
+    if(!item)return {owner:'Requester',label:'Ready when you are',next:'Report a problem or follow your feedback.',why:'Every example follows the same feedback process, from the page where it happens.'};
     const c=item.c,f=c.reviewFlow||{},p=phase(item),v='V'+c.rev;
     const states={
       triage:['Website team','Reviewing your feedback','The team will review the evidence. You can keep working.','The team checks what is already known before asking you to repeat it.'],
@@ -63,7 +71,7 @@
     const id='WQ-'+String(++next.serial).padStart(3,'0'),at=now(next);
     const text=String(payload.text||'').trim();
     if(!text&&!payload.attachments?.length)throw Error('Add a description, image or recording before submitting.');
-    const c=E.createReviewedCase(text||'See the attached '+(payload.attachments.some(a=>a.kind==='audio')?'recording':'image')+'.',{sourceId:scenario.ticketId,scenarioId:scenario.id,journey:true,target:scenario.target});
+    const c=E.createReviewedCase(text||'See the attached '+(payload.attachments.some(a=>a.kind==='audio')?'recording':'image')+'.',{sourceId:scenario.ticketId,scenarioId:scenario.id,journey:true,evidenceFirst:true,target:scenario.target});
     c.reviewFlow.context=clone(payload.context||{});c.reviewFlow.attachments=clone(payload.attachments||[]);
     c.reviewFlow.sourceNote=scenario.sourceNote;
     if(!text){c.reviewFlow.needsMaterialReview=true;c.reviewFlow.scope={approach:'',checks:''};}
@@ -72,7 +80,7 @@
   }
   const permitted={
     Requester:['submit','answer','correct-understanding','adjust','accept'],
-    'Website team':['edit-scope','draft-questions','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
+    'Website team':['draft-plan','edit-scope','draft-questions','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
     'Site owner':['authorize','request-release-changes'],
   };
   function notification(item,action,at){
@@ -142,7 +150,7 @@
     item.ux=item.ux||{events:[],drafts:{},attachments:[]};
     const owner=status(item).owner;
     const previousTiming=item.ux.timing||{};
-    const privateEdit=['edit-scope','draft-questions','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
+    const privateEdit=['draft-plan','edit-scope','draft-questions','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
     // A completed task consumes its return prompt; retaining it would point at the previous owner/action.
     if(!privateEdit)delete item.ux.sinceLastVisit;
     item.ux.timing={...previousTiming,updatedAt:privateEdit?previousTiming.updatedAt:at,nextUpdateAt:owner==='Website team'?(previousTiming.nextUpdateAt||new Date(Date.parse(at)+2*3600000).toISOString()):null};
