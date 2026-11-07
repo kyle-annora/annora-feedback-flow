@@ -194,6 +194,10 @@
     const type=read('type')?.value??previous.type,required=read('required')?.checked??previous.required;
     return {...preserved,id:el.dataset.questionId,text:read('text')?.value??previous.text,type,options:opts,optionIds,reason:read('reason')?.value??previous.reason,disposition:read('disposition')?.value??previous.disposition,required,screened:true,...(type==='multi'?{exclusiveOptionIds:exclusiveLabels.map(label=>optionIds[opts.indexOf(label)]),minSelections:read('minSelections')?.value!==undefined&&read('minSelections').value!==''?Number(read('minSelections').value):required?1:0,maxSelections:read('maxSelections')?.value!==undefined&&read('maxSelections').value!==''?Number(read('maxSelections').value):opts.length}:{})};
   });}
+  function refreshQuestionMeaning(el){
+    const editor=el.closest('[data-question-id]');if(!editor)return;
+    try{const question=readQuestions().find(q=>q.id===editor.dataset.questionId);const target=editor.querySelector('.fs-question-meaning');if(target&&question){const markup=V.questionMeaning(question,current().c.reviewFlow.scenarioId);if(target._meaningMarkup!==markup){target.innerHTML=markup;target._meaningMarkup=markup;}}}catch{}
+  }
   function readAnswers(){const answers={};for(const el of app.querySelectorAll('[data-answer-id]')){const id=el.dataset.answerId;if(el.type==='checkbox'){answers[id]||=[];if(el.checked)answers[id].push(el.value);}else if(el.type==='radio'){if(el.checked)answers[id]=el.value;}else answers[id]=el.value;}return answers;}
   function readAnswerNotes(){return Object.fromEntries([...app.querySelectorAll('[data-answer-other]')].map(el=>[el.dataset.answerOther,el.value]));}
   function formScope(){
@@ -221,7 +225,7 @@
     // Returning is navigation, not a send or validation boundary. Keep even an
     // incomplete private edit, scoped to this version, scope cycle and round.
     if(questionsToKeep)r.item.ux.questionDrafts={...r.item.ux.questionDrafts,[priorQuestionKey]:questionsToKeep};
-    if(['save-questions','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
+    if(['save-questions','confirm-question-meaning','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
     const restoredQuestions=['draft-questions','reopen-clarification','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
     r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='reopen-clarification'?'Follow-up draft opened from the adjustment. Review and preview it before sending.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
@@ -477,6 +481,7 @@
       case 'site-workflow':site.section='workflow';break;
       case 'site-back':site.section='make-pdf';break;
       case 'select-variant':{const selected=C.variant(scenarioId,value);if(!selected)throw Error('That candidate is unavailable.');return apply('edit-candidate',selected.scope);}
+      case 'confirm-question-meaning':{const qs=readQuestions(),question=qs.find(q=>q.id===value);if(!question)return;const saved=apply('save-questions',qs,{quiet:true});const canonical=saved.c.reviewFlow.questionDraft.find(q=>q.id===value);return apply('confirm-question-meaning',{questionId:value,questionText:canonical.text});}
       case 'save-questions':return apply('save-questions',readQuestions());
       case 'preview-questions':apply('save-questions',readQuestions(),{quiet:true});return apply('preview-questions');
       case 'send-questions':{const qs=readQuestions(),pick=rows=>rows.filter(q=>q.disposition==='ask'||!q.disposition).map(q=>[q.id,q.text,q.type,q.options,q.required,q.minSelections,q.maxSelections,q.exclusiveOptionIds]);const unchanged=JSON.stringify(pick(qs))===JSON.stringify(pick(current().c.reviewFlow.questionPreview?.questions||[]));apply('save-questions',qs,{quiet:true});apply('preview-questions',undefined,{quiet:true});if(!unchanged){notice='The customer preview changed. Review it before sending.';render();return;}return apply('send-questions');}
@@ -505,8 +510,8 @@
     savePresentation();render();
   }
   document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
-  document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
-  app.addEventListener('input',event=>{const el=event.target;if(el.dataset.wq==='inspector-search'){const start=el.selectionStart;inspector.view={...inspector.view,query:el.value};render();const input=app.querySelector('[data-wq=inspector-search]');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start);}catch{}return;}if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
+  document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else {saveDraft();refreshQuestionMeaning(el);}}catch(e){showError(e);}});
+  app.addEventListener('input',event=>{const el=event.target;if(el.dataset.wq==='inspector-search'){const start=el.selectionStart;inspector.view={...inspector.view,query:el.value};render();const input=app.querySelector('[data-wq=inspector-search]');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start);}catch{}return;}if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]')){saveDraft();refreshQuestionMeaning(el);}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();saveDraft();syncUI();}else if(current()?.ux?.preparation?.paused)render();});
   window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();syncUI();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
   window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';if(hub.mode==='closed'||page!=='ticket'){data=read();render();}if(document.getElementById('live'))document.getElementById('live').textContent=notice;});

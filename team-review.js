@@ -153,9 +153,15 @@
       if (q.type === "multi" && (!Number.isInteger(minSelections) || !Number.isInteger(maxSelections) || minSelections < (q.required ? 1 : 0) || maxSelections < minSelections || maxSelections > q.options.length)) fail("Set valid minimum and maximum multi-select counts.");
       const prior = previous.find(item=>item.id === q.id) || pdfQuestions.find(item=>item.id === q.id);
       if (prior && prior.disposition !== "ask" && q.disposition === "ask" && q.screened !== true) fail("Screen and rewrite internal questions before asking the customer.");
-      return {id:q.id,text:text(q.text,"Question"),type:q.type,options:clone(q.options),optionIds:clone(optionIds),optionSnapshots:q.options.map((label,index)=>({id:optionIds[index],label})),required:q.required,disposition:q.disposition,
+      const question={id:q.id,text:text(q.text,"Question"),type:q.type,options:clone(q.options),optionIds:clone(optionIds),optionSnapshots:q.options.map((label,index)=>({id:optionIds[index],label})),required:q.required,disposition:q.disposition,
         ...(q.type === "multi" ? {minSelections,maxSelections,exclusiveOptionIds:clone(exclusiveOptionIds)} : {}),
         reason:text(q.reason || "","Question reason",false),...(q.screened === true ? {screened:true} : {})};
+      // Confirmation is tied to the exact saved wording and option contract.
+      // Editing any of them clears it rather than silently re-confirming a
+      // different question. New confirmations only come from the team action.
+      const confirmed=prior?.simulationMeaning;
+      if(confirmed&&Scenarios.questionMeaning("refrigeration",{...question,simulationMeaning:confirmed}).confirmed)question.simulationMeaning=clone(confirmed);
+      return question;
     });
   }
   function answerValue(q,raw,note) {
@@ -359,6 +365,16 @@
       case "save-questions":case "edit-questions":
         requirePhase(c,["question-draft"],action); f.questionDraft = questions(value,f.questionDraft); f.questionPreview = null;
         return done("Saved the private question draft. Nothing was sent.");
+      case "confirm-question-meaning": {
+        requirePhase(c,["question-draft"],action);
+        const question=f.questionDraft.find(q=>q.id===value?.questionId);
+        const meaning=Scenarios.questionMeaning(f.scenarioId,question);
+        if(!question||question.disposition!=="ask"||!meaning.eligible)fail("Confirm a customer equipment-return question with its supported single-choice options and stable option identities.");
+        if(value?.questionText!==undefined&&value.questionText!==question.text)fail("Confirm the current saved question wording, not an earlier draft.");
+        question.simulationMeaning={key:meaning.key,type:question.type,questionText:question.text,options:clone(question.options),optionIds:clone(question.optionIds),confirmedBy:"Website team"};
+        f.questionPreview=null;
+        return done("Confirmed that the saved question asks how equipment is chosen when refrigeration is needed again. Its supported answers may suggest behavior and acceptance checks in this simulation; sending, scope confirmation and acceptance remain separate.");
+      }
       case "close-questions":
         requirePhase(c,["question-draft"],action);
         c = stage(c,"processing",hasJourney(f) && f.journey.activeRound === "detailed" ? "spec-review" : "triage");

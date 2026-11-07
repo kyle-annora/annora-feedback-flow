@@ -2572,6 +2572,30 @@ body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
 #feedback-root .fs-hub-draft-list h2{font:550 13px/1.5 var(--fs-sans);margin:0 0 8px}
 #feedback-root .fs-hub-draft-list h2 small{font-size:11px;color:#737373;margin-left:5px}
 
+/* Current-task clarity: keep the approved palette and make the decision reachable. */
+#feedback-root .fs-hub-launcher { max-width:calc(100vw - 32px); flex-wrap:wrap; }
+#feedback-root .fs-hub-attention { display:flex; flex-wrap:wrap; gap:5px; }
+#feedback-root .fs-hub-task-count { min-height:24px; height:auto; padding:4px 7px; white-space:nowrap; }
+#feedback-root .fs-review-actions { position:sticky; top:0; z-index:3; margin-top:16px; padding:12px 0; background:var(--fs-paper, #fff); border-bottom:1px solid var(--fs-line); }
+#feedback-root .fs-review-actions + .fs-footnote { margin:10px 0 24px; }
+#feedback-root .fs-question-meaning:empty { display:none; }
+#feedback-root .fs-question-meaning { margin-top:24px; padding-top:20px; border-top:1px solid var(--fs-line); }
+#feedback-root .fs-meaning-heading { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px 16px; }
+#feedback-root .fs-meaning-heading h4 { margin:0; font:600 14px/1.5 var(--fs-sans); }
+#feedback-root .fs-meaning-heading > span { font:450 11px/1.5 var(--fs-sans); color:var(--fs-muted); }
+#feedback-root .fs-meaning-purpose { margin:6px 0 16px; font-size:13px; }
+#feedback-root .fs-meaning-options { margin:0; }
+#feedback-root .fs-meaning-options > div { display:grid; grid-template-columns:minmax(120px, .8fr) minmax(0,1.4fr); gap:16px; padding:12px 0; border-top:1px solid var(--fs-line); font:400 12px/1.6 var(--fs-sans); }
+#feedback-root .fs-meaning-options dt { font-weight:600; }
+#feedback-root .fs-meaning-options dd { margin:0; }
+#feedback-root .fs-meaning-options dd > span { display:block; color:var(--fs-muted); font-size:11px; margin-bottom:3px; }
+#feedback-root .fs-meaning-options dd > span:not(:first-child) { margin-top:8px; }
+@media(max-width:660px) {
+ #feedback-root .fs-review-actions > .fs-button { min-height:44px; }
+ #feedback-root .fs-meaning-options > div { grid-template-columns:1fr; gap:6px; }
+ #feedback-root .fs-hub-launcher { gap:7px; }
+}
+
 </style><style>
 .feedback-composer{--fc-ink:#262626;--fc-muted:#666;--fc-rule:#e6e6e6;--fc-blue:#153e5c;position:fixed;right:24px;bottom:24px;z-index:240;box-sizing:border-box;width:min(460px,calc(100vw - 48px));max-height:calc(100dvh - 96px);margin:0;padding:0;border:0;border-radius:12px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 6px 18px #18242e14,0 22px 64px #18242e26;overflow:hidden;isolation:isolate;caret-color:var(--fc-blue);scrollbar-color:#b9b9b9 #f5f5f5;scrollbar-width:thin}
 .feedback-composer[hidden],.feedback-composer [hidden]{display:none!important}
@@ -4183,11 +4207,28 @@ body.feedback-hub-full{overflow:hidden}
     };
     return aliases[id].some(raw=>normalized(raw) === normalized(value));
   }
+  function questionMeaning(id,question){
+    const key="equipment-return-policy";
+    const options=[
+      {id:"reselect",label:equipmentReturnQuestion.options[0],behavior:"Require a new equipment selection when refrigeration is needed again.",check:"Clearing the flag requires selecting equipment again."},
+      {id:"restore",label:equipmentReturnQuestion.options[1],behavior:"Restore the prior equipment and its charges when the flag is cleared and saved.",check:"Clearing the flag and saving restores the prior equipment selection and its charges."},
+      {id:"unsure",label:equipmentReturnQuestion.options[2],behavior:"Keep the choice with the website team; do not infer a policy.",check:null},
+    ];
+    const result={key,title:"How equipment is chosen when refrigeration is needed again",eligible:false,original:false,confirmed:false,options};
+    if(id!=="refrigeration"||question?.id!==equipmentReturnQuestion.id||question.type!=="single")return result;
+    const labels=question.options||question.optionSnapshots?.map(option=>option.label);
+    const ids=question.optionIds||question.optionSnapshots?.map(option=>option.id);
+    const eligible=Array.isArray(labels)&&labels.length===equipmentReturnQuestion.options.length&&labels.every((label,index)=>label===equipmentReturnQuestion.options[index])&&Array.isArray(ids)&&ids.length===equipmentReturnQuestion.optionIds.length&&ids.every((optionId,index)=>optionId===equipmentReturnQuestion.optionIds[index]);
+    // The sent snapshots and editable labels must agree. A stale snapshot cannot
+    // turn a changed answer option back into the old authored policy.
+    if(!eligible||(question.optionSnapshots&&(!Array.isArray(question.optionSnapshots)||question.optionSnapshots.length!==labels.length||question.optionSnapshots.some((option,index)=>option.label!==labels[index]||option.id!==ids[index]))))return result;
+    const original=normalized(question.text)===normalized(equipmentReturnQuestion.text), binding=question.simulationMeaning;
+    const confirmed=!!binding&&binding.key===key&&binding.type===question.type&&binding.questionText===question.text&&binding.confirmedBy==="Website team"&&Array.isArray(binding.options)&&Array.isArray(binding.optionIds)&&binding.options.length===labels.length&&binding.optionIds.length===ids.length&&binding.options.every((label,index)=>label===labels[index])&&binding.optionIds.every((optionId,index)=>optionId===ids[index]);
+    return {...result,eligible:true,original,confirmed};
+  }
   function matchesQuestion(id,question){
-    if(id!=="refrigeration"||question?.id!==equipmentReturnQuestion.id||question.type!=="single"||normalized(question.text)!==normalized(equipmentReturnQuestion.text))return false;
-    const labels=question.optionSnapshots?.map(option=>option.label)||question.options;
-    const ids=question.optionSnapshots?.map(option=>option.id)||question.optionIds;
-    return Array.isArray(labels)&&labels.length===equipmentReturnQuestion.options.length&&labels.every((label,index)=>label===equipmentReturnQuestion.options[index])&&Array.isArray(ids)&&ids.length===equipmentReturnQuestion.optionIds.length&&ids.every((optionId,index)=>optionId===equipmentReturnQuestion.optionIds[index]);
+    const meaning=questionMeaning(id,question);
+    return meaning.eligible&&(meaning.original||meaning.confirmed);
   }
   function suggest(id,answers,options={}) {
     const item = entry(id);
@@ -4195,11 +4236,11 @@ body.feedback-hub-full{overflow:hidden}
     const result = {...clone(options.scope || item.scope),reason:"The team must review this answer and explicitly confirm the current scope.",conflict:null,decisionRequired:true,scenarioId:id};
     if (id !== "refrigeration") return result;
     // The business decision has the same meaning before or after a shared plan.
-    // When called from a case, only the exact sent choice contract can use the
-    // authored policy mapping; an arbitrary manually added question is not it.
+    // The authored wording or an explicit team confirmation of the reworded
+    // question binds this choice contract. Similar words are never enough.
     if(options.questions!==undefined){
       const question=Array.isArray(options.questions)&&options.questions.find(q=>q.id===equipmentReturnQuestion.id);
-      if(!matchesQuestion(id,question))return {...result,reason:"The edited sent question is outside the authored equipment-return choice. The team must interpret the actual question and answer before selecting a policy."};
+      if(!matchesQuestion(id,question))return {...result,reason:"The edited sent question has no confirmed equipment-return meaning. The team must interpret the actual question and answer before selecting a policy."};
     }
     if (answers && typeof answers === "object" && Object.entries(answers).some(([key,value])=>key !== "equipment-return" && (Array.isArray(value) ? value.length : value))) return result;
     if (Object.values(options.notes || {}).some(value=>typeof value === "string" && value.trim())) return {...result,reason:"The customer added context beyond the authored choice. The team must review the complete answer before confirming scope."};
@@ -4221,7 +4262,7 @@ body.feedback-hub-full{overflow:hidden}
     return {interactive:true,scenarioId:id,variantId:found.id,type:id === "pdf" ? "pdf-workflow" : id,configuration:clone(found.configuration),simulated:true,implemented:false,verified:false,
       ...(id === "pdf" ? clone(found.configuration) : {}),reason:"An authored simulation of the exact candidate; not evidence that a live WinQuote feature was implemented or tested."};
   }
-  const api = {list,get,variant,suggest,preview,matchesFeedback,matchesQuestion};
+  const api = {list,get,variant,suggest,preview,matchesFeedback,matchesQuestion,questionMeaning};
   root.FlowScenarios = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(globalThis);
@@ -4382,9 +4423,15 @@ body.feedback-hub-full{overflow:hidden}
       if (q.type === "multi" && (!Number.isInteger(minSelections) || !Number.isInteger(maxSelections) || minSelections < (q.required ? 1 : 0) || maxSelections < minSelections || maxSelections > q.options.length)) fail("Set valid minimum and maximum multi-select counts.");
       const prior = previous.find(item=>item.id === q.id) || pdfQuestions.find(item=>item.id === q.id);
       if (prior && prior.disposition !== "ask" && q.disposition === "ask" && q.screened !== true) fail("Screen and rewrite internal questions before asking the customer.");
-      return {id:q.id,text:text(q.text,"Question"),type:q.type,options:clone(q.options),optionIds:clone(optionIds),optionSnapshots:q.options.map((label,index)=>({id:optionIds[index],label})),required:q.required,disposition:q.disposition,
+      const question={id:q.id,text:text(q.text,"Question"),type:q.type,options:clone(q.options),optionIds:clone(optionIds),optionSnapshots:q.options.map((label,index)=>({id:optionIds[index],label})),required:q.required,disposition:q.disposition,
         ...(q.type === "multi" ? {minSelections,maxSelections,exclusiveOptionIds:clone(exclusiveOptionIds)} : {}),
         reason:text(q.reason || "","Question reason",false),...(q.screened === true ? {screened:true} : {})};
+      // Confirmation is tied to the exact saved wording and option contract.
+      // Editing any of them clears it rather than silently re-confirming a
+      // different question. New confirmations only come from the team action.
+      const confirmed=prior?.simulationMeaning;
+      if(confirmed&&Scenarios.questionMeaning("refrigeration",{...question,simulationMeaning:confirmed}).confirmed)question.simulationMeaning=clone(confirmed);
+      return question;
     });
   }
   function answerValue(q,raw,note) {
@@ -4588,6 +4635,16 @@ body.feedback-hub-full{overflow:hidden}
       case "save-questions":case "edit-questions":
         requirePhase(c,["question-draft"],action); f.questionDraft = questions(value,f.questionDraft); f.questionPreview = null;
         return done("Saved the private question draft. Nothing was sent.");
+      case "confirm-question-meaning": {
+        requirePhase(c,["question-draft"],action);
+        const question=f.questionDraft.find(q=>q.id===value?.questionId);
+        const meaning=Scenarios.questionMeaning(f.scenarioId,question);
+        if(!question||question.disposition!=="ask"||!meaning.eligible)fail("Confirm a customer equipment-return question with its supported single-choice options and stable option identities.");
+        if(value?.questionText!==undefined&&value.questionText!==question.text)fail("Confirm the current saved question wording, not an earlier draft.");
+        question.simulationMeaning={key:meaning.key,type:question.type,questionText:question.text,options:clone(question.options),optionIds:clone(question.optionIds),confirmedBy:"Website team"};
+        f.questionPreview=null;
+        return done("Confirmed that the saved question asks how equipment is chosen when refrigeration is needed again. Its supported answers may suggest behavior and acceptance checks in this simulation; sending, scope confirmation and acceptance remain separate.");
+      }
       case "close-questions":
         requirePhase(c,["question-draft"],action);
         c = stage(c,"processing",hasJourney(f) && f.journey.activeRound === "detailed" ? "spec-review" : "triage");
@@ -6651,7 +6708,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   const permitted={
     Requester:['submit','answer','correct-understanding','adjust','accept'],
-    'Website team':['draft-plan','edit-scope','draft-questions','reopen-clarification','begin-detailed-questions','save-questions','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
+    'Website team':['draft-plan','edit-scope','draft-questions','reopen-clarification','begin-detailed-questions','save-questions','confirm-question-meaning','edit-questions','close-questions','preview-questions','send-questions','confirm-scope','edit-understanding','finish-spec','edit-candidate','begin-check','prepare-result','deliver','publish','publish-failed','retry-publish'],
     'Site owner':['authorize','request-release-changes'],
   };
   function notification(item,action,at){
@@ -6721,7 +6778,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     item.ux=item.ux||{events:[],drafts:{},attachments:[]};
     const owner=status(item).owner;
     const previousTiming=item.ux.timing||{};
-    const privateEdit=['draft-plan','edit-scope','draft-questions','reopen-clarification','save-questions','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
+    const privateEdit=['draft-plan','edit-scope','draft-questions','reopen-clarification','save-questions','confirm-question-meaning','edit-questions','preview-questions','close-questions','edit-candidate','begin-detailed-questions'].includes(command.action);
     // A completed task consumes its return prompt; retaining it would point at the previous owner/action.
     if(!privateEdit)delete item.ux.sinceLastVisit;
     item.ux.timing={...previousTiming,updatedAt:privateEdit?previousTiming.updatedAt:at,nextUpdateAt:owner==='Website team'?(previousTiming.nextUpdateAt||new Date(Date.parse(at)+2*3600000).toISOString()):null};
@@ -7717,20 +7774,29 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return `<details class="fs-selection-rules"><summary>Selection rules ${icon('down', 13)}</summary><p>For multiple-choice answers, set how many options can be chosen. An exclusive answer must be selected on its own.</p><div class="fs-field-pair"><label class="fs-field"><span>Minimum choices</span><input type="number" data-field="minSelections" min="0" max="30" value="${escape(question.minSelections ?? (multiple ? question.required ? 1 : 0 : ''))}" placeholder="Use required setting"></label><label class="fs-field"><span>Maximum choices</span><input type="number" data-field="maxSelections" min="0" max="30" value="${escape(question.maxSelections ?? (multiple ? options.length : ''))}" placeholder="All options"></label></div><label class="fs-field"><span>Exclusive answers</span><textarea data-field="exclusiveOptions" rows="2">${escape(exclusive.join('\n'))}</textarea><small>One exact option label per line. “None of these” and uncertainty answers are exclusive by default.</small></label></details>`;
   }
 
+  function questionMeaning(question, scenarioId) {
+    if (scenarioId !== 'refrigeration' || question.id !== 'equipment-return') return '';
+    const meaning = root.FlowScenarios?.questionMeaning(scenarioId, question);
+    if (!meaning || question.disposition !== 'ask') return '';
+    if (!meaning.eligible) return '<p class="fs-soft-note">The team will interpret this answer. The question type or options no longer match a supported simulated choice.</p>';
+    const ready = meaning.original || meaning.confirmed;
+    return `<div class="fs-meaning-heading"><h4>How answers shape the plan</h4><span>${meaning.confirmed ? 'Team confirmed' : meaning.original ? 'Simulated mapping' : 'Needs team confirmation'}</span></div><p class="fs-meaning-purpose">${escape(meaning.title)}</p><dl class="fs-meaning-options">${meaning.options.map(option => `<div><dt>${escape(option.label)}</dt><dd><span>Candidate</span>${escape(option.behavior)}${option.check ? `<span>Acceptance check</span>${escape(option.check)}` : ''}</dd></div>`).join('')}</dl>${ready ? '<p class="fs-footnote">The selected answer prepares a draft. The team still reviews the plan before sharing it.</p>' : `<p class="fs-soft-note">You changed the question. Confirm it still asks about the choice above to use these simulated outcomes. Otherwise, the team will interpret the answer.</p>${button('confirm-question-meaning', 'Confirm question meaning', { value: question.id, icon: 'check' })}`}`;
+  }
+
   function questionEditor(flow, vm) {
     const questions = Array.isArray(vm.formDraft?.questions) ? vm.formDraft.questions : array(flow.questionDraft);
     const customerQuestions = questions.filter(question => question.disposition === 'ask');
     const returnLabel = flow.evidenceFirst && !flow.planPrepared ? 'Back to evidence' : 'Back to scope';
     const followup = flow.reopenedFor?.scopeCycle === flow.journey?.scopeCycle ? flow.reopenedFor : null;
     return `${questionRound(flow)}<h2>Ask only what the requester can answer</h2><p class="fs-task-intro">Review the wording, answer format, and reason for each question. Keep known facts and technical decisions with the team.</p>${followup ? `<blockquote class="fs-request-quote"><span>Follow-up on changes requested to V${escape(followup.rev)}</span><p>${escape(followup.reason)}</p></blockquote>` : ''}
-      <div class="fs-question-editors">${questions.map((question, index) => `<details class="fs-question-editor" data-question-id="${escape(question.id)}"${question.disposition === 'ask' ? ' open' : ''}><summary><span class="fs-question-number">${index + 1}</span><span>${escape(question.text)}</span><small>${escape({ ask: 'Ask requester', records: 'From records', team: 'Team decision', omit: 'Omitted' }[question.disposition] || 'Draft')}</small>${icon('down', 14)}</summary><div class="fs-question-fields"><label class="fs-field"><span>Question</span><textarea data-field="text" rows="2">${escape(question.text)}</textarea></label><div class="fs-field-pair"><label class="fs-field"><span>Answer type</span><select data-field="type">${[['single', 'Single choice'], ['multi', 'Multiple choice'], ['yes_no', 'Yes / No'], ['text', 'Written answer']].map(([id, label]) => `<option value="${id}"${question.type === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label><label class="fs-field"><span>Resolve with</span><select data-field="disposition">${[['ask', 'Ask requester'], ['records', 'Existing records'], ['team', 'Website team'], ['omit', 'Omit this question']].map(([id, label]) => `<option value="${id}"${question.disposition === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label></div><label class="fs-field"><span>Options</span><textarea data-field="options" rows="3">${escape(array(question.options).map(option => typeof option === 'string' ? option : option.label || option.text).join('\n'))}</textarea><small>One option per line, for choice questions.</small></label>${selectionRules(question)}<label class="fs-field"><span>Why this answer is needed</span><textarea data-field="reason" rows="2">${escape(question.reason)}</textarea></label><label class="fs-checkbox"><input type="checkbox" data-field="required"${question.required ? ' checked' : ''}>Answer required</label></div></details>`).join('')}</div>
+      <div class="fs-question-editors">${questions.map((question, index) => `<details class="fs-question-editor" data-question-id="${escape(question.id)}"${question.disposition === 'ask' ? ' open' : ''}><summary><span class="fs-question-number">${index + 1}</span><span>${escape(question.text)}</span><small>${escape({ ask: 'Ask requester', records: 'From records', team: 'Team decision', omit: 'Omitted' }[question.disposition] || 'Draft')}</small>${icon('down', 14)}</summary><div class="fs-question-fields"><label class="fs-field"><span>Question</span><textarea data-field="text" rows="2">${escape(question.text)}</textarea></label><div class="fs-field-pair"><label class="fs-field"><span>Answer type</span><select data-field="type">${[['single', 'Single choice'], ['multi', 'Multiple choice'], ['yes_no', 'Yes / No'], ['text', 'Written answer']].map(([id, label]) => `<option value="${id}"${question.type === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label><label class="fs-field"><span>Resolve with</span><select data-field="disposition">${[['ask', 'Ask requester'], ['records', 'Existing records'], ['team', 'Website team'], ['omit', 'Omit this question']].map(([id, label]) => `<option value="${id}"${question.disposition === id ? ' selected' : ''}>${label}</option>`).join('')}</select></label></div><label class="fs-field"><span>Options</span><textarea data-field="options" rows="3">${escape(array(question.options).map(option => typeof option === 'string' ? option : option.label || option.text).join('\n'))}</textarea><small>One option per line, for choice questions.</small></label>${selectionRules(question)}<label class="fs-field"><span>Why this answer is needed</span><textarea data-field="reason" rows="2">${escape(question.reason)}</textarea></label><label class="fs-checkbox"><input type="checkbox" data-field="required"${question.required ? ' checked' : ''}>Answer required</label><section class="fs-question-meaning" aria-label="Simulated answer mapping">${questionMeaning(question, flow.scenarioId)}</section></div></details>`).join('')}</div>
       ${!customerQuestions.length ? '<p class="fs-soft-note">No customer questions are selected. Keep recorded facts and team decisions internal, then return to the review to continue.</p>' : ''}
       ${flow.questionPreview ? `<section class="fs-question-preview"><div class="fs-section-heading"><h3>What the requester will see</h3><span>Preview · not sent</span></div>${answerFields(flow.questionPreview.questions, {}, true)}</section>` : ''}
       ${actions(button('close-questions', returnLabel, { quiet: Boolean(customerQuestions.length), primary: !customerQuestions.length }) + button('add-question', 'Add a question', {quiet: true, icon: 'plus'}) + button('save-questions', 'Save draft') + (flow.questionPreview ? button('send-questions', 'Send questions', { primary: true, arrow: true }) : button('preview-questions', 'Preview questions', { primary: true, disabled: !customerQuestions.length })))}
       <p class="fs-footnote">Questions are private until the team sends them.</p>`;
   }
 
-  function currentResult(vm, caseRecord) {
+  function currentResult(vm, caseRecord, { showOpenAction = true } = {}) {
     const flow = caseRecord.reviewFlow;
     const version = array(caseRecord.versions).at(-1);
     const frozen = ['review', 'accepted', 'authorized', 'published', 'release-failed'].includes(flow.phase);
@@ -7738,7 +7804,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const proposal = frozen ? version?.candidate : flow.candidateDraft?.approach;
     const checks = result?.checks || (frozen ? version?.reviewFlow?.candidateDraft?.checks : flow.candidateDraft?.checks);
     const available = Boolean(vm.preview?.interactive);
-    return `<section class="fs-result"><div class="fs-result-heading"><span class="fs-result-icon">${icon('file', 22)}</span><div><h3>Version ${Number(caseRecord.rev) || 1}</h3><p>${escape(vm.scenario?.title || titleFor(vm, vm.current))}</p></div><span class="fs-version-tag">Simulation</span></div><div class="fs-result-summary">${proseList(proposal)}</div>${available ? button('open-result', 'Open result', { primary: true, icon: 'external' }) : `<p class="fs-soft-note">${escape(vm.preview?.reason || 'Prepare this version to open its result.')}</p>`}<details class="fs-result-checks" open><summary>What to check ${icon('down', 14)}</summary>${proseList(checks)}</details>${frozen ? versionBasis(panelPresentation(vm), version?.rev) : ''}</section>`;
+    return `<section class="fs-result"><div class="fs-result-heading"><span class="fs-result-icon">${icon('file', 22)}</span><div><h3>Version ${Number(caseRecord.rev) || 1}</h3><p>${escape(vm.scenario?.title || titleFor(vm, vm.current))}</p></div><span class="fs-version-tag">Simulation</span></div><div class="fs-result-summary">${proseList(proposal)}</div>${available ? (showOpenAction ? button('open-result', 'Open result', { primary: true, icon: 'external' }) : '') : `<p class="fs-soft-note">${escape(vm.preview?.reason || 'Prepare this version to open its result.')}</p>`}<details class="fs-result-checks" open><summary>What to check ${icon('down', 14)}</summary>${proseList(checks)}</details>${frozen ? versionBasis(panelPresentation(vm), version?.rev) : ''}</section>`;
   }
 
   function waiting(vm, caseRecord) {
@@ -7881,7 +7947,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       return `<h2>${phase === 'ready' ? 'Version ' + caseRecord.rev + ' is ready to review' : 'Prepare version ' + caseRecord.rev}</h2><p class="fs-task-intro">${phase === 'ready' ? 'Open the result, check the behavior, and send this exact version to the requester.' : 'Write the intended behavior and how you’ll check it. Then prepare a result the requester can try.'}</p>${caseRecord.adjustment ? `<blockquote class="fs-request-quote"><span>Changes requested to version ${caseRecord.rev - 1}</span><p>${escape(caseRecord.adjustment)}</p></blockquote>` : ''}
         ${canFollowUp ? `<div class="fs-followup-choice">${button('reopen-clarification', 'Ask a follow-up', { quiet: true, icon: 'ask' })}<p>Need a customer decision? Review and preview a question before sending it.</p></div>` : ''}${phase !== 'ready' ? `${variants.length > 1 ? `<label class="fs-field fs-variant"><span>Supported result</span><select data-wq="select-variant" aria-label="Supported result">${!selectedVariant ? '<option value="" disabled selected>Edited behavior · choose a supported result</option>' : ''}${variants.map(variant => `<option value="${escape(variant.id)}"${selectedVariant === variant.id ? ' selected' : ''}>${escape(variant.title)}</option>`).join('')}</select><small>Choosing another result updates its behavior and checks.</small></label>` : ''}${textField('approach', 'Proposed behavior', fieldValue(vm, 'approach', draft.approach))}${textField('checks', 'Acceptance checks', fieldValue(vm, 'checks', draft.checks))}${actions(button('edit-candidate', 'Save draft') + button('prepare-result', 'Prepare simulated result', { primary: true, arrow: true }))}` : currentResult(vm, caseRecord) + actions(button('edit-candidate', 'Edit candidate', { quiet: true, icon: 'edit' }) + button('deliver', 'Send version ' + caseRecord.rev + ' for review', { primary: true, arrow: true }))}`;
     }
-    if (phase === 'review') return `<h2>Does version ${Number(caseRecord.rev)} resolve your feedback?</h2><p class="fs-task-intro">Open the result and try the behavior you asked for. Tell the team if anything still needs to change.</p>${currentResult(vm, caseRecord)}${actions(button('adjust', 'Request changes') + button('accept', 'Accept version ' + caseRecord.rev, { primary: true, icon: 'check' }))}<p class="fs-footnote">Release authorization follows acceptance.</p>`;
+    if (phase === 'review') return `<h2>Does version ${Number(caseRecord.rev)} resolve your feedback?</h2><p class="fs-task-intro">Try the result, then accept this version or ask for changes.</p>${actions((vm.preview?.interactive ? button('open-result', 'Open result', {icon: 'external'}) : '') + button('adjust', 'Request changes', { quiet: true }) + button('accept', 'Accept version ' + caseRecord.rev, { primary: true, icon: 'check' }), 'fs-review-actions')}<p class="fs-footnote">Accepting this version does not publish it.</p>${currentResult(vm, caseRecord, {showOpenAction: false})}`;
     if (phase === 'accepted') return `<h2>Approve version ${Number(caseRecord.rev)} for release</h2><p class="fs-task-intro">The requester accepted this exact version. Review the destination and authorize its simulated release.</p><div class="fs-destination"><span>Release destination</span><strong>${escape(flow.target || 'WinQuote')}</strong></div>${currentResult(vm, caseRecord)}${actions(button('request-release-changes', 'Request a change') + button('authorize', 'Approve simulated release', { primary: true, icon: 'verify' }))}`;
     if (phase === 'authorized') return `<h2>Run the approved release</h2><p class="fs-task-intro">Version ${Number(caseRecord.rev)} has been accepted by the requester and authorized by the site owner.</p><div class="fs-destination"><span>Release destination</span><strong>${escape(flow.target || 'WinQuote')}</strong></div>${actions(button('publish', 'Simulate release', { primary: true, icon: 'release' }) + button('publish-failed', 'Simulate a release failure', { quiet: true }))}`;
     if (phase === 'release-failed') return `<h2>The release needs another attempt</h2><p class="fs-task-intro">${escape(caseRecord.releaseError || flow.releaseError || 'The simulated release could not complete. The accepted version and authorization are still available.')}</p>${actions(button('retry-publish', 'Retry simulated release', { primary: true, icon: 'replay' }) + button('open-result', 'View accepted result', { quiet: true }))}`;
@@ -7905,7 +7971,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       return `<h2>A little context will help</h2><p class="fs-task-intro">${escape(question.reason || textOf(p.why))}</p><fieldset class="fs-question"><legend>${escape(question.text || 'What would you like the team to change?')}</legend>${array(question.options).length ? `<div class="fs-options">${question.options.map(value => `<label class="fs-option"><input type="radio" name="answer" value="${escape(typeof value === 'string' ? value : value.label)}"><span>${escape(typeof value === 'string' ? value : value.label)}</span></label>`).join('')}</div>` : ''}${textField('answer', 'Your answer', fieldValue(vm, 'answer', ''), { rows: 2 })}</fieldset>${actions(button('legacy-answer', 'Send answer to the team', { primary: true, arrow: true }))}`;
     }
     if (['processing', 'blocked'].includes(c.stage)) return `<h2>Prepare version ${escape(c.rev)}</h2><p class="fs-task-intro">Review the copy and its acceptance checks before sending it.</p>${derived.reason ? `<p class="fs-soft-note">${escape(derived.reason)}</p>` : ''}${quote}${textField('candidate', 'Proposed copy', fieldValue(vm, 'candidate', candidate || ''))}<h3>Acceptance checks</h3>${proseList(checks)}${actions(button('legacy-prepare', 'Save draft & check') + button('legacy-deliver', 'Send version ' + c.rev + ' for review', { primary: true, disabled: Boolean(derived.blocked || !candidate), arrow: true }))}`;
-    if (c.stage === 'review') return `<h2>Does version ${escape(c.rev)} resolve your feedback?</h2><p class="fs-task-intro">Review the proposed copy against your request and the acceptance checks.</p>${result}${actions(button('legacy-adjust', 'Request changes') + button('legacy-accept', 'Accept version ' + c.rev, { primary: true, icon: 'check' }))}<p class="fs-footnote">Release authorization follows acceptance.</p>`;
+    if (c.stage === 'review') return `<h2>Does version ${escape(c.rev)} resolve your feedback?</h2><p class="fs-task-intro">Review the proposed copy against your request and the acceptance checks.</p>${actions(button('legacy-adjust', 'Request changes') + button('legacy-accept', 'Accept version ' + c.rev, { primary: true, icon: 'check' }), 'fs-review-actions')}<p class="fs-footnote">Accepting this version does not publish it.</p>${result}`;
     if (c.stage === 'release') return `<h2>Approve version ${escape(c.rev)} for release</h2><p class="fs-task-intro">The requester accepted this exact version. Authorize its simulated release to ${escape(p.target || 'WinQuote homepage')}.</p>${result}${actions(button('legacy-authorize', 'Approve simulated release', { primary: true, icon: 'verify' }))}`;
     if (c.stage === 'authorized') return `<h2>Run the approved release</h2><p class="fs-task-intro">Version ${escape(c.rev)} has been accepted and authorized for ${escape(p.target || 'WinQuote homepage')}.</p>${result}${actions(button('legacy-publish', 'Simulate release', { primary: true, icon: 'release' }))}`;
     return `<h2>${escape(status.label)}</h2><p class="fs-task-intro">${escape(textOf(p.why) || 'Review the recorded request and its current basis.')}</p>${quote}`;
@@ -8243,8 +8309,16 @@ if (typeof module==="object" && module.exports) module.exports = api;
   function hubLauncher(vm) {
     const attention=hubAttention(vm),count=Math.max(0,Number(attention.taskCount)||0),draft=Boolean(vm.hub?.hasDraft);
     const unread=Boolean(attention.hasUnreadFyi ?? attention.hasUnread);
-    const label='Feedback'+(count?' · '+count+' '+(count===1?'ticket needs':'tickets need')+' your attention':'')+(unread?' · Unread updates':'')+(draft?' · Saved draft':'');
-    return '<button type="button" class="fs-hub-launcher" data-wq="hub-open" data-feedback-private aria-label="'+escape(label)+'" aria-controls="feedback-hub" aria-expanded="'+(vm.hub?.mode!=='closed')+'">'+icon('feedback',20)+'<span>Feedback</span>'+(count?'<span class="fs-hub-task-count" aria-label="'+count+' actionable '+(count===1?'ticket':'tickets')+'">'+(count>99?'99+':count)+'</span>':'')+(unread?'<span class="fs-hub-unread-dot" aria-label="Unread updates"></span>':'')+(draft?'<span class="fs-hub-draft-indicator">Draft</span>':'')+'</button>';
+    const groups = [{kind:'answer',label:'to answer'},{kind:'review',label:'to review'},{kind:'approve-release',label:'to approve'}];
+    const tasks=array(attention.tasks),seen=new Set();
+    const unique=tasks.filter(task=>!seen.has(task.ticketId)&&seen.add(task.ticketId));
+    const parts=groups.map(group=>({...group,count:unique.filter(task=>task.action===group.kind).length}));
+    const known=parts.reduce((sum,part)=>sum+part.count,0);
+    parts.push({kind:'other',label:'need'+(count-known===1?'s':'')+' you',count:Math.max(0,count-known)});
+    const visible=parts.filter(part=>part.count);
+    const summary=visible.map(part=>part.count+' '+part.label).join(' · ');
+    const label='Feedback'+(summary?' · '+summary:'')+(unread?' · Unread updates':'')+(draft?' · Saved draft':'');
+    return '<button type="button" class="fs-hub-launcher" data-wq="hub-open" data-feedback-private aria-label="'+escape(label)+'" aria-controls="feedback-hub" aria-expanded="'+(vm.hub?.mode!=='closed')+'">'+icon('feedback',20)+'<span>Feedback</span>'+(count?'<span class="fs-hub-attention" aria-label="'+count+' actionable '+(count===1?'ticket':'tickets')+'">'+visible.map(part=>'<span class="fs-hub-task-count" data-attention-kind="'+part.kind+'">'+(part.count>99?'99+':part.count)+' '+part.label+'</span>').join('')+'</span>':'')+(unread?'<span class="fs-hub-unread-dot" aria-label="Unread updates"></span>':'')+(draft?'<span class="fs-hub-draft-indicator">Draft</span>':'')+'</button>';
   }
   function hubSource(vm) {
     const h={...vm,scenario:vm.host?.scenario||vm.scenario,site:vm.host?.site||vm.site},s=h.site||{},kind=siteKind(h);
@@ -8299,7 +8373,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return '<div class="fs-hub-app" data-hub-mode="'+escape(hub.mode)+'">'+hubHost(vm)+surface+(!hub.composing&&hub.mode==='closed'?hubLauncher({...vm,hub}):'')+(vm.console?.open?demoConsole(vm):'')+'</div>';
   }
 
-  root.FeedbackView = { render, renderHub, task, questionGroups };
+  root.FeedbackView = { render, renderHub, task, questionGroups, questionMeaning };
 })(globalThis);
 
 </script><script>
@@ -8615,6 +8689,10 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const type=read('type')?.value??previous.type,required=read('required')?.checked??previous.required;
     return {...preserved,id:el.dataset.questionId,text:read('text')?.value??previous.text,type,options:opts,optionIds,reason:read('reason')?.value??previous.reason,disposition:read('disposition')?.value??previous.disposition,required,screened:true,...(type==='multi'?{exclusiveOptionIds:exclusiveLabels.map(label=>optionIds[opts.indexOf(label)]),minSelections:read('minSelections')?.value!==undefined&&read('minSelections').value!==''?Number(read('minSelections').value):required?1:0,maxSelections:read('maxSelections')?.value!==undefined&&read('maxSelections').value!==''?Number(read('maxSelections').value):opts.length}:{})};
   });}
+  function refreshQuestionMeaning(el){
+    const editor=el.closest('[data-question-id]');if(!editor)return;
+    try{const question=readQuestions().find(q=>q.id===editor.dataset.questionId);const target=editor.querySelector('.fs-question-meaning');if(target&&question){const markup=V.questionMeaning(question,current().c.reviewFlow.scenarioId);if(target._meaningMarkup!==markup){target.innerHTML=markup;target._meaningMarkup=markup;}}}catch{}
+  }
   function readAnswers(){const answers={};for(const el of app.querySelectorAll('[data-answer-id]')){const id=el.dataset.answerId;if(el.type==='checkbox'){answers[id]||=[];if(el.checked)answers[id].push(el.value);}else if(el.type==='radio'){if(el.checked)answers[id]=el.value;}else answers[id]=el.value;}return answers;}
   function readAnswerNotes(){return Object.fromEntries([...app.querySelectorAll('[data-answer-other]')].map(el=>[el.dataset.answerOther,el.value]));}
   function formScope(){
@@ -8642,7 +8720,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     // Returning is navigation, not a send or validation boundary. Keep even an
     // incomplete private edit, scoped to this version, scope cycle and round.
     if(questionsToKeep)r.item.ux.questionDrafts={...r.item.ux.questionDrafts,[priorQuestionKey]:questionsToKeep};
-    if(['save-questions','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
+    if(['save-questions','confirm-question-meaning','edit-questions','send-questions'].includes(action)&&r.item.ux.questionDrafts)delete r.item.ux.questionDrafts[priorQuestionKey];
     const restoredQuestions=['draft-questions','reopen-clarification','begin-detailed-questions'].includes(action)?r.item.ux.questionDrafts?.[questionDraftKey(r.item)]:null;
     r.item.ux.drafts=restoredQuestions?{questions:clone(restoredQuestions)}:{};persist(r.data);savePresentation();if(quiet)rendered={ticketId:r.item.id,sequence:r.item.sequence,rev:r.item.c.rev,bundleId:r.item.c.reviewFlow?.sentBundle?.id};error='';notice=simulated?'Walkthrough step simulated.':action==='reopen-clarification'?'Follow-up draft opened from the adjustment. Review and preview it before sending.':action==='draft-plan'?'Draft prepared from this feedback. Review it before sharing.':action==='answer'?'Answer received. The website team owns the next step.':action==='deliver'?'V'+r.item.c.rev+' sent for review.':action==='accept'?'Accepted. Release approval is now with the site owner.':action==='authorize'?'Release authorized. The team can now run it in simulation.':'Saved.';
     if(!quiet)render();return r.item;
@@ -8898,6 +8976,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'site-workflow':site.section='workflow';break;
       case 'site-back':site.section='make-pdf';break;
       case 'select-variant':{const selected=C.variant(scenarioId,value);if(!selected)throw Error('That candidate is unavailable.');return apply('edit-candidate',selected.scope);}
+      case 'confirm-question-meaning':{const qs=readQuestions(),question=qs.find(q=>q.id===value);if(!question)return;const saved=apply('save-questions',qs,{quiet:true});const canonical=saved.c.reviewFlow.questionDraft.find(q=>q.id===value);return apply('confirm-question-meaning',{questionId:value,questionText:canonical.text});}
       case 'save-questions':return apply('save-questions',readQuestions());
       case 'preview-questions':apply('save-questions',readQuestions(),{quiet:true});return apply('preview-questions');
       case 'send-questions':{const qs=readQuestions(),pick=rows=>rows.filter(q=>q.disposition==='ask'||!q.disposition).map(q=>[q.id,q.text,q.type,q.options,q.required,q.minSelections,q.maxSelections,q.exclusiveOptionIds]);const unchanged=JSON.stringify(pick(qs))===JSON.stringify(pick(current().c.reviewFlow.questionPreview?.questions||[]));apply('save-questions',qs,{quiet:true});apply('preview-questions',undefined,{quiet:true});if(!unchanged){notice='The customer preview changed. Review it before sending.';render();return;}return apply('send-questions');}
@@ -8926,8 +9005,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
     savePresentation();render();
   }
   document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
-  document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
-  app.addEventListener('input',event=>{const el=event.target;if(el.dataset.wq==='inspector-search'){const start=el.selectionStart;inspector.view={...inspector.view,query:el.value};render();const input=app.querySelector('[data-wq=inspector-search]');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start);}catch{}return;}if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
+  document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else {saveDraft();refreshQuestionMeaning(el);}}catch(e){showError(e);}});
+  app.addEventListener('input',event=>{const el=event.target;if(el.dataset.wq==='inspector-search'){const start=el.selectionStart;inspector.view={...inspector.view,query:el.value};render();const input=app.querySelector('[data-wq=inspector-search]');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start);}catch{}return;}if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]')){saveDraft();refreshQuestionMeaning(el);}});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();saveDraft();syncUI();}else if(current()?.ux?.preparation?.paused)render();});
   window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();syncUI();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
   window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';if(hub.mode==='closed'||page!=='ticket'){data=read();render();}if(document.getElementById('live'))document.getElementById('live').textContent=notice;});

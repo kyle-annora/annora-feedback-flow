@@ -104,11 +104,28 @@
     };
     return aliases[id].some(raw=>normalized(raw) === normalized(value));
   }
+  function questionMeaning(id,question){
+    const key="equipment-return-policy";
+    const options=[
+      {id:"reselect",label:equipmentReturnQuestion.options[0],behavior:"Require a new equipment selection when refrigeration is needed again.",check:"Clearing the flag requires selecting equipment again."},
+      {id:"restore",label:equipmentReturnQuestion.options[1],behavior:"Restore the prior equipment and its charges when the flag is cleared and saved.",check:"Clearing the flag and saving restores the prior equipment selection and its charges."},
+      {id:"unsure",label:equipmentReturnQuestion.options[2],behavior:"Keep the choice with the website team; do not infer a policy.",check:null},
+    ];
+    const result={key,title:"How equipment is chosen when refrigeration is needed again",eligible:false,original:false,confirmed:false,options};
+    if(id!=="refrigeration"||question?.id!==equipmentReturnQuestion.id||question.type!=="single")return result;
+    const labels=question.options||question.optionSnapshots?.map(option=>option.label);
+    const ids=question.optionIds||question.optionSnapshots?.map(option=>option.id);
+    const eligible=Array.isArray(labels)&&labels.length===equipmentReturnQuestion.options.length&&labels.every((label,index)=>label===equipmentReturnQuestion.options[index])&&Array.isArray(ids)&&ids.length===equipmentReturnQuestion.optionIds.length&&ids.every((optionId,index)=>optionId===equipmentReturnQuestion.optionIds[index]);
+    // The sent snapshots and editable labels must agree. A stale snapshot cannot
+    // turn a changed answer option back into the old authored policy.
+    if(!eligible||(question.optionSnapshots&&(!Array.isArray(question.optionSnapshots)||question.optionSnapshots.length!==labels.length||question.optionSnapshots.some((option,index)=>option.label!==labels[index]||option.id!==ids[index]))))return result;
+    const original=normalized(question.text)===normalized(equipmentReturnQuestion.text), binding=question.simulationMeaning;
+    const confirmed=!!binding&&binding.key===key&&binding.type===question.type&&binding.questionText===question.text&&binding.confirmedBy==="Website team"&&Array.isArray(binding.options)&&Array.isArray(binding.optionIds)&&binding.options.length===labels.length&&binding.optionIds.length===ids.length&&binding.options.every((label,index)=>label===labels[index])&&binding.optionIds.every((optionId,index)=>optionId===ids[index]);
+    return {...result,eligible:true,original,confirmed};
+  }
   function matchesQuestion(id,question){
-    if(id!=="refrigeration"||question?.id!==equipmentReturnQuestion.id||question.type!=="single"||normalized(question.text)!==normalized(equipmentReturnQuestion.text))return false;
-    const labels=question.optionSnapshots?.map(option=>option.label)||question.options;
-    const ids=question.optionSnapshots?.map(option=>option.id)||question.optionIds;
-    return Array.isArray(labels)&&labels.length===equipmentReturnQuestion.options.length&&labels.every((label,index)=>label===equipmentReturnQuestion.options[index])&&Array.isArray(ids)&&ids.length===equipmentReturnQuestion.optionIds.length&&ids.every((optionId,index)=>optionId===equipmentReturnQuestion.optionIds[index]);
+    const meaning=questionMeaning(id,question);
+    return meaning.eligible&&(meaning.original||meaning.confirmed);
   }
   function suggest(id,answers,options={}) {
     const item = entry(id);
@@ -116,11 +133,11 @@
     const result = {...clone(options.scope || item.scope),reason:"The team must review this answer and explicitly confirm the current scope.",conflict:null,decisionRequired:true,scenarioId:id};
     if (id !== "refrigeration") return result;
     // The business decision has the same meaning before or after a shared plan.
-    // When called from a case, only the exact sent choice contract can use the
-    // authored policy mapping; an arbitrary manually added question is not it.
+    // The authored wording or an explicit team confirmation of the reworded
+    // question binds this choice contract. Similar words are never enough.
     if(options.questions!==undefined){
       const question=Array.isArray(options.questions)&&options.questions.find(q=>q.id===equipmentReturnQuestion.id);
-      if(!matchesQuestion(id,question))return {...result,reason:"The edited sent question is outside the authored equipment-return choice. The team must interpret the actual question and answer before selecting a policy."};
+      if(!matchesQuestion(id,question))return {...result,reason:"The edited sent question has no confirmed equipment-return meaning. The team must interpret the actual question and answer before selecting a policy."};
     }
     if (answers && typeof answers === "object" && Object.entries(answers).some(([key,value])=>key !== "equipment-return" && (Array.isArray(value) ? value.length : value))) return result;
     if (Object.values(options.notes || {}).some(value=>typeof value === "string" && value.trim())) return {...result,reason:"The customer added context beyond the authored choice. The team must review the complete answer before confirming scope."};
@@ -142,7 +159,7 @@
     return {interactive:true,scenarioId:id,variantId:found.id,type:id === "pdf" ? "pdf-workflow" : id,configuration:clone(found.configuration),simulated:true,implemented:false,verified:false,
       ...(id === "pdf" ? clone(found.configuration) : {}),reason:"An authored simulation of the exact candidate; not evidence that a live WinQuote feature was implemented or tested."};
   }
-  const api = {list,get,variant,suggest,preview,matchesFeedback,matchesQuestion};
+  const api = {list,get,variant,suggest,preview,matchesFeedback,matchesQuestion,questionMeaning};
   root.FlowScenarios = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(globalThis);

@@ -1059,3 +1059,27 @@ body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
 #feedback-root .fs-hub-draft-list{margin-top:22px;padding-top:18px;border-top:1px solid var(--fs-line)}
 #feedback-root .fs-hub-draft-list h2{font:550 13px/1.5 var(--fs-sans);margin:0 0 8px}
 #feedback-root .fs-hub-draft-list h2 small{font-size:11px;color:#737373;margin-left:5px}
+
+/* Current-task clarity: keep the approved palette and make the decision reachable. */
+#feedback-root .fs-hub-launcher { max-width:calc(100vw - 32px); flex-wrap:wrap; }
+#feedback-root .fs-hub-attention { display:flex; flex-wrap:wrap; gap:5px; }
+#feedback-root .fs-hub-task-count { min-height:24px; height:auto; padding:4px 7px; white-space:nowrap; }
+#feedback-root .fs-review-actions { position:sticky; top:0; z-index:3; margin-top:16px; padding:12px 0; background:var(--fs-paper, #fff); border-bottom:1px solid var(--fs-line); }
+#feedback-root .fs-review-actions + .fs-footnote { margin:10px 0 24px; }
+#feedback-root .fs-question-meaning:empty { display:none; }
+#feedback-root .fs-question-meaning { margin-top:24px; padding-top:20px; border-top:1px solid var(--fs-line); }
+#feedback-root .fs-meaning-heading { display:flex; align-items:baseline; flex-wrap:wrap; gap:8px 16px; }
+#feedback-root .fs-meaning-heading h4 { margin:0; font:600 14px/1.5 var(--fs-sans); }
+#feedback-root .fs-meaning-heading > span { font:450 11px/1.5 var(--fs-sans); color:var(--fs-muted); }
+#feedback-root .fs-meaning-purpose { margin:6px 0 16px; font-size:13px; }
+#feedback-root .fs-meaning-options { margin:0; }
+#feedback-root .fs-meaning-options > div { display:grid; grid-template-columns:minmax(120px, .8fr) minmax(0,1.4fr); gap:16px; padding:12px 0; border-top:1px solid var(--fs-line); font:400 12px/1.6 var(--fs-sans); }
+#feedback-root .fs-meaning-options dt { font-weight:600; }
+#feedback-root .fs-meaning-options dd { margin:0; }
+#feedback-root .fs-meaning-options dd > span { display:block; color:var(--fs-muted); font-size:11px; margin-bottom:3px; }
+#feedback-root .fs-meaning-options dd > span:not(:first-child) { margin-top:8px; }
+@media(max-width:660px) {
+ #feedback-root .fs-review-actions > .fs-button { min-height:44px; }
+ #feedback-root .fs-meaning-options > div { grid-template-columns:1fr; gap:6px; }
+ #feedback-root .fs-hub-launcher { gap:7px; }
+}

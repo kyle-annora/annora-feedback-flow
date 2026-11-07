@@ -90,3 +90,11 @@ The host renders one bottom-right launcher; it does not add Feedback to its busi
 New report drafts bind scenario, quote, compartment and source section. Additional notes bind their original ticket, version, sequence and author; a stale submit is rejected and its draft retained. Matching legacy drafts are migrated without deleting their source record, and a migration receipt prevents old drafts from reappearing after submission. Page selection targets only the host business surface.
 
 Walkthrough presentation snapshots use a lossless shared-node pool so repeated long questions, answers and version copies do not exhaust local storage during acceptance and release. Existing plain snapshots are upgraded when saved. Canonical cases and submitted versions retain their original structure and exact content; this is storage deduplication only, with no new business state or reconstructed evidence.
+
+## Follow-up questions and review handoffs
+
+Minimize the workspace to see whether the current role has feedback **to answer**, **to review**, or **to approve**. Saved drafts and informational updates remain separate signals. Open a review in the full workspace to find **Open result**, **Request changes**, and **Accept version** before the detailed result. Acceptance and release approval remain distinct.
+
+For the refrigeration walkthrough, request a change to V1, then have the Website team choose **Ask a follow-up**. Rewrite the equipment-return question while retaining its three single-choice options. The editor shows how each option affects the simulated candidate and acceptance check. Choose **Confirm question meaning** only if the revised question still asks how equipment should be chosen when refrigeration is needed again, then preview and send. An unconfirmed rewrite or changed options stays a manual team decision. After answering, draft and confirm the updated plan, prepare V2 and send it for review. Details → Versions retains V1's original Q1 and basis separately from V2's Q2.
+
+This is a bounded, team-confirmed simulation, not arbitrary language understanding. No real customer message, engineering change or business release is performed.

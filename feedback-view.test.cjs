@@ -548,3 +548,36 @@ test('explicit legacy question identity beats stale question wording without reu
   const entries=View.questionGroups(input)[0].entries;assert.equal(entries.length,2);assert.equal(entries[0].answer,undefined);assert.equal(entries[1].answer,'Only for a');
  }
 });
+
+test('minimized launcher distinguishes questions from version reviews and keeps draft independent',()=>{
+  const tasks=[{ticketId:'Q',action:'answer'},{ticketId:'V1',action:'review'},{ticketId:'V2',action:'review'}];
+  const html=View.renderHub(hubVM({hub:{hasDraft:true},attention:{tasks,taskCount:3,hasUnreadFyi:true}}));
+  assert.match(html,/data-attention-kind="answer">1 to answer/);
+  assert.match(html,/data-attention-kind="review">2 to review/);
+  assert.match(html,/aria-label="Feedback · 1 to answer · 2 to review · Unread updates · Saved draft"/);
+  const owner=View.renderHub(hubVM({attention:{tasks:[{ticketId:'V2',action:'approve-release'}],taskCount:1}}));
+  assert.match(owner,/1 to approve/);assert.doesNotMatch(owner,/to answer|to review/);
+});
+
+test('customer review offers the version-specific decision before the long result and keeps publishing separate',()=>{
+  const state=vm({actor:'Requester',status:{owner:'Requester',phase:'review'}});
+  state.current.c.reviewFlow={phase:'review'};state.current.c.rev=2;
+  state.current.c.versions=[{rev:2,candidate:'A long candidate. '.repeat(50),result:{checks:['Only this quote changes.']}}];
+  state.preview={interactive:true};state.presentation={versions:[],basis:[]};
+  const html=View.task(state);
+  assert.ok(html.indexOf('data-wq="accept"') < html.indexOf('class="fs-result"'));
+  assert.ok(html.indexOf('data-wq="adjust"') < html.indexOf('class="fs-result"'));
+  assert.equal((html.match(/data-wq="open-result"/g)||[]).length,1);
+  assert.match(html,/Accept version 2/);assert.match(html,/Accepting this version does not publish it/);
+  assert.doesNotMatch(html,/data-wq="authorize"|data-wq="publish"/);
+});
+
+test('rewritten question explains both outcome mappings and requires explicit team confirmation',()=>{
+  const C=require('./scenario-catalog.js');globalThis.FlowScenarios=C;
+  const q={id:'equipment-return',type:'single',disposition:'ask',text:'After trying V1, how should equipment return?',options:['Select equipment again','Restore the previous equipment selection',"I'm not sure"],optionIds:['reselect','restore','unsure']};
+  const html=View.questionMeaning(q,'refrigeration');
+  assert.match(html,/Needs team confirmation/);assert.match(html,/Confirm question meaning/);
+  assert.match(html,/Require a new equipment selection/);assert.match(html,/restores the prior equipment selection and its charges/);
+  assert.match(html,/do not infer a policy/);
+  assert.doesNotMatch(View.questionMeaning({...q,type:'text'},'refrigeration'),/data-wq="confirm-question-meaning"/);
+});

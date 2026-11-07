@@ -69,6 +69,46 @@ test("draft and unsent preview actions produce no customer notification; only th
   assert.equal(S.status(sent.item).owner,"Requester");
 });
 
+test("confirming edited question meaning is a private team action; the sent binding survives reload without accepting or publishing", () => {
+  let {data,item}=add(S.migrate(null),"refrigeration");const id=item.id;
+  const run=(actor,action,value)=>({data,item}=command(data,id,actor,action,value));
+  run("Website team","draft-questions");
+  const wording="If refrigeration is needed again, should the previous equipment return or should you choose it again?";
+  const draft=clone(item.c.reviewFlow.questionDraft);
+  draft.find(q=>q.id==="equipment-return").text=wording;
+  run("Website team","save-questions",draft);
+  const saved=clone(item),before=JSON.stringify(data),value={questionId:"equipment-return",questionText:wording};
+  for(const actor of ["Requester","Site owner"])assert.throws(()=>command(freeze(data),id,actor,"confirm-question-meaning",value),/different role/);
+  assert.equal(JSON.stringify(data),before);
+  run("Website team","confirm-question-meaning",value);
+  assert.equal(item.sequence,saved.sequence+1);
+  assert.equal(item.c.reviewFlow.phase,"question-draft");
+  assert.equal(S.status(item).owner,"Website team");
+  assert.equal(item.c.reviewFlow.sentBundle,null);
+  assert.equal(item.c.reviewFlow.questionPreview,null);
+  assert.deepEqual(item.ux.events,saved.ux.events);
+  assert.deepEqual(item.ux.timing,saved.ux.timing);
+  assert.deepEqual(S.updates(data),[]);
+  assert.throws(()=>S.commit(data,id,{expectedSequence:saved.sequence,actor:"Website team",action:"preview-questions"}),/changed.*latest version/);
+  data=S.migrate(JSON.parse(JSON.stringify(data)));item=S.get(data,id);
+  assert.equal(C.questionMeaning("refrigeration",item.c.reviewFlow.questionDraft.find(q=>q.id==="equipment-return")).confirmed,true);
+  run("Website team","preview-questions");
+  assert.deepEqual(S.updates(data),[]);
+  run("Website team","send-questions");
+  const sentQuestion=item.c.reviewFlow.sentBundle.questions.find(q=>q.id==="equipment-return");
+  assert.deepEqual(sentQuestion.optionIds,["reselect","restore","unsure"]);
+  assert.equal(sentQuestion.simulationMeaning.questionText,wording);
+  assert.equal(S.updates(data).length,1);
+  assert.equal(S.updates(data)[0].action,"send-questions");
+  assert.equal(S.updates(data)[0].bundleId,item.c.reviewFlow.sentBundle.id);
+  run("Requester","answer",{bundleId:item.c.reviewFlow.sentBundle.id,answers:{"equipment-return":"restore"}});
+  assert.match(item.c.reviewFlow.suggestedScope.approach,/restore that prior selection/);
+  assert.match(item.c.reviewFlow.suggestedScope.checks,/restores the prior equipment selection and its charges/);
+  assert.equal(item.c.accepted,null);
+  assert.equal(item.c.authorization,null);
+  assert.equal(item.c.receipt,null);
+});
+
 test("the team reopens a requested change as private Q2 and delivers V2 without rewriting V1 or inventing a requester correction", () => {
   let {data,item}=add(S.migrate(null),"refrigeration");const id=item.id;
   const run=(actor,action,value)=>({data,item}=command(data,id,actor,action,value));

@@ -301,3 +301,13 @@ The compact nonmodal panel prioritizes up to three tasks, two recent ticket upda
 Attio's same-interaction full-page expansion informs continuity, and Intercom's persistent messenger access informs availability. The actionable badge semantics are our product decision. Preserve the approved serif/sans typography, neutral copy and restrained navy actions. No backdrop, automatic popup or artificial completion percentage. Desktop supports both sizes; mobile uses an unobstructed full-height sheet.
 
 Demo role switching and authored examples remain in a separate console. A notification is navigation, never a grant of another role or acceptance/release authorization. The business app's Home/Configure/record navigation is not a second feedback entry.
+
+## Answer and review handoffs · November 7 refinement
+
+Preserve the approved Source Serif Pro headings, Inter body, neutral text and navy actions. This refinement follows the user's observed walkthrough: the minimized Feedback entry must name the kind of pending action, review decisions must be reachable immediately, and revised Q2 wording must retain an explicit answer-to-outcome relationship.
+
+The Attio reference (Refero style 9f0c028b-6b11-415e-ab92-f32e4597cbe2) informs the current-decision hierarchy; Cycle's screened AI suggestions remain the model for team ownership. Keep these information roles within the existing visual system. Do not introduce new decorative cards or an alternate workspace theme.
+
+The launcher separates “to answer,” “to review,” and “to approve” counts from informational updates and saved drafts. These counts come from the current role's existing actionable-ticket predicate, not notification volume. Full review places Open result, Request changes and Accept version together before the long candidate and evidence. Acceptance still does not authorize publication; historical versions are read-only.
+
+For the supported refrigeration question, show each choice's simulated candidate behavior and matching acceptance check. Editing the wording requires an explicit team confirmation that it still asks how equipment is chosen when refrigeration is needed again. Confirmation belongs to the exact saved question text, type and stable choice IDs; later edits invalidate it. Changed choices, free text, uncertainty or added conflicting notes stay with the team. Confirmation neither sends questions nor publishes a plan. The actual sent wording and confirmed mapping remain in the submitted version's own evidence.
