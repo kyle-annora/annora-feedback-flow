@@ -519,12 +519,18 @@
     return { impact, linked: linked || changeLinked, rev: p.viewedRev, questionId: linked && impact.source?.type !== 'revision-request' ? impact.source?.id : null };
   }
 
-  function versionFocus(p) {
+  function versionFocus(p, full = false) {
     const decision = versionDecision(p);
     if (!decision) return '';
     const { impact, linked, rev } = decision;
     const requestedChange = impact.source?.type === 'revision-request';
-    return `<section class="fs-version-focus" aria-label="Version ${escape(rev)} decision basis"><header><h3>Version ${escape(rev)} basis</h3><small>${p.historical ? 'Read-only' : 'Saved at submission'}</small></header>${impact.source?.label ? `<p class="fs-focus-source">${escape(impact.source.label)}</p>` : ''}<dl><div><dt>${requestedChange ? 'Requested change' : linked ? 'Answer used' : 'Recorded answer'}</dt><dd class="fs-focus-answer">${escape(textOf(impact.answer))}</dd></div>${linked ? `<div><dt>Impact</dt><dd>${proseList(impact.behavior)}</dd></div><div><dt>Acceptance ${array(impact.checks).length === 1 ? 'check' : 'checks'}</dt><dd>${array(impact.checks).length ? proseList(impact.checks) : '<p>No matching check was saved with this version.</p>'}</dd></div>` : '<div><dt>Relationship needs review</dt><dd>The saved plan is available below. Its effect cannot be attributed to this answer automatically.</dd></div>'}</dl></section>`;
+    const group = questionGroups(p).find(r => (r.id || r.bundleId) === impact.source?.id);
+    const linkedEntry = group?.entries.find(entry => entry.id === impact.source?.answerId);
+    const aggregate = !requestedChange && group?.entries.length > 1 && !linkedEntry;
+    const answerSummary = aggregate ? group.entries.filter(e=>answeredValue(e.answer)).length + ' answers recorded in Round ' + group.number : full ? textOf(impact.answer) : shortText(textOf(impact.answer),180);
+    const sourceLink = linkedEntry ? sourceRecordButton('question',linkedEntry.id,'View source answer') : group ? `<button type="button" class="fs-source-link" data-wq="inspector-list" data-value="questions">View clarification history${icon('next',12)}</button>` : '';
+    const points = values => full ? proseList(values) : proseList(array(values).slice(0,1).map(value=>shortText(value,150))) + (array(values).length>1?`<span class="fs-basis-more">${values.length-1} more saved ${values.length===2?'item':'items'}</span>`:'');
+    return `<section class="fs-version-focus" aria-label="Version ${escape(rev)} decision basis"><header><h3>Version ${escape(rev)} basis</h3><small>${p.historical ? 'Read-only' : 'Saved at submission'}</small></header>${impact.source?.label ? `<p class="fs-focus-source">${escape(impact.source.label)}</p>` : ''}<dl><div><dt>${requestedChange ? 'Requested change' : linked ? 'Answer used' : 'Recorded answer'}</dt><dd class="fs-focus-answer">${escape(answerSummary)}${sourceLink}</dd></div>${linked ? `<div><dt>Impact</dt><dd>${points(impact.behavior)}</dd></div><div><dt>Acceptance ${array(impact.checks).length === 1 ? 'check' : 'checks'}</dt><dd>${array(impact.checks).length ? points(impact.checks) : '<p>No matching check was saved with this version.</p>'}</dd></div>` : '<div><dt>Relationship needs review</dt><dd>The saved plan is available below. Its effect cannot be attributed to this answer automatically.</dd></div>'}</dl>${!full?sourceRecordButton('basis','version','View full basis'):''}</section>`;
   }
 
   function activityRows(entries) {
@@ -536,26 +542,112 @@
     }).join('')}</ol>` : '<p class="fs-inspector-empty">No shared activity has been recorded.</p>'}</section>`;
   }
 
-  function questionHistory(p) {
-    const decision = versionDecision(p);
+  const answeredValue = value => Array.isArray(value) ? value.some(answeredValue) : value !== null && value !== undefined && (typeof value !== 'string' || value.trim() !== '');
+  const answerText = value => Array.isArray(value) ? value.map(answerText).join(' · ') : typeof value === 'object' ? textOf(value) : String(value ?? '');
+  const shortText = (value, limit = 150) => { const text = String(value || '').replace(/\s+/g, ' ').trim(); return text.length > limit ? text.slice(0, limit - 1) + '…' : text; };
+  const answerStatus = entry => entry.status || (answeredValue(entry.answer) ? 'answered' : 'awaiting-answer');
+  const statusText = status => ({answered:'Answered',skipped:'Skipped · optional','awaiting-answer':'Awaiting answer','not-recorded':'Answer not recorded'}[status] || 'Answer not recorded');
+  function questionGroups(p) {
     const groups = new Map();
-    array(p.questionRounds).forEach(round => groups.set(round.id || round.bundleId, { ...round, entries: [] }));
-    array(p.answers).forEach(answer => {
+    array(p.questionRounds).forEach((round, index) => groups.set(round.id || round.bundleId || 'round-' + index, { ...round, number:index + 1, entries:[] }));
+    for (const answer of array(p.answers)) {
       const key = answer.bundleId || answer.id || answer.round || 'initial';
-      if (!groups.has(key)) groups.set(key, { id: key, round: answer.round, scopeCycle: answer.scopeCycle, entries: [] });
-      groups.get(key).entries.push(answer);
-    });
-    for (const group of groups.values()) {
-      if (!group.entries.length) group.entries = array(group.questions).map(question => ({ question: question.text, answer: group.answers?.[question.id], note: group.answerNotes?.[question.id], at: group.answeredAt || group.sentAt || group.at, simulated: group.answerSimulated ?? group.simulated }));
+      if (!groups.has(key)) groups.set(key, {id:key,number:groups.size + 1,entries:[]});
     }
-    const rows = [...groups.values()];
-    if (!rows.length) return '';
-    const answerText = value => Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? textOf(value) : String(value ?? '');
-    return panelFold('Question rounds', rows.length, rows.map((round, index) => {
-      const answered = round.entries.filter(entry => entry.answer !== null && entry.answer !== undefined && entry.answer !== '').length;
-      const label = 'Question round ' + (index + 1);
-      return `<section class="fs-question-history" aria-label="${label}"><header><h4>Round ${index + 1}</h4>${decision?.questionId === round.id ? `<small class="fs-round-used">Used in V${escape(decision.rev)}</small>` : ''}<span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}</header>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</section>`;
-    }).join(''));
+    for (const [key, group] of groups) {
+      const saved = array(p.answers).filter(answer => (answer.bundleId || answer.id || answer.round || 'initial') === key);
+      if (Array.isArray(group.entries) && array(p.questionRounds).find(r => (r.id || r.bundleId) === key)?.entries) {
+        group.entries = array(p.questionRounds).find(r => (r.id || r.bundleId) === key).entries.map(entry => ({...entry}));
+      } else if (array(group.questions).length) {
+        const matched = new Set();
+        group.entries = group.questions.map((q, index) => {
+          const direct = saved.filter(a => q.id != null && (a.questionId === q.id || a.id === key + ':' + q.id));
+          const sameQuestion = saved.filter(a => !matched.has(a) && a.questionId == null && !group.questions.some(other=>other.id != null && a.id === key+':'+other.id) && sameText(textOf(a.question) || a.text, q.text));
+          const previous = direct.length === 1 ? direct[0] : sameQuestion.length === 1 && group.questions.filter(other=>sameText(other.text,q.text)).length === 1 ? sameQuestion[0] : {};
+          if (saved.includes(previous)) matched.add(previous);
+          const answer = Object.prototype.hasOwnProperty.call(previous,'answer') ? previous.answer : group.answers?.[q.id];
+          return {...previous,id:key + ':' + (q.id || index),bundleId:key,questionId:q.id || null,question:q.text,type:q.type,required:q.required,answer,note:previous.note || group.answerNotes?.[q.id] || '',status:answeredValue(answer)?'answered':group.answered?(q.required===false?'skipped':'not-recorded'):'awaiting-answer',at:previous.at || group.answeredAt || null,sentAt:group.sentAt || group.at,simulated:previous.simulated ?? group.simulated};
+        });
+        // Keep ambiguous legacy evidence readable without inventing a question link.
+        saved.filter(entry=>!matched.has(entry)).forEach((entry,index)=>group.entries.push({...entry,id:key+':unlinked-'+index,questionId:null,question:entry.question || entry.text || 'Saved answer',unlinked:true,status:answeredValue(entry.answer)?'answered':'not-recorded'}));
+      } else group.entries = saved.map((entry,index) => ({...entry,id:entry.id || key + ':' + index}));
+      group.entries = group.entries.map(entry => ({...entry,bundleId:key,roundNumber:group.number}));
+    }
+    return [...groups.values()].filter(group => group.entries.length);
+  }
+  function linkedImpacts(p, entry) {
+    if (p.reasoning?.state !== 'submitted' || Number(p.reasoning.sourceVersion) !== Number(p.viewedRev)) return [];
+    if (entry.unlinked) return [];
+    return array(p.reasoning.implications).filter(impact => impact.source?.answerId === entry.id && impact.supported && !impact.note && array(impact.behavior).length);
+  }
+  function sourceRecordButton(kind, id, label, className = '') {
+    return `<button type="button" class="fs-source-link ${className}" data-wq="inspector-open" data-kind="${kind}" data-value="${escape(id)}">${escape(label)}${icon('next',12)}</button>`;
+  }
+  function inspectorSection(title, count, contents, extra = '') {
+    return `<section class="fs-index-section"><header><h3>${escape(title)}</h3>${count ? `<span>${escape(count)}</span>` : ''}</header>${extra}${contents}</section>`;
+  }
+  function viewAll(section, count, label) { return `<button type="button" class="fs-index-more" data-wq="inspector-list" data-value="${section}">View all ${count} ${label}${icon('next',13)}</button>`; }
+  function answerContent(entry) {
+    if (!answeredValue(entry.answer)) return `<p class="fs-record-empty">${escape(statusText(answerStatus(entry)))}</p>`;
+    return Array.isArray(entry.answer) ? `<ul class="fs-record-answers">${entry.answer.map(value=>`<li>${escape(answerText(value))}</li>`).join('')}</ul>` : `<p class="fs-record-answer">${escape(answerText(entry.answer))}</p>`;
+  }
+  function questionHistory(p, vm, all = false) {
+    const groups = questionGroups(p), total = groups.reduce((sum,r)=>sum+r.entries.length,0);
+    if (!total) return all ? '<p class="fs-inspector-empty">No clarification questions were saved.</p>' : '';
+    if (total === 1 && !all) {
+      const entry = groups[0].entries[0], long = answerText(entry.answer).length > 180 || String(entry.question).length > 180 || Boolean(entry.note);
+      return inspectorSection('Clarification',answeredValue(entry.answer)?'Answered':'',`<div class="fs-single-answer"><p class="fs-record-question">${escape(shortText(textOf(entry.question) || entry.text,200))}</p>${long ? `<p class="fs-record-answer">${escape(shortText(answerText(entry.answer),180) || statusText(answerStatus(entry)))}</p>` : answerContent(entry)}${sourceRecordButton('question',entry.id,long?'Read full answer':'View record')}</div>`);
+    }
+    const search = all ? String(vm.inspector?.view?.query || '').toLowerCase().trim() : '';
+    let budget = all ? Infinity : 4, shown = 0;
+    const content = groups.slice().reverse().map(group => {
+      const entries = group.entries.filter(e=>!search || [e.question,e.text,answerText(e.answer),e.note].join(' ').toLowerCase().includes(search)).slice(0,budget);
+      budget -= entries.length; shown += entries.length;
+      if (!entries.length) return '';
+      const answered = group.entries.filter(e=>answeredValue(e.answer)).length, pending = group.entries.filter(e=>answerStatus(e)==='awaiting-answer').length;
+      const decision = versionDecision(p), batchUsed = decision?.questionId === (group.id || group.bundleId) && !array(p.reasoning?.implications).some(i=>i.source?.id===(group.id || group.bundleId)&&i.source?.answerId);
+      return `<div class="fs-question-group" data-round="${escape(group.id || group.bundleId)}"><header><h4>Round ${group.number}</h4><span>${pending ? pending + ' awaiting answer' : answered + ' answered'}</span></header>${batchUsed?`<small class="fs-batch-relation">Contains an answer used in V${escape(p.viewedRev)}</small>`:''}<ul class="fs-question-index">${entries.map(entry=>`<li><button type="button" class="fs-question-row" data-wq="inspector-open" data-kind="question" data-value="${escape(entry.id)}"><span><strong>${escape(shortText(textOf(entry.question) || entry.text,150))}</strong><span>${escape(shortText(answerText(entry.answer) || statusText(answerStatus(entry)),110))}</span>${entry.unlinked?'<small>Question link unavailable</small>':''}${linkedImpacts(p,entry).length?`<small class="fs-entry-used">Used in V${escape(p.viewedRev)}</small>`:''}</span>${icon('next',13)}</button></li>`).join('')}</ul></div>`;
+    }).join('');
+    const searchField = all && total > 8 ? `<label class="fs-index-search"><span>Find a question or answer</span><input type="search" data-wq="inspector-search" value="${escape(vm.inspector?.view?.query || '')}" placeholder="Search clarifications"></label>` : '';
+    return inspectorSection('Clarifications',total+(groups.some(g=>g.entries.some(e=>e.unlinked))?' records · ':' questions · ')+groups.length+' rounds',`${searchField}${content || '<p class="fs-inspector-empty">No matching questions. Try another word.</p>'}${!all&&total>shown?viewAll('questions',total,'questions'):''}`,all&&p.historical?`<p class="fs-panel-note">Saved with V${escape(p.viewedRev)}. Later answers are not included.</p>`:'');
+  }
+  function questionDetail(p, id) {
+    const group = questionGroups(p).find(round=>round.entries.some(entry=>entry.id===id)),entry=group?.entries.find(entry=>entry.id===id);
+    if (!entry) return '<p class="fs-inspector-empty">This question is not part of the selected version.</p>';
+    const impacts=linkedImpacts(p,entry),at=entry.answeredAt||entry.at;
+    return `<article class="fs-source-record" data-record-id="${escape(entry.id)}"><div class="fs-record-meta"><span>Round ${group.number} · ${escape(statusText(answerStatus(entry)))}</span>${p.historical?`<span>Saved with V${escape(p.viewedRev)}</span>`:''}</div><h3 tabindex="-1" class="fs-record-title">${escape(textOf(entry.question)||entry.text)}</h3><section><h4>Customer’s answer</h4>${entry.unlinked?'<p class="fs-panel-note">This saved answer could not be linked to a specific question. Its original wording is preserved below.</p>':''}${answerContent(entry)}${entry.note?`<h4>Additional detail</h4><p class="fs-record-answer">${escape(entry.note)}</p>`:''}</section>${impacts.map(impact=>`<section class="fs-answer-impact"><h4>Used in V${escape(p.viewedRev)}</h4><dl><div><dt>Impact</dt><dd>${proseList(impact.behavior)}</dd></div><div><dt>Acceptance checks</dt><dd>${array(impact.checks).length?proseList(impact.checks):'No matching check was saved.'}</dd></div></dl></section>`).join('')}${entry.effect?`<section><h4>Recorded impact</h4><p>${escape(textOf(entry.effect))}</p></section>`:''}<dl class="fs-record-provenance"><div><dt>Source</dt><dd>${escape(group.id||entry.bundleId)}${entry.questionId?' / '+escape(entry.questionId):''}</dd></div>${group.scopeCycle?`<div><dt>Scope revision</dt><dd>${escape(group.scopeCycle)}</dd></div>`:''}<div><dt>${answerStatus(entry)==='awaiting-answer'?'Sent':answerStatus(entry)==='answered'?'Answered':'Batch submitted'}</dt><dd>${escape(displayTime(answerStatus(entry)==='awaiting-answer'?entry.sentAt||group.at:at)||'Time not recorded')}</dd></div>${entry.simulated?'<div><dt>Answer type</dt><dd>Simulated answer</dd></div>':''}</dl></article>`;
+  }
+  function changeRecords(p) {
+    const records=array(p.corrections).map((entry,index)=>({...entry,key:'correction:'+entry.id+':'+index,label:'Understanding correction',scope:entry.scopeCycle?'Scope revision '+entry.scopeCycle:'',attachments:array(entry.evidence?.attachments)}));
+    if(p.adjustment||p.adjustmentEvidence)records.push({key:'adjustment:'+ (p.adjustmentEvidence?.rev || Number(p.viewedRev||1)-1),label:'Changes requested',text:p.adjustment || 'See the attached adjustment evidence.',scope:p.adjustmentEvidence?.rev?'To V'+p.adjustmentEvidence.rev:'Saved adjustment',evidence:p.adjustmentEvidence,attachments:array(p.adjustmentEvidence?.attachments)});
+    return records.reverse();
+  }
+  function changesIndex(p, all=false) {
+    const records=changeRecords(p);if(!records.length)return '';
+    return inspectorSection('Changes & corrections',records.length,`<ul class="fs-change-index">${records.slice(0,all?Infinity:3).map(record=>`<li><button type="button" class="fs-question-row" data-wq="inspector-open" data-kind="change" data-value="${escape(record.key)}"><span><strong>${escape(shortText(record.text,130))}</strong><span>${escape([record.label,record.scope].filter(Boolean).join(' · '))}${record.attachments.length?' · '+record.attachments.length+' attachments':''}</span></span>${icon('next',13)}</button></li>`).join('')}</ul>${!all&&records.length>3?viewAll('changes',records.length,'changes'):''}`);
+  }
+  function changeDetail(p,id) {
+    const record=changeRecords(p).find(r=>r.key===id);if(!record)return '<p class="fs-inspector-empty">This update is not part of the selected version.</p>';
+    return `<article class="fs-source-record"><div class="fs-record-meta">${escape(record.scope)}${p.historical?' · Saved with V'+escape(p.viewedRev):''}</div><h3 class="fs-record-title" tabindex="-1">${escape(record.label)}</h3><p class="fs-record-answer">${escape(record.text)}</p>${record.evidence?.actor?`<p class="fs-record-meta">${escape(actorName(record.evidence.actor))}</p>`:''}${record.attachments.length?`<section><h4>Attached to this update</h4>${attachmentRows(record.attachments)}</section>`:''}${contextRows(record.evidence?.context)}${record.id?`<p class="fs-record-meta">Source ${escape(record.id)}</p>`:''}</article>`;
+  }
+  function attachmentsIndex(p,all=false) {
+    const files=array(p.request?.attachments);if(!files.length)return '';
+    return inspectorSection('Attachments',files.length,`${attachmentRows(files.slice(0,all?Infinity:3))}${!all&&files.length>3?viewAll('attachments',files.length,'attachments'):''}`);
+  }
+  function versionsIndex(p,all=false) {
+    const versions=array(p.versions).slice().sort((a,b)=>Number(b.rev)-Number(a.rev));
+    return inspectorSection('Versions',versions.length,`${versionList(versions.slice(0,all?Infinity:4),p)}${!all&&versions.length>4?viewAll('versions',versions.length,'versions'):''}`);
+  }
+  function inspectorDrill(p,vm) {
+    const view=vm.inspector?.view;if(!view)return '';
+    const names={questions:'Clarifications',changes:'Changes & corrections',attachments:'Attachments',versions:'Versions'};
+    const backLabel=vm.inspector?.backLabel||'Details';
+    const back=`<button type="button" class="fs-inspector-back" data-wq="inspector-back">${icon('back',14)}Back to ${escape(backLabel)}</button>`;
+    if(view.kind==='basis')return back+versionFocus(p,true);
+    if(view.kind==='plan')return back+inspectorSection('Saved plan','V'+p.viewedRev,basisContents(p));
+    if(view.kind==='question')return back+questionDetail(p,view.id);
+    if(view.kind==='change')return back+changeDetail(p,view.id);
+    return back+({questions:()=>questionHistory(p,vm,true),changes:()=>changesIndex(p,true),attachments:()=>attachmentsIndex(p,true),versions:()=>versionsIndex(p,true)}[view.section]?.()||`<p class="fs-inspector-empty">${escape(names[view.section]||'This record')} is unavailable.</p>`);
   }
 
   function versionList(versions, p) {
@@ -568,11 +660,6 @@
       const earlier = milestones.filter(status => status !== primary);
       return `<button type="button" class="fs-version-row${viewing ? ' fs-version-viewed' : ''}" data-wq="${version.readOnly === false ? 'current-version' : 'view-version'}" data-value="${escape(version.rev)}"${viewing ? ' aria-current="true"' : ''}><span class="fs-version-icon">${icon('file', 15)}</span><span><strong>Version ${escape(version.rev)}${viewing ? '<small>Viewing</small>' : version.current ? '<small>Current</small>' : ''}</strong><span>${escape(version.status || 'Submitted')}</span>${earlier.length ? `<small>${earlier.map(status => milestoneLabels[status]).join(' · ')}</small>` : ''}${version.at ? `<small>${escape(displayTime(version.at))}</small>` : ''}</span>${icon('next', 12)}</button>`;
     }).join('')}</div>`;
-  }
-
-  function correctionEvidence(corrections) {
-    if (!array(corrections).length) return '';
-    return panelFold('Updates to this feedback', corrections.length, corrections.map(correction=>`<section class="fs-correction-evidence"><h3>${escape(correction.id)} · Scope revision ${escape(correction.scopeCycle)}</h3><p>${escape(correction.text)}</p>${attachmentRows(array(correction.evidence?.attachments))}</section>`).join(''));
   }
 
   function details(vm) {
@@ -591,14 +678,13 @@
     const versions = array(p.versions).slice().sort((a, b) => Number(b.rev) - Number(a.rev));
     const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs" role="tablist" aria-label="Feedback context">${['details', 'activity'].map(name => `<button type="button" role="tab" id="fs-tab-${name}" data-wq="context-tab" data-value="${name}" aria-selected="${tab === name}" aria-controls="fs-inspector-content" tabindex="${tab === name ? '0' : '-1'}">${name === 'details' ? 'Details' : 'Activity'}</button>`).join('')}</div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
     const focus = versionFocus(p);
-    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + panelFold('Full saved plan', undefined, basisContents(p), { hint: 'V' + p.viewedRev }) : basisRows(p);
+    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + sourceRecordButton('plan','saved','Full saved plan') : basisRows(p);
     const sourceNote = request.source?.note || request.sourceNote;
-    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${correctionEvidence(p.corrections)}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+    const content = tab === 'details' && vm.inspector?.view ? inspectorDrill(p,vm) : tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${questionHistory(p,vm)}${changesIndex(p)}
       ${panelFold('Original feedback', undefined, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${sourceNote ? `<p class="fs-panel-note">${escape(sourceNote)}</p>` : ''}`)}
-      ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
-      ${questionHistory(p)}
+      ${attachmentsIndex(p)}
       ${decisions.length ? panelFold('Earlier decisions', decisions.length, decisions.map(decision => `<div class="fs-history-event"><span>${escape(displayTime(decision.date || decision.at))}${decision.superseded ? ' · Superseded' : ''}</span><p>${escape(decision.decision || decision.text || decision.summary)}</p>${decision.source ? `<small>${escape(textOf(decision.source))}</small>` : ''}</div>`).join('')) : ''}
-      ${panelFold('Versions', versions.length, versionList(versions, p), { open: Boolean(versions.length) })}`;
+      ${versionsIndex(p)}`;
     return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback ${tab}">${heading}<div id="fs-inspector-content" role="tabpanel" aria-labelledby="fs-tab-${tab}" tabindex="0" class="fs-inspector-panel">${content}</div></aside>`;
   }
 
@@ -667,5 +753,5 @@
     return `<div class="fs-app">${navigation(vm)}<section class="fs-main">${topbar(vm)}<main class="fs-content" id="feedback-main" tabindex="-1">${content}</main></section>${demoConsole(vm)}</div>`;
   }
 
-  root.FeedbackView = { render, task };
+  root.FeedbackView = { render, task, questionGroups };
 })(globalThis);

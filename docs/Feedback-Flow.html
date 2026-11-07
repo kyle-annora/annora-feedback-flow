@@ -2335,6 +2335,69 @@ body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
  #feedback-modal-root .fs-dialog.fs-receipt-floating { right:12px; bottom:max(12px,env(safe-area-inset-bottom)); width:calc(100vw - 24px); padding:22px; }
 }
 
+/* Clarification index: bounded overview, a single record to read, and a stable way back. */
+#feedback-root .fs-index-section { border-top:1px solid var(--fs-line); padding:16px 0; }
+#feedback-root .fs-index-section > header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; margin-bottom:8px; }
+#feedback-root .fs-index-section > header h3 { margin:0; color:#303030; font-size:13px; }
+#feedback-root .fs-index-section > header > span { color:#666; font:400 11px/1.5 var(--fs-sans); }
+#feedback-root :is(.fs-question-index,.fs-change-index) { list-style:none; margin:0; padding:0; }
+#feedback-root .fs-question-group + .fs-question-group { margin-top:16px; }
+#feedback-root .fs-question-group > header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; padding:8px 0 4px; }
+#feedback-root .fs-question-group h4 { margin:0; color:#595959; font:550 11px/1.5 var(--fs-sans); }
+#feedback-root .fs-question-group > header > span { color:#737373; font-size:10px; }
+#feedback-root .fs-question-row { display:flex; align-items:center; gap:12px; width:100%; padding:12px 4px; text-align:left; border:0; border-bottom:1px solid #ededed; background:transparent; color:#303030; border-radius:0; }
+#feedback-root .fs-question-row > span { flex:1; min-width:0; }
+#feedback-root .fs-question-row strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font:500 12px/1.5 var(--fs-sans); overflow-wrap:anywhere; }
+#feedback-root .fs-question-row > span > span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:400 11px/1.5 var(--fs-sans); color:#666; margin-top:4px; }
+#feedback-root .fs-question-row small { display:block; margin-top:4px; color:#666; font:400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-question-row > svg { flex:none; color:#737373; }
+#feedback-root .fs-question-row:hover { background:#f2f2f2; }
+#feedback-root .fs-batch-relation { display:block; font:400 10px/1.5 var(--fs-sans); color:#666; margin:4px 0; }
+#feedback-root :is(.fs-index-more,.fs-source-link,.fs-inspector-back) { display:flex; align-items:center; gap:8px; background:transparent; border:0; padding:8px 0; min-height:36px; color:#153e5c; font:500 11px/1.5 var(--fs-sans); text-align:left; }
+#feedback-root .fs-index-more { margin-top:8px; }
+#feedback-root .fs-source-link { width:fit-content; }
+#feedback-root .fs-inspector-back { margin:8px 0; min-height:44px; }
+#feedback-root :is(.fs-index-more,.fs-source-link,.fs-inspector-back):hover { text-decoration:underline; text-underline-offset:3px; }
+#feedback-root .fs-single-answer .fs-record-question { margin:8px 0; font:400 12px/1.65 var(--fs-sans); color:#595959; }
+#feedback-root .fs-record-answer { white-space:pre-wrap; overflow-wrap:anywhere; font:400 13px/1.7 var(--fs-sans); color:#303030; margin:8px 0; }
+#feedback-root .fs-single-answer .fs-record-answer { font-weight:500; font-size:12px; margin:8px 0 4px; }
+#feedback-root .fs-record-answers { margin:8px 0; padding-left:18px; color:#303030; font:400 13px/1.7 var(--fs-sans); }
+#feedback-root .fs-record-answers li { overflow-wrap:anywhere; white-space:pre-wrap; margin:4px 0; }
+#feedback-root .fs-record-empty { font:400 12px/1.6 var(--fs-sans); color:#666; }
+#feedback-root .fs-record-meta { display:flex; flex-wrap:wrap; gap:4px 8px; font:400 11px/1.6 var(--fs-sans); color:#666; margin:8px 0; overflow-wrap:anywhere; }
+#feedback-root .fs-source-record .fs-record-title { font:550 16px/1.5 var(--fs-sans); margin:12px 0 20px; overflow-wrap:anywhere; color:#262626; }
+#feedback-root .fs-source-record section { margin:20px 0; }
+#feedback-root .fs-source-record h4 { margin:16px 0 8px; color:#666; font:500 11px/1.5 var(--fs-sans); }
+#feedback-root .fs-record-provenance { border-top:1px solid var(--fs-line); padding-top:12px; margin-top:24px; }
+#feedback-root .fs-record-provenance > div { display:grid; grid-template-columns:84px minmax(0,1fr); gap:8px; margin:8px 0; font:400 11px/1.6 var(--fs-sans); }
+#feedback-root .fs-record-provenance dt { color:#666; }
+#feedback-root .fs-record-provenance dd { margin:0; overflow-wrap:anywhere; color:#454545; }
+#feedback-root .fs-answer-impact { border-top:1px solid var(--fs-line); padding-top:8px; }
+#feedback-root .fs-answer-impact dt { font:500 11px/1.5 var(--fs-sans); color:#666; margin-top:12px; }
+#feedback-root .fs-answer-impact dd { margin:4px 0 12px; font:400 12px/1.65 var(--fs-sans); color:#454545; }
+#feedback-root .fs-answer-impact ul { padding-left:16px; }
+#feedback-root .fs-index-search { display:block; margin:12px 0; font:400 11px/1.5 var(--fs-sans); color:#666; }
+#feedback-root .fs-index-search input { display:block; width:100%; margin-top:6px; padding:8px 10px; border:1px solid #d9d9d9; border-radius:6px; background:#fff; color:#303030; font:400 12px/1.5 var(--fs-sans); }
+#feedback-root .fs-evidence-row strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+#feedback-root .fs-version-row > span > strong { display:flex; flex-wrap:wrap; gap:4px 8px; align-items:baseline; }
+@media(min-width:901px) {
+ #feedback-root .fs-details { align-self:start; position:sticky; top:0; height:calc(100dvh - 60px); min-height:0; overflow:auto; overscroll-behavior:contain; padding-bottom:16px; scrollbar-color:#c7c7c7 #fcfcfc; scrollbar-width:thin; }
+ #feedback-root .fs-details-heading { position:sticky; top:-19px; z-index:2; background:#fcfcfc; padding-top:8px; }
+}
+@media(max-width:900px) {
+ #feedback-root :is(.fs-source-link,.fs-index-more,.fs-index-search input) { min-height:44px; font-size:12px; }
+ #feedback-root .fs-question-row strong { font-size:13px; }
+ #feedback-root .fs-question-row > span > span { font-size:12px; }
+}
+
+#feedback-root .fs-basis-more { display:block; color:#666; font:400 11px/1.5 var(--fs-sans); margin-top:4px; }
+@media(min-width:901px){
+ body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:316px; }
+}
+
+@media(min-width:1650px){body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:344px; }}
+@media(min-width:901px) and (max-width:1180px){body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:274px; }}
+
 </style><style>
 .feedback-composer{--fc-ink:#262626;--fc-muted:#666;--fc-rule:#e6e6e6;--fc-blue:#153e5c;position:fixed;right:24px;bottom:24px;z-index:240;box-sizing:border-box;width:min(460px,calc(100vw - 48px));max-height:calc(100dvh - 96px);margin:0;padding:0;border:0;border-radius:12px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 6px 18px #18242e14,0 22px 64px #18242e26;overflow:hidden;isolation:isolate;caret-color:var(--fc-blue);scrollbar-color:#b9b9b9 #f5f5f5;scrollbar-width:thin}
 .feedback-composer[hidden],.feedback-composer [hidden]{display:none!important}
@@ -6005,6 +6068,40 @@ if (typeof module==="object" && module.exports) module.exports = api;
   const publicActions=new Set(['submit','answer','send-questions','confirm-scope','edit-understanding','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish','request-release-changes']);
   const checked=value=>typeof value==='string'&&value.trim()?value:null;
   const excerpt=(value,size=180)=>String(value||'').trim().replace(/\s+/g,' ').slice(0,size);
+  // A completed batch may deliberately omit an optional answer. Empty arrays are not answers.
+  const hasAnswer=value=>Array.isArray(value)?value.some(hasAnswer):typeof value==='string'?Boolean(value.trim()):typeof value==='number'?Number.isFinite(value):typeof value==='boolean';
+  function questionRoundsFor(f,sourceTrail){
+    const sentEvents=rows(sourceTrail).filter(t=>t.action==='send-questions'),answerEvents=rows(sourceTrail).filter(t=>t.action==='answer');
+    let answeredIndex=0;
+    let rounds=rows(f?.questionRounds);
+    if(!rounds.length&&f?.sentBundle)rounds=[{...f.sentBundle,answers:f.answers,answerNotes:f.answerNotes,answered:f.phase!=='awaiting-answer',answerSimulated:f.answerSimulated}];
+    return rounds.map((r,index)=>{
+      const bundleId=r.id||r.bundleId||null,completed=r.answered===true;
+      const sentAt=r.sentAt||r.at||sentEvents[index]?.at||null;
+      const answeredAt=completed?(r.answeredAt||answerEvents[answeredIndex++]?.at||null):null;
+      const questions=clone(r.questions)||[],answers=clone(r.answers),answerNotes=clone(r.answerNotes)||{};
+      const entries=questions.map((q,questionIndex)=>{
+        const questionId=q.id||null,value=clone(answers?.[q.id]),answered=hasAnswer(value);
+        const status=answered?'answered':!completed?'awaiting-answer':q.required===false?'skipped':'not-recorded';
+        return {id:String(bundleId||'legacy-round-'+index)+':'+String(questionId||'question-'+(questionIndex+1)),questionId,bundleId,round:r.round||'initial',scopeCycle:r.scopeCycle,
+          question:q.text,text:q.text,type:q.type||'text',required:q.required===true,answer:value,value:clone(value),note:answerNotes[q.id]||'',answered,status,
+          simulated:r.answerSimulated===true,sentAt,answeredAt,at:completed?answeredAt:sentAt};
+      });
+      return {id:bundleId,bundleId,round:r.round||'initial',scopeCycle:r.scopeCycle,questions,answers,answerNotes,answerText:r.answerText||'',answered:completed,simulated:r.answerSimulated===true,at:sentAt,sentAt,answeredAt,entries};
+    });
+  }
+  function questionSource(source,answer,questionRounds){
+    const bundleId=source?.bundleId||source?.id||null,round=rows(questionRounds).find(r=>r.id===bundleId);
+    const match=rows(round?.entries).filter(entry=>{
+      if(!entry.answered||!entry.questionId)return false;
+      const value=Array.isArray(entry.answer)?entry.answer.join('; '):String(entry.answer??'');
+      const summary=[value,entry.note].filter(Boolean).join(': ');
+      return summary.trim()===String(answer??'').trim();
+    });
+    // Equality must identify exactly one saved answer. Aggregate answers and ambiguous duplicates stay batch-level.
+    const exact=match.length===1?match[0]:null;
+    return {...source,bundleId:round?.id||bundleId,questionId:exact?.questionId||null,answerId:exact?.id||null,linkage:exact?'question':round?'bundle':'unavailable'};
+  }
   function safeView(c,snapshot){
     if(snapshot)return clone(snapshot.view)||{candidate:snapshot.candidate||snapshot.text||'',checks:clone(snapshot.checks)||[]};
     try{return E.derive(c);}catch{return {candidate:'',checks:[],manual:true,blocked:true,reason:'The team needs to review this saved record before continuing.'};}
@@ -6218,15 +6315,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const basis=concealed?[]:lines(scopeText).map((text,index)=>({id:'basis-'+index,text,status:basisStatus,source:clone(basisSource)}));
     let sourceTrail=rows(c.trail);
     if(historical){const delivery=sourceTrail.findIndex(t=>t.action==='deliver'&&t.rev===snapshot.rev);sourceTrail=delivery>=0?sourceTrail.slice(0,delivery+1):sourceTrail.filter(t=>t.rev<=snapshot.rev);}
-    const sentEvents=sourceTrail.filter(t=>t.action==='send-questions'),answerEvents=sourceTrail.filter(t=>t.action==='answer');
-    let answers=rows(f?.questionRounds).filter(r=>r.answered).flatMap((r,index)=>rows(r.questions).map(q=>({id:r.id+':'+q.id,bundleId:r.id,round:r.round,scopeCycle:r.scopeCycle,question:q.text,text:q.text,answer:clone(r.answers?.[q.id]),value:clone(r.answers?.[q.id]),note:r.answerNotes?.[q.id]||'',simulated:r.answerSimulated===true,at:r.answeredAt||answerEvents[index]?.at||null})));
+    const answerEvents=sourceTrail.filter(t=>t.action==='answer');
+    const questionRounds=questionRoundsFor(f,sourceTrail);
+    let answers=questionRounds.filter(r=>r.answered).flatMap(r=>clone(r.entries));
     const answer=historical?snapshot.answer:c.answer;
-    if(!answers.length&&checked(answer))answers=[{id:'legacy-answer',round:'initial',question:'Requester’s clarification',text:'Requester’s clarification',answer,value:answer,simulated:(historical?snapshot.answerSimulated:c.answerSimulated)===true,at:answerEvents.at(-1)?.at||null}];
+    if(!answers.length&&checked(answer))answers=[{id:'legacy-answer',questionId:null,bundleId:null,round:'initial',question:'Requester’s clarification',text:'Requester’s clarification',answer,value:answer,answered:true,status:'answered',simulated:(historical?snapshot.answerSimulated:c.answerSimulated)===true,sentAt:null,answeredAt:answerEvents.at(-1)?.at||null,at:answerEvents.at(-1)?.at||null}];
     let activity=sourceTrail;
     activity=activity.map((t,index)=>({...clone(t),id:'activity-'+index,actor:actorName(t.actor),at:t.at||null})).filter(t=>team||publicActions.has(t.action)).reverse();
     const decisions=rows(f?.source?.history).map((decision,index)=>({...clone(decision),id:'decision-'+index,superseded:decision.status==='superseded'||(f?.source?.id==='fb_2026-07-11_002'&&decision.date==='2026-07-16'&&rows(f.source.history).some(later=>later.date==='2026-08-05')),status:decision.status||(f?.source?.id==='fb_2026-07-11_002'&&decision.date==='2026-07-16'?'superseded':'historical-record')}));
-    const questionRounds=rows(f?.questionRounds).map((r,index)=>({id:r.id,round:r.round,scopeCycle:r.scopeCycle,questions:clone(r.questions),answers:clone(r.answers),answerText:r.answerText||'',answered:r.answered===true,simulated:r.answerSimulated===true,at:r.sentAt||r.at||sentEvents[index]?.at||null}));
-    if(!questionRounds.length&&f?.sentBundle)questionRounds.push({id:f.sentBundle.id,round:f.sentBundle.round||'initial',questions:clone(f.sentBundle.questions),answers:clone(f.answers),answered:f.phase!=='awaiting-answer',at:f.sentBundle.at||null});
     const projection={legacy:!c.reviewFlow||!c.reviewFlow.scenarioId,historical,currentRev:c.rev,viewedRev:historical?snapshot.rev:c.rev,
       phase:historical?'history':c.reviewFlow?.phase||c.stage,kind:f?.kind||view.kind||'other',title:title(presentationCase,scenario),target:historical?(f?.target||null):knownTarget(c,scenario),
       request:{text,context,attachments,at:context?.capturedAt||sourceTrail.find(t=>t.action==='submit')?.at||(historical?null:item.ux?.createdAt)||null,unavailable:historical&&(!f||text===null),source:clone(f?.source)},understanding,basis,answers,
@@ -6235,6 +6331,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       activity,adjustment:historical?snapshot.adjustment:c.adjustment,adjustmentEvidence:clone(f?.adjustmentEvidence||(historical?snapshot.evidence?.adjustment:item.ux?.adjustmentEvidence)),preview:E.reviewPreview(historical?snapshot:c),
       why:why(item,{actor,rev:historical?snapshot.rev:undefined}),preparation:historical?null:preparation(item,undefined,{actor})};
     projection.reasoning=reasoningFor(item,projection,{actor,snapshot:basisSnapshot});
+    projection.reasoning.implications=projection.reasoning.implications.map(impact=>impact.source?.type==='requester-answer'?{...impact,source:questionSource(impact.source,impact.answer,questionRounds)}:impact);
     if(historical)projection.why={...projection.why,scenarioId:scenario?.id||null,source:f?.source?.id||'Submitted snapshot',text:'Read-only V'+snapshot.rev+' and its saved evidence. Newer material and later decisions are not substituted into this snapshot.'};
     return projection;
   }
@@ -7495,12 +7592,18 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return { impact, linked: linked || changeLinked, rev: p.viewedRev, questionId: linked && impact.source?.type !== 'revision-request' ? impact.source?.id : null };
   }
 
-  function versionFocus(p) {
+  function versionFocus(p, full = false) {
     const decision = versionDecision(p);
     if (!decision) return '';
     const { impact, linked, rev } = decision;
     const requestedChange = impact.source?.type === 'revision-request';
-    return `<section class="fs-version-focus" aria-label="Version ${escape(rev)} decision basis"><header><h3>Version ${escape(rev)} basis</h3><small>${p.historical ? 'Read-only' : 'Saved at submission'}</small></header>${impact.source?.label ? `<p class="fs-focus-source">${escape(impact.source.label)}</p>` : ''}<dl><div><dt>${requestedChange ? 'Requested change' : linked ? 'Answer used' : 'Recorded answer'}</dt><dd class="fs-focus-answer">${escape(textOf(impact.answer))}</dd></div>${linked ? `<div><dt>Impact</dt><dd>${proseList(impact.behavior)}</dd></div><div><dt>Acceptance ${array(impact.checks).length === 1 ? 'check' : 'checks'}</dt><dd>${array(impact.checks).length ? proseList(impact.checks) : '<p>No matching check was saved with this version.</p>'}</dd></div>` : '<div><dt>Relationship needs review</dt><dd>The saved plan is available below. Its effect cannot be attributed to this answer automatically.</dd></div>'}</dl></section>`;
+    const group = questionGroups(p).find(r => (r.id || r.bundleId) === impact.source?.id);
+    const linkedEntry = group?.entries.find(entry => entry.id === impact.source?.answerId);
+    const aggregate = !requestedChange && group?.entries.length > 1 && !linkedEntry;
+    const answerSummary = aggregate ? group.entries.filter(e=>answeredValue(e.answer)).length + ' answers recorded in Round ' + group.number : full ? textOf(impact.answer) : shortText(textOf(impact.answer),180);
+    const sourceLink = linkedEntry ? sourceRecordButton('question',linkedEntry.id,'View source answer') : group ? `<button type="button" class="fs-source-link" data-wq="inspector-list" data-value="questions">View clarification history${icon('next',12)}</button>` : '';
+    const points = values => full ? proseList(values) : proseList(array(values).slice(0,1).map(value=>shortText(value,150))) + (array(values).length>1?`<span class="fs-basis-more">${values.length-1} more saved ${values.length===2?'item':'items'}</span>`:'');
+    return `<section class="fs-version-focus" aria-label="Version ${escape(rev)} decision basis"><header><h3>Version ${escape(rev)} basis</h3><small>${p.historical ? 'Read-only' : 'Saved at submission'}</small></header>${impact.source?.label ? `<p class="fs-focus-source">${escape(impact.source.label)}</p>` : ''}<dl><div><dt>${requestedChange ? 'Requested change' : linked ? 'Answer used' : 'Recorded answer'}</dt><dd class="fs-focus-answer">${escape(answerSummary)}${sourceLink}</dd></div>${linked ? `<div><dt>Impact</dt><dd>${points(impact.behavior)}</dd></div><div><dt>Acceptance ${array(impact.checks).length === 1 ? 'check' : 'checks'}</dt><dd>${array(impact.checks).length ? points(impact.checks) : '<p>No matching check was saved with this version.</p>'}</dd></div>` : '<div><dt>Relationship needs review</dt><dd>The saved plan is available below. Its effect cannot be attributed to this answer automatically.</dd></div>'}</dl>${!full?sourceRecordButton('basis','version','View full basis'):''}</section>`;
   }
 
   function activityRows(entries) {
@@ -7512,26 +7615,112 @@ if (typeof module==="object" && module.exports) module.exports = api;
     }).join('')}</ol>` : '<p class="fs-inspector-empty">No shared activity has been recorded.</p>'}</section>`;
   }
 
-  function questionHistory(p) {
-    const decision = versionDecision(p);
+  const answeredValue = value => Array.isArray(value) ? value.some(answeredValue) : value !== null && value !== undefined && (typeof value !== 'string' || value.trim() !== '');
+  const answerText = value => Array.isArray(value) ? value.map(answerText).join(' · ') : typeof value === 'object' ? textOf(value) : String(value ?? '');
+  const shortText = (value, limit = 150) => { const text = String(value || '').replace(/\s+/g, ' ').trim(); return text.length > limit ? text.slice(0, limit - 1) + '…' : text; };
+  const answerStatus = entry => entry.status || (answeredValue(entry.answer) ? 'answered' : 'awaiting-answer');
+  const statusText = status => ({answered:'Answered',skipped:'Skipped · optional','awaiting-answer':'Awaiting answer','not-recorded':'Answer not recorded'}[status] || 'Answer not recorded');
+  function questionGroups(p) {
     const groups = new Map();
-    array(p.questionRounds).forEach(round => groups.set(round.id || round.bundleId, { ...round, entries: [] }));
-    array(p.answers).forEach(answer => {
+    array(p.questionRounds).forEach((round, index) => groups.set(round.id || round.bundleId || 'round-' + index, { ...round, number:index + 1, entries:[] }));
+    for (const answer of array(p.answers)) {
       const key = answer.bundleId || answer.id || answer.round || 'initial';
-      if (!groups.has(key)) groups.set(key, { id: key, round: answer.round, scopeCycle: answer.scopeCycle, entries: [] });
-      groups.get(key).entries.push(answer);
-    });
-    for (const group of groups.values()) {
-      if (!group.entries.length) group.entries = array(group.questions).map(question => ({ question: question.text, answer: group.answers?.[question.id], note: group.answerNotes?.[question.id], at: group.answeredAt || group.sentAt || group.at, simulated: group.answerSimulated ?? group.simulated }));
+      if (!groups.has(key)) groups.set(key, {id:key,number:groups.size + 1,entries:[]});
     }
-    const rows = [...groups.values()];
-    if (!rows.length) return '';
-    const answerText = value => Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? textOf(value) : String(value ?? '');
-    return panelFold('Question rounds', rows.length, rows.map((round, index) => {
-      const answered = round.entries.filter(entry => entry.answer !== null && entry.answer !== undefined && entry.answer !== '').length;
-      const label = 'Question round ' + (index + 1);
-      return `<section class="fs-question-history" aria-label="${label}"><header><h4>Round ${index + 1}</h4>${decision?.questionId === round.id ? `<small class="fs-round-used">Used in V${escape(decision.rev)}</small>` : ''}<span>${round.scopeCycle > 1 ? 'Scope revision ' + Number(round.scopeCycle) + ' · ' : ''}${answered} of ${round.entries.length} answered</span>${round.id ? `<small class="fs-round-reference">Reference ${escape(round.id)}</small>` : ''}</header>${round.entries.map(entry => `<div class="fs-answer-history"><p>${escape(textOf(entry.question) || entry.text)}</p>${entry.answer !== null && entry.answer !== undefined && entry.answer !== '' ? `<blockquote>${escape(answerText(entry.answer))}</blockquote>` : '<small>Awaiting an answer</small>'}${entry.note ? `<p class="fs-answer-effect">${escape(entry.note)}</p>` : ''}${entry.effect ? `<p class="fs-answer-effect">${escape(textOf(entry.effect))}</p>` : ''}<small>${escape(displayTime(entry.at))}${entry.simulated ? ' · Simulated answer' : ''}</small></div>`).join('')}</section>`;
-    }).join(''));
+    for (const [key, group] of groups) {
+      const saved = array(p.answers).filter(answer => (answer.bundleId || answer.id || answer.round || 'initial') === key);
+      if (Array.isArray(group.entries) && array(p.questionRounds).find(r => (r.id || r.bundleId) === key)?.entries) {
+        group.entries = array(p.questionRounds).find(r => (r.id || r.bundleId) === key).entries.map(entry => ({...entry}));
+      } else if (array(group.questions).length) {
+        const matched = new Set();
+        group.entries = group.questions.map((q, index) => {
+          const direct = saved.filter(a => q.id != null && (a.questionId === q.id || a.id === key + ':' + q.id));
+          const sameQuestion = saved.filter(a => !matched.has(a) && a.questionId == null && !group.questions.some(other=>other.id != null && a.id === key+':'+other.id) && sameText(textOf(a.question) || a.text, q.text));
+          const previous = direct.length === 1 ? direct[0] : sameQuestion.length === 1 && group.questions.filter(other=>sameText(other.text,q.text)).length === 1 ? sameQuestion[0] : {};
+          if (saved.includes(previous)) matched.add(previous);
+          const answer = Object.prototype.hasOwnProperty.call(previous,'answer') ? previous.answer : group.answers?.[q.id];
+          return {...previous,id:key + ':' + (q.id || index),bundleId:key,questionId:q.id || null,question:q.text,type:q.type,required:q.required,answer,note:previous.note || group.answerNotes?.[q.id] || '',status:answeredValue(answer)?'answered':group.answered?(q.required===false?'skipped':'not-recorded'):'awaiting-answer',at:previous.at || group.answeredAt || null,sentAt:group.sentAt || group.at,simulated:previous.simulated ?? group.simulated};
+        });
+        // Keep ambiguous legacy evidence readable without inventing a question link.
+        saved.filter(entry=>!matched.has(entry)).forEach((entry,index)=>group.entries.push({...entry,id:key+':unlinked-'+index,questionId:null,question:entry.question || entry.text || 'Saved answer',unlinked:true,status:answeredValue(entry.answer)?'answered':'not-recorded'}));
+      } else group.entries = saved.map((entry,index) => ({...entry,id:entry.id || key + ':' + index}));
+      group.entries = group.entries.map(entry => ({...entry,bundleId:key,roundNumber:group.number}));
+    }
+    return [...groups.values()].filter(group => group.entries.length);
+  }
+  function linkedImpacts(p, entry) {
+    if (p.reasoning?.state !== 'submitted' || Number(p.reasoning.sourceVersion) !== Number(p.viewedRev)) return [];
+    if (entry.unlinked) return [];
+    return array(p.reasoning.implications).filter(impact => impact.source?.answerId === entry.id && impact.supported && !impact.note && array(impact.behavior).length);
+  }
+  function sourceRecordButton(kind, id, label, className = '') {
+    return `<button type="button" class="fs-source-link ${className}" data-wq="inspector-open" data-kind="${kind}" data-value="${escape(id)}">${escape(label)}${icon('next',12)}</button>`;
+  }
+  function inspectorSection(title, count, contents, extra = '') {
+    return `<section class="fs-index-section"><header><h3>${escape(title)}</h3>${count ? `<span>${escape(count)}</span>` : ''}</header>${extra}${contents}</section>`;
+  }
+  function viewAll(section, count, label) { return `<button type="button" class="fs-index-more" data-wq="inspector-list" data-value="${section}">View all ${count} ${label}${icon('next',13)}</button>`; }
+  function answerContent(entry) {
+    if (!answeredValue(entry.answer)) return `<p class="fs-record-empty">${escape(statusText(answerStatus(entry)))}</p>`;
+    return Array.isArray(entry.answer) ? `<ul class="fs-record-answers">${entry.answer.map(value=>`<li>${escape(answerText(value))}</li>`).join('')}</ul>` : `<p class="fs-record-answer">${escape(answerText(entry.answer))}</p>`;
+  }
+  function questionHistory(p, vm, all = false) {
+    const groups = questionGroups(p), total = groups.reduce((sum,r)=>sum+r.entries.length,0);
+    if (!total) return all ? '<p class="fs-inspector-empty">No clarification questions were saved.</p>' : '';
+    if (total === 1 && !all) {
+      const entry = groups[0].entries[0], long = answerText(entry.answer).length > 180 || String(entry.question).length > 180 || Boolean(entry.note);
+      return inspectorSection('Clarification',answeredValue(entry.answer)?'Answered':'',`<div class="fs-single-answer"><p class="fs-record-question">${escape(shortText(textOf(entry.question) || entry.text,200))}</p>${long ? `<p class="fs-record-answer">${escape(shortText(answerText(entry.answer),180) || statusText(answerStatus(entry)))}</p>` : answerContent(entry)}${sourceRecordButton('question',entry.id,long?'Read full answer':'View record')}</div>`);
+    }
+    const search = all ? String(vm.inspector?.view?.query || '').toLowerCase().trim() : '';
+    let budget = all ? Infinity : 4, shown = 0;
+    const content = groups.slice().reverse().map(group => {
+      const entries = group.entries.filter(e=>!search || [e.question,e.text,answerText(e.answer),e.note].join(' ').toLowerCase().includes(search)).slice(0,budget);
+      budget -= entries.length; shown += entries.length;
+      if (!entries.length) return '';
+      const answered = group.entries.filter(e=>answeredValue(e.answer)).length, pending = group.entries.filter(e=>answerStatus(e)==='awaiting-answer').length;
+      const decision = versionDecision(p), batchUsed = decision?.questionId === (group.id || group.bundleId) && !array(p.reasoning?.implications).some(i=>i.source?.id===(group.id || group.bundleId)&&i.source?.answerId);
+      return `<div class="fs-question-group" data-round="${escape(group.id || group.bundleId)}"><header><h4>Round ${group.number}</h4><span>${pending ? pending + ' awaiting answer' : answered + ' answered'}</span></header>${batchUsed?`<small class="fs-batch-relation">Contains an answer used in V${escape(p.viewedRev)}</small>`:''}<ul class="fs-question-index">${entries.map(entry=>`<li><button type="button" class="fs-question-row" data-wq="inspector-open" data-kind="question" data-value="${escape(entry.id)}"><span><strong>${escape(shortText(textOf(entry.question) || entry.text,150))}</strong><span>${escape(shortText(answerText(entry.answer) || statusText(answerStatus(entry)),110))}</span>${entry.unlinked?'<small>Question link unavailable</small>':''}${linkedImpacts(p,entry).length?`<small class="fs-entry-used">Used in V${escape(p.viewedRev)}</small>`:''}</span>${icon('next',13)}</button></li>`).join('')}</ul></div>`;
+    }).join('');
+    const searchField = all && total > 8 ? `<label class="fs-index-search"><span>Find a question or answer</span><input type="search" data-wq="inspector-search" value="${escape(vm.inspector?.view?.query || '')}" placeholder="Search clarifications"></label>` : '';
+    return inspectorSection('Clarifications',total+(groups.some(g=>g.entries.some(e=>e.unlinked))?' records · ':' questions · ')+groups.length+' rounds',`${searchField}${content || '<p class="fs-inspector-empty">No matching questions. Try another word.</p>'}${!all&&total>shown?viewAll('questions',total,'questions'):''}`,all&&p.historical?`<p class="fs-panel-note">Saved with V${escape(p.viewedRev)}. Later answers are not included.</p>`:'');
+  }
+  function questionDetail(p, id) {
+    const group = questionGroups(p).find(round=>round.entries.some(entry=>entry.id===id)),entry=group?.entries.find(entry=>entry.id===id);
+    if (!entry) return '<p class="fs-inspector-empty">This question is not part of the selected version.</p>';
+    const impacts=linkedImpacts(p,entry),at=entry.answeredAt||entry.at;
+    return `<article class="fs-source-record" data-record-id="${escape(entry.id)}"><div class="fs-record-meta"><span>Round ${group.number} · ${escape(statusText(answerStatus(entry)))}</span>${p.historical?`<span>Saved with V${escape(p.viewedRev)}</span>`:''}</div><h3 tabindex="-1" class="fs-record-title">${escape(textOf(entry.question)||entry.text)}</h3><section><h4>Customer’s answer</h4>${entry.unlinked?'<p class="fs-panel-note">This saved answer could not be linked to a specific question. Its original wording is preserved below.</p>':''}${answerContent(entry)}${entry.note?`<h4>Additional detail</h4><p class="fs-record-answer">${escape(entry.note)}</p>`:''}</section>${impacts.map(impact=>`<section class="fs-answer-impact"><h4>Used in V${escape(p.viewedRev)}</h4><dl><div><dt>Impact</dt><dd>${proseList(impact.behavior)}</dd></div><div><dt>Acceptance checks</dt><dd>${array(impact.checks).length?proseList(impact.checks):'No matching check was saved.'}</dd></div></dl></section>`).join('')}${entry.effect?`<section><h4>Recorded impact</h4><p>${escape(textOf(entry.effect))}</p></section>`:''}<dl class="fs-record-provenance"><div><dt>Source</dt><dd>${escape(group.id||entry.bundleId)}${entry.questionId?' / '+escape(entry.questionId):''}</dd></div>${group.scopeCycle?`<div><dt>Scope revision</dt><dd>${escape(group.scopeCycle)}</dd></div>`:''}<div><dt>${answerStatus(entry)==='awaiting-answer'?'Sent':answerStatus(entry)==='answered'?'Answered':'Batch submitted'}</dt><dd>${escape(displayTime(answerStatus(entry)==='awaiting-answer'?entry.sentAt||group.at:at)||'Time not recorded')}</dd></div>${entry.simulated?'<div><dt>Answer type</dt><dd>Simulated answer</dd></div>':''}</dl></article>`;
+  }
+  function changeRecords(p) {
+    const records=array(p.corrections).map((entry,index)=>({...entry,key:'correction:'+entry.id+':'+index,label:'Understanding correction',scope:entry.scopeCycle?'Scope revision '+entry.scopeCycle:'',attachments:array(entry.evidence?.attachments)}));
+    if(p.adjustment||p.adjustmentEvidence)records.push({key:'adjustment:'+ (p.adjustmentEvidence?.rev || Number(p.viewedRev||1)-1),label:'Changes requested',text:p.adjustment || 'See the attached adjustment evidence.',scope:p.adjustmentEvidence?.rev?'To V'+p.adjustmentEvidence.rev:'Saved adjustment',evidence:p.adjustmentEvidence,attachments:array(p.adjustmentEvidence?.attachments)});
+    return records.reverse();
+  }
+  function changesIndex(p, all=false) {
+    const records=changeRecords(p);if(!records.length)return '';
+    return inspectorSection('Changes & corrections',records.length,`<ul class="fs-change-index">${records.slice(0,all?Infinity:3).map(record=>`<li><button type="button" class="fs-question-row" data-wq="inspector-open" data-kind="change" data-value="${escape(record.key)}"><span><strong>${escape(shortText(record.text,130))}</strong><span>${escape([record.label,record.scope].filter(Boolean).join(' · '))}${record.attachments.length?' · '+record.attachments.length+' attachments':''}</span></span>${icon('next',13)}</button></li>`).join('')}</ul>${!all&&records.length>3?viewAll('changes',records.length,'changes'):''}`);
+  }
+  function changeDetail(p,id) {
+    const record=changeRecords(p).find(r=>r.key===id);if(!record)return '<p class="fs-inspector-empty">This update is not part of the selected version.</p>';
+    return `<article class="fs-source-record"><div class="fs-record-meta">${escape(record.scope)}${p.historical?' · Saved with V'+escape(p.viewedRev):''}</div><h3 class="fs-record-title" tabindex="-1">${escape(record.label)}</h3><p class="fs-record-answer">${escape(record.text)}</p>${record.evidence?.actor?`<p class="fs-record-meta">${escape(actorName(record.evidence.actor))}</p>`:''}${record.attachments.length?`<section><h4>Attached to this update</h4>${attachmentRows(record.attachments)}</section>`:''}${contextRows(record.evidence?.context)}${record.id?`<p class="fs-record-meta">Source ${escape(record.id)}</p>`:''}</article>`;
+  }
+  function attachmentsIndex(p,all=false) {
+    const files=array(p.request?.attachments);if(!files.length)return '';
+    return inspectorSection('Attachments',files.length,`${attachmentRows(files.slice(0,all?Infinity:3))}${!all&&files.length>3?viewAll('attachments',files.length,'attachments'):''}`);
+  }
+  function versionsIndex(p,all=false) {
+    const versions=array(p.versions).slice().sort((a,b)=>Number(b.rev)-Number(a.rev));
+    return inspectorSection('Versions',versions.length,`${versionList(versions.slice(0,all?Infinity:4),p)}${!all&&versions.length>4?viewAll('versions',versions.length,'versions'):''}`);
+  }
+  function inspectorDrill(p,vm) {
+    const view=vm.inspector?.view;if(!view)return '';
+    const names={questions:'Clarifications',changes:'Changes & corrections',attachments:'Attachments',versions:'Versions'};
+    const backLabel=vm.inspector?.backLabel||'Details';
+    const back=`<button type="button" class="fs-inspector-back" data-wq="inspector-back">${icon('back',14)}Back to ${escape(backLabel)}</button>`;
+    if(view.kind==='basis')return back+versionFocus(p,true);
+    if(view.kind==='plan')return back+inspectorSection('Saved plan','V'+p.viewedRev,basisContents(p));
+    if(view.kind==='question')return back+questionDetail(p,view.id);
+    if(view.kind==='change')return back+changeDetail(p,view.id);
+    return back+({questions:()=>questionHistory(p,vm,true),changes:()=>changesIndex(p,true),attachments:()=>attachmentsIndex(p,true),versions:()=>versionsIndex(p,true)}[view.section]?.()||`<p class="fs-inspector-empty">${escape(names[view.section]||'This record')} is unavailable.</p>`);
   }
 
   function versionList(versions, p) {
@@ -7544,11 +7733,6 @@ if (typeof module==="object" && module.exports) module.exports = api;
       const earlier = milestones.filter(status => status !== primary);
       return `<button type="button" class="fs-version-row${viewing ? ' fs-version-viewed' : ''}" data-wq="${version.readOnly === false ? 'current-version' : 'view-version'}" data-value="${escape(version.rev)}"${viewing ? ' aria-current="true"' : ''}><span class="fs-version-icon">${icon('file', 15)}</span><span><strong>Version ${escape(version.rev)}${viewing ? '<small>Viewing</small>' : version.current ? '<small>Current</small>' : ''}</strong><span>${escape(version.status || 'Submitted')}</span>${earlier.length ? `<small>${earlier.map(status => milestoneLabels[status]).join(' · ')}</small>` : ''}${version.at ? `<small>${escape(displayTime(version.at))}</small>` : ''}</span>${icon('next', 12)}</button>`;
     }).join('')}</div>`;
-  }
-
-  function correctionEvidence(corrections) {
-    if (!array(corrections).length) return '';
-    return panelFold('Updates to this feedback', corrections.length, corrections.map(correction=>`<section class="fs-correction-evidence"><h3>${escape(correction.id)} · Scope revision ${escape(correction.scopeCycle)}</h3><p>${escape(correction.text)}</p>${attachmentRows(array(correction.evidence?.attachments))}</section>`).join(''));
   }
 
   function details(vm) {
@@ -7567,14 +7751,13 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const versions = array(p.versions).slice().sort((a, b) => Number(b.rev) - Number(a.rev));
     const heading = `<div class="fs-details-heading"><div class="fs-detail-tabs" role="tablist" aria-label="Feedback context">${['details', 'activity'].map(name => `<button type="button" role="tab" id="fs-tab-${name}" data-wq="context-tab" data-value="${name}" aria-selected="${tab === name}" aria-controls="fs-inspector-content" tabindex="${tab === name ? '0' : '-1'}">${name === 'details' ? 'Details' : 'Activity'}</button>`).join('')}</div>${button('toggle-context', 'Close', { quiet: true, icon: 'cross', className: 'fs-close-details' })}</div>`;
     const focus = versionFocus(p);
-    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + panelFold('Full saved plan', undefined, basisContents(p), { hint: 'V' + p.viewedRev }) : basisRows(p);
+    const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + sourceRecordButton('plan','saved','Full saved plan') : basisRows(p);
     const sourceNote = request.source?.note || request.sourceNote;
-    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${correctionEvidence(p.corrections)}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+    const content = tab === 'details' && vm.inspector?.view ? inspectorDrill(p,vm) : tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${questionHistory(p,vm)}${changesIndex(p)}
       ${panelFold('Original feedback', undefined, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${sourceNote ? `<p class="fs-panel-note">${escape(sourceNote)}</p>` : ''}`)}
-      ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
-      ${questionHistory(p)}
+      ${attachmentsIndex(p)}
       ${decisions.length ? panelFold('Earlier decisions', decisions.length, decisions.map(decision => `<div class="fs-history-event"><span>${escape(displayTime(decision.date || decision.at))}${decision.superseded ? ' · Superseded' : ''}</span><p>${escape(decision.decision || decision.text || decision.summary)}</p>${decision.source ? `<small>${escape(textOf(decision.source))}</small>` : ''}</div>`).join('')) : ''}
-      ${panelFold('Versions', versions.length, versionList(versions, p), { open: Boolean(versions.length) })}`;
+      ${versionsIndex(p)}`;
     return `<aside class="fs-details${vm.contextOpen ? ' fs-details-open' : ''}" id="feedback-details" tabindex="-1" aria-label="Feedback ${tab}">${heading}<div id="fs-inspector-content" role="tabpanel" aria-labelledby="fs-tab-${tab}" tabindex="0" class="fs-inspector-panel">${content}</div></aside>`;
   }
 
@@ -7643,7 +7826,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return `<div class="fs-app">${navigation(vm)}<section class="fs-main">${topbar(vm)}<main class="fs-content" id="feedback-main" tabindex="-1">${content}</main></section>${demoConsole(vm)}</div>`;
   }
 
-  root.FeedbackView = { render, task };
+  root.FeedbackView = { render, task, questionGroups };
 })(globalThis);
 
 </script><script>
@@ -7790,6 +7973,27 @@ if (typeof module==="object" && module.exports) module.exports = api;
   const current=()=>S.get(data,data.current),scenario=()=>C.get(scenarioId)||C.get('pdf');
   const mediaCache=new Map();let visibleMediaIds=new Set();
   let walkCursor=null;
+  let inspector={key:'',view:null,stack:[]},inspectorRestore=null;
+  const inspectorNames={questions:'clarifications',changes:'changes',attachments:'attachments',versions:'versions'};
+  function inspectorPosition(){
+    const drawer=app.querySelector('#feedback-details');
+    return {scroll:drawer?.scrollTop||0,windowY:root.scrollY||0,folds:[...(drawer?.querySelectorAll('details')||[])].map(el=>({label:el.querySelector('summary > span')?.textContent||'',open:el.open})),focus:null};
+  }
+  function restoreInspector(position){
+    if(!position)return;const drawer=app.querySelector('#feedback-details');if(!drawer)return;
+    for(const el of drawer.querySelectorAll('details')){const saved=position.folds?.find(row=>row.label===(el.querySelector('summary > span')?.textContent||''));if(saved)el.open=saved.open;}
+    drawer.scrollTop=position.scroll||0;
+    if(position.returning)root.scrollTo(0,position.windowY||0);
+    if(position.focus){const target=[...drawer.querySelectorAll('[data-wq]')].find(el=>el.dataset.wq===position.focus.action&&el.dataset.value===position.focus.value&&(!position.focus.kind||el.dataset.kind===position.focus.kind));target?.focus({preventScroll:true});}
+  }
+  function openInspector(view,el){
+    saveDraft();const position=inspectorPosition();position.focus={action:el.dataset.wq,value:el.dataset.value,kind:el.dataset.kind};
+    inspector.stack.push({view:inspector.view?clone(inspector.view):null,position});inspector.view=view;inspectorRestore={scroll:0,folds:[]};render();
+    app.querySelector('.fs-record-title,.fs-inspector-back')?.focus({preventScroll:true});
+  }
+  function backInspector(){
+    const previous=inspector.stack.pop();inspector.view=previous?.view||null;inspectorRestore={...previous?.position,returning:true};render();
+  }
   function savePresentation(){
     if(!current())return;
     const id=current().id,fresh=read();if(!S.get(fresh,id))return;
@@ -7838,8 +8042,13 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const status=S.status(page==='site'?null:item,S.now(data));
     rendered=item?{ticketId:item.id,sequence:item.sequence,rev:item.c.rev,bundleId:item.c.reviewFlow?.sentBundle?.id}:null;
     const projection=presentationVM(page==='site'?null:item);
-    app.innerHTML=V.render({page,items:S.customerItems(data).map(i=>({...i,status:S.status(i,S.now(data))})),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),updateGroups:S.digest(data),status,console:consoleState,error,notice,contextOpen,contextTab,historyVersion,preparationPaused:!!item?.ux?.preparation?.paused,...projection,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?.c.reviewFlow?E.reviewPreview(item.c):null,clock:S.now(data)});
-    configureDrawer();
+    const key=JSON.stringify([page,item?.id,actor,historyVersion||null,walkCursor,projection.presentation?.historical?projection.presentation.viewedRev:item?.sequence,contextTab]);
+    let position=inspectorRestore || inspectorPosition();inspectorRestore=null;
+    if(inspector.key!==key){inspector={key,view:null,stack:[]};position=null;}
+    const previousView=inspector.stack.at(-1)?.view;
+    const inspectorVM={view:inspector.view,backLabel:previousView?.section?inspectorNames[previousView.section]:previousView?.kind==='basis'?'version basis':previousView?.kind==='plan'?'saved plan':'details'};
+    app.innerHTML=V.render({page,items:S.customerItems(data).map(i=>({...i,status:S.status(i,S.now(data))})),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),updateGroups:S.digest(data),status,console:consoleState,error,notice,contextOpen,contextTab,historyVersion,preparationPaused:!!item?.ux?.preparation?.paused,...projection,inspector:inspectorVM,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?.c.reviewFlow?E.reviewPreview(item.c):null,clock:S.now(data)});
+    configureDrawer();restoreInspector(position);
     document.title=(page==='ticket'&&item?projection.presentation.title+' · ':'')+'WinQuote Feedback';
     void hydrateMedia(projection.presentation);
   }
@@ -8095,6 +8304,10 @@ if (typeof module==="object" && module.exports) module.exports = api;
     error='';
     if(action!=='watch-toggle'&&action!=='watch-next'&&consoleState.playing)stopWatch();
     switch(action){
+      case 'inspector-open':return openInspector({kind:el.dataset.kind,id:value},el);
+      case 'inspector-list':return openInspector({kind:'list',section:value,query:''},el);
+      case 'inspector-back':return backInspector();
+      case 'inspector-search':return;
       case 'nav-inbox':history.replaceState({},'',location.pathname);return go('inbox');
       case 'nav-updates':return go('updates');
       case 'open-ticket':return routeTicket(value);
@@ -8176,7 +8389,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
   document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
-  app.addEventListener('input',event=>{const el=event.target;if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
+  app.addEventListener('input',event=>{const el=event.target;if(el.dataset.wq==='inspector-search'){const start=el.selectionStart;inspector.view={...inspector.view,query:el.value};render();const input=app.querySelector('[data-wq=inspector-search]');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start);}catch{}return;}if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();pausePreparation();savePresentation();}else if(current()?.ux?.preparation?.paused)render();});
   window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();savePresentation();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
   window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';document.getElementById('live').textContent=notice;});

@@ -75,3 +75,9 @@ The approved Source Serif Pro headings, Inter body and original WinQuote mark ar
 The business page owns the top-right Feedback split button. Its main action opens a draft; the chevron offers page context capture. Attachment actions (Add image and Record voice) sit next to the text field, separate from Send. Minimize and save-close retain the draft and local files. Escape minimizes; focus returns to the entry without locking the business page. Mobile uses a partial-height bottom panel.
 
 Correct our understanding and Request changes use this same panel. Their submission is bound to the original ticket, role, version and sequence. Navigating elsewhere cannot redirect the update. A stale version fails safely with the draft intact. Correction evidence is saved with its scope revision and included in later submitted snapshots; historical versions keep their original evidence.
+
+## Reading clarification history
+
+Details keeps the saved version's decision basis first. One question displays a compact answer; multiple questions are grouped by round in a short index. View all opens the full list, with search for larger histories. Select a question to read its complete answer, multi-select choices, additional note and provenance. Back restores the same list position and keyboard focus.
+
+Attachments, changes/corrections and versions also have bounded overviews and complete list access. These are presentation controls: opening, searching and returning do not change the feedback. Switching versions clears an incompatible selected record and reads only that version's frozen question, answer and supporting material. Optional skipped questions are distinct from unanswered or missing historical records. A batch-level answer relationship is not presented as individual adoption of every question.

@@ -68,9 +68,9 @@ test('requester waiting does not restore a private legacy candidate from derivat
 test('question-round count groups answers by bundle and includes sent unanswered questions', () => {
   const state=vm({presentation:{request:{text:'Feedback'},basis:[],versions:[],questionRounds:[{id:'initial-1',round:'initial',questions:[{id:'q1',text:'First question'},{id:'q2',text:'Second question'}]},{id:'detailed-2',round:'detailed',questions:[{id:'q3',text:'Next decision'}]}],answers:[{bundleId:'initial-1',question:'First question',answer:'First answer'},{bundleId:'initial-1',question:'Second question',answer:'Second answer'}]}});
   const html=View.render(state);
-  assert.match(html,/Question rounds<\/span><small class="fs-side-count">2/);
-  assert.match(html,/2 of 2 answered/);
-  assert.match(html,/0 of 1 answered/);
+  assert.match(html,/3 questions · 2 rounds/);assert.equal((html.match(/class="fs-question-row"/g)||[]).length,3);
+  assert.match(html,/2 answered/);
+  assert.match(html,/1 awaiting answer/);
   assert.match(html,/Next decision/);
 });
 test('sidebar grouping preserves distinct source identities and all saved plan lines without repeated source disclosures', () => {
@@ -95,7 +95,11 @@ test('historical sidebar retains round identities, Other notes and provenance wi
   ],answers:[{bundleId:'Q1',question:'Same question?',answer:['Other'],note:'Saved custom answer.',at:'2026-11-04T13:00:00Z'}]}});
   state.current.c.answer='LATER ANSWER';state.current.c.reviewFlow={source:{note:'LATER SOURCE'},sharedUnderstanding:{text:'LATER PLAN'}};
   const before=JSON.stringify(state),sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
-  for(const text of ['Reference Q1','Reference Q2','Scope revision 2','Saved custom answer.','Awaiting an answer','Reconstructed from an earlier record','Nov 5','Statuses below reflect current progress','Viewing'])assert.ok(sidebar.includes(text),text);
+  for(const text of ['2 questions · 2 rounds','Awaiting answer','Reconstructed from an earlier record','Statuses below reflect current progress','Viewing'])assert.ok(sidebar.includes(text),text);
+  const record=View.render({...state,inspector:{view:{kind:'question',id:'Q1:a'},backLabel:'clarifications'}}).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+  for(const text of ['Saved custom answer.','Q1 / a','Nov 4','Back to clarifications'])assert.ok(record.includes(text),text);
+  assert.doesNotMatch(record,/LATER ANSWER|LATER SOURCE|LATER PLAN|Same question.*Same question/);
+  const pending=View.render({...state,inspector:{view:{kind:'question',id:'Q2:b'}}});assert.match(pending,/Scope revision/);assert.match(pending,/Nov 5/);
   assert.equal((sidebar.match(/Same question\?/g)||[]).length,2);
   assert.doesNotMatch(sidebar,/LATER ANSWER|LATER SOURCE|LATER PLAN/);
   assert.match(sidebar,/data-wq="current-version" data-value="2"/);
@@ -112,8 +116,8 @@ test('sidebar leads with the submitted governing answer and keeps earlier rounds
   for(const text of ['Read-only','Q2 · Scope revision 2','Answer used','Restore previous selection','Impact','Restore the prior equipment on save.','Acceptance check','Saving restores its charge.'])assert.ok(focus.includes(text),text);
   assert.doesNotMatch(focus,/<details|Select again|Full frozen plan|PRIVATE FUTURE/);
   assert.ok(sidebar.indexOf('fs-version-focus')<sidebar.indexOf('Full saved plan'));
-  assert.match(sidebar,/<details class="fs-side-fold"><summary><span>Full saved plan/);
-  assert.ok(sidebar.includes('Select again'));assert.equal((sidebar.match(/Used in V2/g)||[]).length,1);
+  assert.match(sidebar,/data-kind="plan"[^>]*>Full saved plan/);
+  assert.ok(sidebar.includes('Select again'));assert.match(sidebar,/Contains an answer used in V2/);assert.doesNotMatch(sidebar,/class="fs-entry-used"/);
   assert.equal(JSON.stringify(state),before);
   state.presentation.reasoning.sourceVersion=3;
   assert.doesNotMatch(View.render(state),/fs-version-focus|Used in V2/);
@@ -377,7 +381,7 @@ test('first saved customer question is round one even when its preserved interna
   const html=View.render(state),header=html.match(/<div class="fs-round">[\s\S]*?<\/div>/)[0];
   assert.match(header,/Question round 1/);
   assert.doesNotMatch(header,/Q2|Detailed decisions|Question round 2/);
-  assert.match(html,/Reference Q2/);
+  assert.match(html,/data-value="Q2:return"/);assert.doesNotMatch(html,/Reference Q2/);
   assert.match(html,/Awaiting your answer/);
   assert.match(html,/revise the shared plan/);
   assert.match(html,/Shared plan so far/);
@@ -419,4 +423,52 @@ test('unknown supplied material offers a team draft without suggesting it has al
   assert.match(html,/The supplied material needs team review/);
   assert.match(html,/Confirm with the customer/);
   assert.doesNotMatch(html,/Use existing evidence|name="approach"/);
+});
+
+test('8+2 question overview is bounded, full index keeps groups, and detail preserves long multi-select and notes',()=>{
+ const long='A long customer explanation. '.repeat(100),note='OTHER DETAIL '+long;
+ const round=(id,count)=>({id,answered:true,questions:Array.from({length:count},(_,n)=>({id:'q'+n,text:'Question '+id+' '+n,type:n===1?'multi':'text',required:false})),answers:Object.fromEntries(Array.from({length:count},(_,n)=>['q'+n,n===0?long:n===1?['First choice','Second choice']:n===2?[]:'Answer '+id+' '+n])),answerNotes:{q1:note}});
+ const state=vm({presentation:{historical:true,viewedRev:2,request:{},versions:[],questionRounds:[round('Q1',8),round('Q2',2)],reasoning:{state:'submitted',sourceVersion:2,implications:[{answer:long,source:{id:'Q2',linkage:'bundle'},supported:true,behavior:['Actual saved behavior'],checks:['Actual check']}]}}});
+ const before=JSON.stringify(state),sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+ assert.match(sidebar,/10 questions · 2 rounds/);assert.equal((sidebar.match(/class="fs-question-row"/g)||[]).length,4);assert.match(sidebar,/View all 10 questions/);assert.doesNotMatch(sidebar,/Reference Q|OTHER DETAIL/);assert.ok(!sidebar.includes(long));assert.match(sidebar,/2 answers recorded in Round 2/);
+ const all=View.render({...state,inspector:{view:{kind:'list',section:'questions'}}}).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+ assert.equal((all.match(/class="fs-question-row"/g)||[]).length,10);assert.match(all,/Skipped · optional/);assert.match(all,/Find a question or answer/);assert.ok(all.indexOf('data-round="Q2"')<all.indexOf('data-round="Q1"'));
+ const detail=View.render({...state,inspector:{view:{kind:'question',id:'Q1:q1'},backLabel:'clarifications'}}).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+ assert.match(detail,/<li>First choice<\/li><li>Second choice<\/li>/);assert.ok(detail.includes(note));assert.match(detail,/Source|Q1 \/ q1/);assert.doesNotMatch(detail,/class="fs-question-row"|data-round="Q2"/);assert.equal(JSON.stringify(state),before);
+ const filtered=View.render({...state,inspector:{view:{kind:'list',section:'questions',query:'Q1 7'}}});assert.match(filtered,/Question Q1 7/);assert.equal((filtered.match(/class="fs-question-row"/g)||[]).length,1);
+});
+test('single clarification has no round scaffolding and exact adoption does not mark sibling answers',()=>{
+ const entry={id:'Q2:a',questionId:'a',question:'Continue where?',answer:'Same quote',status:'answered'};
+ const state=vm({presentation:{historical:true,viewedRev:2,request:{},versions:[],questionRounds:[{id:'Q2',entries:[entry]}],reasoning:{state:'submitted',sourceVersion:2,implications:[{answer:'Same quote',source:{id:'Q2',answerId:'Q2:a'},supported:true,behavior:['Stay here'],checks:['Same quote stays']} ]}}});
+ let sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];assert.match(sidebar,/fs-single-answer/);assert.doesNotMatch(sidebar,/Round 1|Reference Q2|1 of 1/);assert.match(sidebar,/View source answer/);const detail=View.render({...state,inspector:{view:{kind:'question',id:'Q2:a'}}});assert.match(detail,/Same quote stays/);
+ state.presentation.questionRounds[0].entries.push({...entry,id:'Q2:b',questionId:'b',question:'Another question?',answer:'Another answer'});
+ sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];assert.equal((sidebar.match(/class="fs-entry-used"/g)||[]).length,1);
+ const wrong=View.render({...state,inspector:{view:{kind:'question',id:'Q3:a'}}});assert.match(wrong,/not part of the selected version/);assert.doesNotMatch(wrong,/fs-record-answer/);
+});
+test('attachments, changes and versions use bounded indexes without losing full records',()=>{
+ const note='Long requested change. '.repeat(100),state=vm({presentation:{historical:true,viewedRev:1,request:{attachments:Array.from({length:7},(_,i)=>({id:'file'+i,kind:'image',name:'Screenshot '+i}))},basis:[],versions:Array.from({length:7},(_,i)=>({rev:i+1,status:'Submitted',readOnly:true})),corrections:Array.from({length:6},(_,i)=>({id:'C'+i,text:note,scopeCycle:i+1,evidence:{attachments:[{id:'note'+i,name:'Correction evidence '+i,kind:'image'}]}}))}});
+ const before=JSON.stringify(state),sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];
+ assert.equal((sidebar.match(/class="fs-evidence-row"/g)||[]).length,3);assert.equal((sidebar.match(/class="fs-version-row/g)||[]).length,4);assert.equal((sidebar.match(/data-kind="change"/g)||[]).length,3);assert.ok(!sidebar.includes(note));
+ for(const [section,expected,pattern] of [['attachments',7,/class="fs-evidence-row"/g],['versions',7,/class="fs-version-row/g],['changes',6,/data-kind="change"/g]]){const html=View.render({...state,inspector:{view:{kind:'list',section}}});assert.equal((html.match(pattern)||[]).length,expected);}
+ const detail=View.render({...state,inspector:{view:{kind:'change',id:'correction:C2:2'}}});assert.ok(detail.includes(note));assert.match(detail,/Correction evidence 2/);assert.doesNotMatch(detail,/Correction evidence 3/);assert.equal(JSON.stringify(state),before);
+});
+
+test('ambiguous legacy answer text never duplicates an answer across identically worded questions',()=>{
+ const groups=View.questionGroups({questionRounds:[{id:'Q1',answered:true,questions:[{id:'a',text:'Same question?'},{id:'b',text:'Same question?'},{id:'c',text:'Optional?',required:false}]}],answers:[{bundleId:'Q1',question:'Same question?',answer:'A saved answer with no question id'}]});
+ assert.deepEqual(groups[0].entries.slice(0,3).map(e=>e.status),['not-recorded','not-recorded','skipped']);assert.ok(groups[0].entries.slice(0,3).every(e=>e.answer===undefined));assert.equal(groups[0].entries[3].unlinked,true);assert.equal(groups[0].entries[3].answer,'A saved answer with no question id');
+ const exact=View.questionGroups({questionRounds:[{id:'Q1',questions:[{id:'a',text:'Same question?'},{id:'b',text:'Same question?'}]}],answers:[{bundleId:'Q1',questionId:'b',question:'Same question?',answer:'The second answer'}]});
+ assert.equal(exact[0].entries[0].answer,undefined);assert.equal(exact[0].entries[1].answer,'The second answer');
+});
+test('long decision basis stays bounded on overview and full saved content stays reachable',()=>{
+ const state=vm({presentation:{historical:true,viewedRev:1,request:{},basis:[{text:'Saved plan source'}],versions:[],reasoning:{state:'submitted',sourceVersion:1,implications:[{answer:'A short answer',source:{id:'old'},supported:true,behavior:['First behavior','Second behavior','Third behavior'],checks:['First check','Second check','Third check']}]}}});
+ const sidebar=View.render(state).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];assert.match(sidebar,/First behavior|First check/);assert.doesNotMatch(sidebar,/Second behavior|Third check/);assert.match(sidebar,/View full basis/);assert.match(sidebar,/2 more saved items/);
+ const full=View.render({...state,inspector:{view:{kind:'basis'}}}).match(/<aside class="fs-details[\s\S]*?<\/aside>/)[0];for(const s of ['First behavior','Second behavior','Third behavior','First check','Second check','Third check'])assert.ok(full.includes(s));
+ const plan=View.render({...state,inspector:{view:{kind:'plan'}}});assert.match(plan,/Saved plan source/);
+});
+
+test('explicit legacy question identity beats stale question wording without reusing the answer',()=>{
+ for(const identity of [{questionId:'a'},{id:'Q1:a'}]) {
+  const input={questionRounds:[{id:'Q1',questions:[{id:'b',text:'Changed wording'},{id:'a',text:'Original question'}]}],answers:[{bundleId:'Q1',...identity,question:'Changed wording',answer:'Only for a'}]};
+  const entries=View.questionGroups(input)[0].entries;assert.equal(entries.length,2);assert.equal(entries[0].answer,undefined);assert.equal(entries[1].answer,'Only for a');
+ }
 });

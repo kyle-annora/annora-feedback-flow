@@ -822,3 +822,66 @@ body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
  body.feedback-compose-minimized #feedback-root .fs-console { bottom:78px; max-height:calc(100dvh - 160px); }
  #feedback-modal-root .fs-dialog.fs-receipt-floating { right:12px; bottom:max(12px,env(safe-area-inset-bottom)); width:calc(100vw - 24px); padding:22px; }
 }
+
+/* Clarification index: bounded overview, a single record to read, and a stable way back. */
+#feedback-root .fs-index-section { border-top:1px solid var(--fs-line); padding:16px 0; }
+#feedback-root .fs-index-section > header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; margin-bottom:8px; }
+#feedback-root .fs-index-section > header h3 { margin:0; color:#303030; font-size:13px; }
+#feedback-root .fs-index-section > header > span { color:#666; font:400 11px/1.5 var(--fs-sans); }
+#feedback-root :is(.fs-question-index,.fs-change-index) { list-style:none; margin:0; padding:0; }
+#feedback-root .fs-question-group + .fs-question-group { margin-top:16px; }
+#feedback-root .fs-question-group > header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; padding:8px 0 4px; }
+#feedback-root .fs-question-group h4 { margin:0; color:#595959; font:550 11px/1.5 var(--fs-sans); }
+#feedback-root .fs-question-group > header > span { color:#737373; font-size:10px; }
+#feedback-root .fs-question-row { display:flex; align-items:center; gap:12px; width:100%; padding:12px 4px; text-align:left; border:0; border-bottom:1px solid #ededed; background:transparent; color:#303030; border-radius:0; }
+#feedback-root .fs-question-row > span { flex:1; min-width:0; }
+#feedback-root .fs-question-row strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font:500 12px/1.5 var(--fs-sans); overflow-wrap:anywhere; }
+#feedback-root .fs-question-row > span > span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:400 11px/1.5 var(--fs-sans); color:#666; margin-top:4px; }
+#feedback-root .fs-question-row small { display:block; margin-top:4px; color:#666; font:400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-question-row > svg { flex:none; color:#737373; }
+#feedback-root .fs-question-row:hover { background:#f2f2f2; }
+#feedback-root .fs-batch-relation { display:block; font:400 10px/1.5 var(--fs-sans); color:#666; margin:4px 0; }
+#feedback-root :is(.fs-index-more,.fs-source-link,.fs-inspector-back) { display:flex; align-items:center; gap:8px; background:transparent; border:0; padding:8px 0; min-height:36px; color:#153e5c; font:500 11px/1.5 var(--fs-sans); text-align:left; }
+#feedback-root .fs-index-more { margin-top:8px; }
+#feedback-root .fs-source-link { width:fit-content; }
+#feedback-root .fs-inspector-back { margin:8px 0; min-height:44px; }
+#feedback-root :is(.fs-index-more,.fs-source-link,.fs-inspector-back):hover { text-decoration:underline; text-underline-offset:3px; }
+#feedback-root .fs-single-answer .fs-record-question { margin:8px 0; font:400 12px/1.65 var(--fs-sans); color:#595959; }
+#feedback-root .fs-record-answer { white-space:pre-wrap; overflow-wrap:anywhere; font:400 13px/1.7 var(--fs-sans); color:#303030; margin:8px 0; }
+#feedback-root .fs-single-answer .fs-record-answer { font-weight:500; font-size:12px; margin:8px 0 4px; }
+#feedback-root .fs-record-answers { margin:8px 0; padding-left:18px; color:#303030; font:400 13px/1.7 var(--fs-sans); }
+#feedback-root .fs-record-answers li { overflow-wrap:anywhere; white-space:pre-wrap; margin:4px 0; }
+#feedback-root .fs-record-empty { font:400 12px/1.6 var(--fs-sans); color:#666; }
+#feedback-root .fs-record-meta { display:flex; flex-wrap:wrap; gap:4px 8px; font:400 11px/1.6 var(--fs-sans); color:#666; margin:8px 0; overflow-wrap:anywhere; }
+#feedback-root .fs-source-record .fs-record-title { font:550 16px/1.5 var(--fs-sans); margin:12px 0 20px; overflow-wrap:anywhere; color:#262626; }
+#feedback-root .fs-source-record section { margin:20px 0; }
+#feedback-root .fs-source-record h4 { margin:16px 0 8px; color:#666; font:500 11px/1.5 var(--fs-sans); }
+#feedback-root .fs-record-provenance { border-top:1px solid var(--fs-line); padding-top:12px; margin-top:24px; }
+#feedback-root .fs-record-provenance > div { display:grid; grid-template-columns:84px minmax(0,1fr); gap:8px; margin:8px 0; font:400 11px/1.6 var(--fs-sans); }
+#feedback-root .fs-record-provenance dt { color:#666; }
+#feedback-root .fs-record-provenance dd { margin:0; overflow-wrap:anywhere; color:#454545; }
+#feedback-root .fs-answer-impact { border-top:1px solid var(--fs-line); padding-top:8px; }
+#feedback-root .fs-answer-impact dt { font:500 11px/1.5 var(--fs-sans); color:#666; margin-top:12px; }
+#feedback-root .fs-answer-impact dd { margin:4px 0 12px; font:400 12px/1.65 var(--fs-sans); color:#454545; }
+#feedback-root .fs-answer-impact ul { padding-left:16px; }
+#feedback-root .fs-index-search { display:block; margin:12px 0; font:400 11px/1.5 var(--fs-sans); color:#666; }
+#feedback-root .fs-index-search input { display:block; width:100%; margin-top:6px; padding:8px 10px; border:1px solid #d9d9d9; border-radius:6px; background:#fff; color:#303030; font:400 12px/1.5 var(--fs-sans); }
+#feedback-root .fs-evidence-row strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+#feedback-root .fs-version-row > span > strong { display:flex; flex-wrap:wrap; gap:4px 8px; align-items:baseline; }
+@media(min-width:901px) {
+ #feedback-root .fs-details { align-self:start; position:sticky; top:0; height:calc(100dvh - 60px); min-height:0; overflow:auto; overscroll-behavior:contain; padding-bottom:16px; scrollbar-color:#c7c7c7 #fcfcfc; scrollbar-width:thin; }
+ #feedback-root .fs-details-heading { position:sticky; top:-19px; z-index:2; background:#fcfcfc; padding-top:8px; }
+}
+@media(max-width:900px) {
+ #feedback-root :is(.fs-source-link,.fs-index-more,.fs-index-search input) { min-height:44px; font-size:12px; }
+ #feedback-root .fs-question-row strong { font-size:13px; }
+ #feedback-root .fs-question-row > span > span { font-size:12px; }
+}
+
+#feedback-root .fs-basis-more { display:block; color:#666; font:400 11px/1.5 var(--fs-sans); margin-top:4px; }
+@media(min-width:901px){
+ body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:316px; }
+}
+
+@media(min-width:1650px){body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:344px; }}
+@media(min-width:901px) and (max-width:1180px){body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:274px; }}

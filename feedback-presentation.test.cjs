@@ -333,3 +333,73 @@ test('walkthrough and preparation persistence merge presentation metadata while 
   assert.deepEqual(prepared.item.c,before);assert.equal(prepared.item.sequence,sequence);
   const restored=S.migrate(JSON.parse(JSON.stringify(prepared.data)));assert.equal(S.get(restored,id).ux.walk.cursor,3);assert.equal(S.get(restored,id).ux.preparation.stage,'draft-ready');
 });
+
+test('large sent batches expose stable question identities, separate timestamps, optional omissions and exact answer notes',()=>{
+  const q=(id,type='text',options=[],extra={})=>({id,text:'Business decision '+id+'?',type,options,required:true,disposition:'ask',reason:'A missing business decision.',...extra});
+  const questions=[
+    q('outputs','multi',['Equipment','Charges','Totals'],{minSelections:1,maxSelections:3}),
+    q('optional-multi','multi',['A','B'],{required:false,minSelections:0,maxSelections:2}),
+    q('optional-note','text',[],{required:false}),
+    q('other','single',['Standard','Other']),q('confirmation','yes_no',['Yes','No','Not sure']),
+    q('long'),q('same-id'),q('last')
+  ];
+  let c=E.createReviewedCase(C.get('pdf').feedback,{scenarioId:'pdf',journey:true});
+  c=E.review(c,'draft-questions');c=E.review(c,'save-questions',questions);c=E.review(c,'send-questions');
+  const longAnswer='A saved answer with many details. '.repeat(50);
+  c=E.review(c,'answer',{answers:{outputs:['Equipment','Totals'],'optional-multi':[],'optional-note':'',other:'Other',confirmation:'No',long:longAnswer,'same-id':'First answer',last:'Final answer'},notes:{other:'A custom requirement'}});
+  const before=JSON.stringify(c),p=P.describe(customer(freeze(c))),round=p.questionRounds[0];
+  assert.equal(round.bundleId,'Q1');assert.equal(round.entries.length,8);assert.equal(p.answers.length,8);
+  assert.deepEqual(round.entries.map(entry=>entry.id),questions.map(q=>'Q1:'+q.id));
+  assert.deepEqual(round.entries[0].answer,['Equipment','Totals']);assert.deepEqual(round.entries[1].answer,[]);
+  for(const index of [1,2]){assert.equal(round.entries[index].answered,false);assert.equal(round.entries[index].status,'skipped');}
+  assert.equal(round.entries[3].note,'A custom requirement');assert.equal(round.answerNotes.other,'A custom requirement');
+  assert.equal(round.entries[4].answer,'No');assert.equal(round.entries[4].answered,true);
+  assert.equal(round.entries[5].answer,longAnswer);
+  assert.equal(round.sentAt,c.trail.find(t=>t.action==='send-questions').at);
+  assert.equal(round.answeredAt,c.trail.find(t=>t.action==='answer').at);
+  assert.ok(round.entries.every(entry=>entry.sentAt===round.sentAt&&entry.answeredAt===round.answeredAt));
+  assert.equal(JSON.stringify(c),before);
+  c=E.review(c,'confirm-scope',C.get('pdf').scope);c=E.review(c,'begin-detailed-questions');
+  c=E.review(c,'save-questions',[q('same-id'),q('followup')]);c=E.review(c,'send-questions');
+  const pending=P.describe(customer(c));assert.equal(pending.questionRounds.length,2);
+  assert.deepEqual(pending.questionRounds[0],round);
+  assert.deepEqual(pending.questionRounds[1].entries.map(e=>[e.id,e.status,e.answeredAt]),[['Q2:same-id','awaiting-answer',null],['Q2:followup','awaiting-answer',null]]);
+  assert.equal(pending.questionRounds[1].sentAt,c.trail.at(-1).at);
+  c=E.review(c,'answer',{answers:{'same-id':'Changed answer',followup:'Second detail'}});
+  const complete=P.describe(customer(c));assert.equal(complete.answers.length,10);
+  assert.deepEqual(complete.questionRounds[0],round);
+  assert.equal(complete.answers.find(a=>a.id==='Q1:same-id').answer,'First answer');
+  assert.equal(complete.answers.find(a=>a.id==='Q2:same-id').answer,'Changed answer');
+});
+
+test('answer implications identify one exact saved question only and retain ambiguous or aggregate answers at batch level',()=>{
+  const c=submittedPolicy('restore'),saved=JSON.stringify(c),p=P.describe(customer(freeze(c)),{rev:1});
+  assert.equal(p.reasoning.implications[0].source.bundleId,'Q1');
+  assert.equal(p.reasoning.implications[0].source.questionId,'equipment-return');
+  assert.equal(p.reasoning.implications[0].source.answerId,'Q1:equipment-return');
+  assert.equal(p.reasoning.implications[0].source.linkage,'question');assert.equal(JSON.stringify(c),saved);
+  let multiple=E.createReviewedCase(C.get('pdf').feedback,{scenarioId:'pdf',journey:true});
+  multiple=E.review(multiple,'draft-questions');multiple=E.review(multiple,'save-questions',[
+    {id:'first',text:'First decision?',type:'text',options:[],required:true,disposition:'ask',reason:'Customer context'},
+    {id:'second',text:'Second decision?',type:'text',options:[],required:true,disposition:'ask',reason:'Customer context'}
+  ]);multiple=E.review(multiple,'send-questions');multiple=E.review(multiple,'answer',{answers:{first:'Yes',second:'Yes'}});
+  let source=P.describe(customer(multiple),{actor:'Website team'}).reasoning.implications[0].source;
+  assert.equal(source.linkage,'bundle');assert.equal(source.questionId,null);assert.equal(source.answerId,null);
+  // An older saved aggregate may contain just one shared value. Two equal answers still do not identify a question.
+  multiple.reviewFlow.questionRounds[0].answerText='Yes';multiple.answer='Yes';
+  source=P.describe(customer(multiple),{actor:'Website team'}).reasoning.implications[0].source;
+  assert.equal(source.linkage,'bundle');assert.equal(source.questionId,null);
+});
+
+test('incomplete historical answers stay unavailable rather than borrowing newer values or inventing answered timestamps',()=>{
+  const c=submittedPolicy('restore'),v1=c.versions[0];
+  v1.reviewFlow.questionRounds[0].answers={};v1.reviewFlow.questionRounds[0].answerNotes={};
+  c.reviewFlow.questionRounds[0].answers['equipment-return']='NEWER ANSWER';
+  c.reviewFlow.questionRounds[0].answerNotes['equipment-return']='NEWER NOTE';
+  c.trail=c.trail.filter(event=>event.action!=='answer');
+  const before=JSON.stringify(c),p=P.describe(customer(freeze(c)),{rev:1}),entry=p.questionRounds[0].entries[0];
+  assert.equal(entry.answer,null);assert.equal(entry.note,'');assert.equal(entry.answered,false);
+  assert.equal(entry.status,'not-recorded');assert.equal(entry.answeredAt,null);
+  assert.equal(p.reasoning.implications[0].source.linkage,'bundle');
+  assert.ok(!JSON.stringify(p.questionRounds).includes('NEWER'));assert.equal(JSON.stringify(c),before);
+});

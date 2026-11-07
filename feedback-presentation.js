@@ -12,6 +12,40 @@
   const publicActions=new Set(['submit','answer','send-questions','confirm-scope','edit-understanding','correct-understanding','deliver','adjust','accept','authorize','publish','publish-failed','retry-publish','request-release-changes']);
   const checked=value=>typeof value==='string'&&value.trim()?value:null;
   const excerpt=(value,size=180)=>String(value||'').trim().replace(/\s+/g,' ').slice(0,size);
+  // A completed batch may deliberately omit an optional answer. Empty arrays are not answers.
+  const hasAnswer=value=>Array.isArray(value)?value.some(hasAnswer):typeof value==='string'?Boolean(value.trim()):typeof value==='number'?Number.isFinite(value):typeof value==='boolean';
+  function questionRoundsFor(f,sourceTrail){
+    const sentEvents=rows(sourceTrail).filter(t=>t.action==='send-questions'),answerEvents=rows(sourceTrail).filter(t=>t.action==='answer');
+    let answeredIndex=0;
+    let rounds=rows(f?.questionRounds);
+    if(!rounds.length&&f?.sentBundle)rounds=[{...f.sentBundle,answers:f.answers,answerNotes:f.answerNotes,answered:f.phase!=='awaiting-answer',answerSimulated:f.answerSimulated}];
+    return rounds.map((r,index)=>{
+      const bundleId=r.id||r.bundleId||null,completed=r.answered===true;
+      const sentAt=r.sentAt||r.at||sentEvents[index]?.at||null;
+      const answeredAt=completed?(r.answeredAt||answerEvents[answeredIndex++]?.at||null):null;
+      const questions=clone(r.questions)||[],answers=clone(r.answers),answerNotes=clone(r.answerNotes)||{};
+      const entries=questions.map((q,questionIndex)=>{
+        const questionId=q.id||null,value=clone(answers?.[q.id]),answered=hasAnswer(value);
+        const status=answered?'answered':!completed?'awaiting-answer':q.required===false?'skipped':'not-recorded';
+        return {id:String(bundleId||'legacy-round-'+index)+':'+String(questionId||'question-'+(questionIndex+1)),questionId,bundleId,round:r.round||'initial',scopeCycle:r.scopeCycle,
+          question:q.text,text:q.text,type:q.type||'text',required:q.required===true,answer:value,value:clone(value),note:answerNotes[q.id]||'',answered,status,
+          simulated:r.answerSimulated===true,sentAt,answeredAt,at:completed?answeredAt:sentAt};
+      });
+      return {id:bundleId,bundleId,round:r.round||'initial',scopeCycle:r.scopeCycle,questions,answers,answerNotes,answerText:r.answerText||'',answered:completed,simulated:r.answerSimulated===true,at:sentAt,sentAt,answeredAt,entries};
+    });
+  }
+  function questionSource(source,answer,questionRounds){
+    const bundleId=source?.bundleId||source?.id||null,round=rows(questionRounds).find(r=>r.id===bundleId);
+    const match=rows(round?.entries).filter(entry=>{
+      if(!entry.answered||!entry.questionId)return false;
+      const value=Array.isArray(entry.answer)?entry.answer.join('; '):String(entry.answer??'');
+      const summary=[value,entry.note].filter(Boolean).join(': ');
+      return summary.trim()===String(answer??'').trim();
+    });
+    // Equality must identify exactly one saved answer. Aggregate answers and ambiguous duplicates stay batch-level.
+    const exact=match.length===1?match[0]:null;
+    return {...source,bundleId:round?.id||bundleId,questionId:exact?.questionId||null,answerId:exact?.id||null,linkage:exact?'question':round?'bundle':'unavailable'};
+  }
   function safeView(c,snapshot){
     if(snapshot)return clone(snapshot.view)||{candidate:snapshot.candidate||snapshot.text||'',checks:clone(snapshot.checks)||[]};
     try{return E.derive(c);}catch{return {candidate:'',checks:[],manual:true,blocked:true,reason:'The team needs to review this saved record before continuing.'};}
@@ -225,15 +259,14 @@
     const basis=concealed?[]:lines(scopeText).map((text,index)=>({id:'basis-'+index,text,status:basisStatus,source:clone(basisSource)}));
     let sourceTrail=rows(c.trail);
     if(historical){const delivery=sourceTrail.findIndex(t=>t.action==='deliver'&&t.rev===snapshot.rev);sourceTrail=delivery>=0?sourceTrail.slice(0,delivery+1):sourceTrail.filter(t=>t.rev<=snapshot.rev);}
-    const sentEvents=sourceTrail.filter(t=>t.action==='send-questions'),answerEvents=sourceTrail.filter(t=>t.action==='answer');
-    let answers=rows(f?.questionRounds).filter(r=>r.answered).flatMap((r,index)=>rows(r.questions).map(q=>({id:r.id+':'+q.id,bundleId:r.id,round:r.round,scopeCycle:r.scopeCycle,question:q.text,text:q.text,answer:clone(r.answers?.[q.id]),value:clone(r.answers?.[q.id]),note:r.answerNotes?.[q.id]||'',simulated:r.answerSimulated===true,at:r.answeredAt||answerEvents[index]?.at||null})));
+    const answerEvents=sourceTrail.filter(t=>t.action==='answer');
+    const questionRounds=questionRoundsFor(f,sourceTrail);
+    let answers=questionRounds.filter(r=>r.answered).flatMap(r=>clone(r.entries));
     const answer=historical?snapshot.answer:c.answer;
-    if(!answers.length&&checked(answer))answers=[{id:'legacy-answer',round:'initial',question:'Requester’s clarification',text:'Requester’s clarification',answer,value:answer,simulated:(historical?snapshot.answerSimulated:c.answerSimulated)===true,at:answerEvents.at(-1)?.at||null}];
+    if(!answers.length&&checked(answer))answers=[{id:'legacy-answer',questionId:null,bundleId:null,round:'initial',question:'Requester’s clarification',text:'Requester’s clarification',answer,value:answer,answered:true,status:'answered',simulated:(historical?snapshot.answerSimulated:c.answerSimulated)===true,sentAt:null,answeredAt:answerEvents.at(-1)?.at||null,at:answerEvents.at(-1)?.at||null}];
     let activity=sourceTrail;
     activity=activity.map((t,index)=>({...clone(t),id:'activity-'+index,actor:actorName(t.actor),at:t.at||null})).filter(t=>team||publicActions.has(t.action)).reverse();
     const decisions=rows(f?.source?.history).map((decision,index)=>({...clone(decision),id:'decision-'+index,superseded:decision.status==='superseded'||(f?.source?.id==='fb_2026-07-11_002'&&decision.date==='2026-07-16'&&rows(f.source.history).some(later=>later.date==='2026-08-05')),status:decision.status||(f?.source?.id==='fb_2026-07-11_002'&&decision.date==='2026-07-16'?'superseded':'historical-record')}));
-    const questionRounds=rows(f?.questionRounds).map((r,index)=>({id:r.id,round:r.round,scopeCycle:r.scopeCycle,questions:clone(r.questions),answers:clone(r.answers),answerText:r.answerText||'',answered:r.answered===true,simulated:r.answerSimulated===true,at:r.sentAt||r.at||sentEvents[index]?.at||null}));
-    if(!questionRounds.length&&f?.sentBundle)questionRounds.push({id:f.sentBundle.id,round:f.sentBundle.round||'initial',questions:clone(f.sentBundle.questions),answers:clone(f.answers),answered:f.phase!=='awaiting-answer',at:f.sentBundle.at||null});
     const projection={legacy:!c.reviewFlow||!c.reviewFlow.scenarioId,historical,currentRev:c.rev,viewedRev:historical?snapshot.rev:c.rev,
       phase:historical?'history':c.reviewFlow?.phase||c.stage,kind:f?.kind||view.kind||'other',title:title(presentationCase,scenario),target:historical?(f?.target||null):knownTarget(c,scenario),
       request:{text,context,attachments,at:context?.capturedAt||sourceTrail.find(t=>t.action==='submit')?.at||(historical?null:item.ux?.createdAt)||null,unavailable:historical&&(!f||text===null),source:clone(f?.source)},understanding,basis,answers,
@@ -242,6 +275,7 @@
       activity,adjustment:historical?snapshot.adjustment:c.adjustment,adjustmentEvidence:clone(f?.adjustmentEvidence||(historical?snapshot.evidence?.adjustment:item.ux?.adjustmentEvidence)),preview:E.reviewPreview(historical?snapshot:c),
       why:why(item,{actor,rev:historical?snapshot.rev:undefined}),preparation:historical?null:preparation(item,undefined,{actor})};
     projection.reasoning=reasoningFor(item,projection,{actor,snapshot:basisSnapshot});
+    projection.reasoning.implications=projection.reasoning.implications.map(impact=>impact.source?.type==='requester-answer'?{...impact,source:questionSource(impact.source,impact.answer,questionRounds)}:impact);
     if(historical)projection.why={...projection.why,scenarioId:scenario?.id||null,source:f?.source?.id||'Submitted snapshot',text:'Read-only V'+snapshot.rev+' and its saved evidence. Newer material and later decisions are not substituted into this snapshot.'};
     return projection;
   }
