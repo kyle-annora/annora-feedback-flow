@@ -199,16 +199,60 @@
     return {data:next,item,summary};
   }
   /** One digest per customer ticket; events remain independently addressable for stale-link checks. */
-  function digest(data){
+  function groupedUpdates(data,list,taskIds){
     const groups=new Map();
-    for(const event of updates(data)){
+    for(const event of list){
       if(!groups.has(event.ticketId))groups.set(event.ticketId,[]);groups.get(event.ticketId).push(event);
     }
     return [...groups.entries()].map(([ticketId,events])=>{
       const latest=events[0],item=get(data,ticketId),state=status(item,now(data)),unreadCount=events.filter(e=>!e.read).length;
       return {...latest,id:ticketId+':digest',ticketId,eventId:latest.id,latestEventId:latest.id,events:clone(events),count:events.length,unreadCount,read:unreadCount===0,
-        title:events.length===1?latest.title:events.length+' updates · '+(item?.c.reviewFlow?.target||'Your feedback'),summary:latest.title+'. '+state.next,body:latest.title+'. '+state.next,status:state,cta:state.needsInput?'Open current task':'View feedback',at:latest.at,rev:item?.c.rev};
+        title:events.length===1?latest.title:events.length+' updates · '+(item?.c.reviewFlow?.target||'Your feedback'),summary:latest.title+'. '+state.next,body:latest.title+'. '+state.next,status:state,cta:(taskIds?taskIds.has(ticketId):state.needsInput)?'Open current task':'View feedback',at:latest.at,rev:item?.c.rev};
     }).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))||a.ticketId.localeCompare(b.ticketId));
+  }
+  function digest(data){return groupedUpdates(data,updates(data));}
+  /** Role-scoped demo presentation, not authentication or a new workflow engine.
+   * A task is derived from the current case, never from whether an event was read.
+   * Opening this projection does not visit a ticket or consume its return summary.
+   */
+  function attention(data,{actor='Requester'}={}){
+    const items=customerItems(data),supported=Object.prototype.hasOwnProperty.call(permitted,actor),clock=now(data);
+    const tasks=supported?items.flatMap(item=>{
+      const state=status(item,clock),c=item.c,f=c.reviewFlow||{},v='V'+c.rev;
+      if(state.owner!==actor)return [];
+      const actions={
+        clarify:['answer','Answer the question'],
+        'awaiting-answer':['answer','Answer the questions'],
+        review:['review','Review '+v],
+        accepted:['approve-release','Approve '+v+' for release'],
+        release:['approve-release','Approve '+v+' for release'],
+        triage:['review-evidence',f.planPrepared?'Review the draft plan':'Review the evidence'],
+        'question-draft':['screen-questions','Review the questions'],
+        'answer-review':['update-plan',f.planPrepared?'Review the updated plan':'Draft an updated plan'],
+        'spec-review':['prepare-version','Confirm the plan for '+v],
+        candidate:['prepare-version','Prepare '+v],
+        checking:['prepare-version','Check '+v],
+        ready:['send-review','Send '+v+' for review'],
+        authorized:['release','Run the approved '+v+' release'],
+        'release-failed':['retry-release','Retry the '+v+' release'],
+        processing:['prepare-version','Prepare '+v],
+        blocked:['review-evidence','Review the blocked plan'],
+      };
+      const action=actions[state.phase];
+      // A local report draft is resumable, but is not a team-assigned task.
+      // Unknown phases must not create an apparent actionable assignment.
+      if(!action)return [];
+      return [{ticketId:item.id,title:f.target||'Your feedback',owner:state.owner,phase:state.phase,
+        action:action[0],actionLabel:action[1],rev:c.rev,bundleId:state.phase==='awaiting-answer'?f.sentBundle?.id||null:null,
+        sequence:item.sequence,updatedAt:state.updatedAt,nextUpdate:state.nextUpdate,overdue:state.overdue,status:state}];
+    }):[];
+    tasks.sort((a,b)=>Number(b.overdue)-Number(a.overdue)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))||a.ticketId.localeCompare(b.ticketId));
+    const relevantUpdates=supported?updates(data).filter(event=>event.recipient===actor):[];
+    const unreadCount=relevantUpdates.filter(event=>!event.read).length;
+    const taskIds=new Set(tasks.map(task=>task.ticketId));
+    const unreadFyiCount=relevantUpdates.filter(event=>!event.read&&!taskIds.has(event.ticketId)).length;
+    return {actor,items,tasks,taskCount:tasks.length,updates:relevantUpdates,
+      updateGroups:groupedUpdates(data,relevantUpdates,taskIds),unreadCount,hasUnread:unreadCount>0,unreadFyiCount,hasUnreadFyi:unreadFyiCount>0};
   }
   function metadataItem(data,id){const next=clone(data),item=get(next,id);if(!item)fail('This feedback is not available in this workspace.');item.ux||={events:[],drafts:{}};return {next,item};}
   function metadataEvent(item,action,title,at,eventId){
@@ -255,6 +299,6 @@
     const value=P.preparation(item,stage);item.ux.preparation={...value,at:now(next)};
     return {data:next,item,preparation:clone(item.ux.preparation)};
   }
-  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,setExpectation,recordDelay,saveWalk,preparation};
+  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,attention,setExpectation,recordDelay,saveWalk,preparation};
   root.FeedbackStore=api;if(common)module.exports=api;
 })(globalThis);

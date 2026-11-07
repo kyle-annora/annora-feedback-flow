@@ -288,3 +288,14 @@ Attachments use thumbnail rows (three on the overview), changes/corrections use 
 Verify with one question, 8+2 questions, long and multi-select answers, skipped questions, repeated question IDs across rounds, version-specific attachments, and V1/V2 navigation at desktop and 390px. Synthetic stress fixtures are QA evidence, not additional customer demo tickets.
 
 The saved version basis starts with a short source/answer summary, one impact and one acceptance check. Additional saved items have a count and an explicit full-basis detail; the complete saved plan is a separate detail. The floating walkthrough launcher sits outside the inspector on desktop. Ambiguous legacy answers remain readable as unlinked records; they are never attributed to multiple questions.
+
+
+## Persistent Feedback hub — approved November 6, 2026
+
+One bottom-right icon-and-label entry owns reporting and personal feedback work. The numeric badge counts actionable tickets for the active demo role. A quiet unread marker covers FYI updates; Draft is separate. Opening the overview does not imply reading every update.
+
+The compact nonmodal panel prioritizes up to three tasks, two recent ticket updates and a visible source-page reporting entry. Opening a ticket shows its owner and next action. Simple answers can stay compact; review, historical evidence and complex editing expand into the same full-page workspace. Host navigation and the source quote remain separate from the selected feedback. The full workspace reuses version-bound question, answer and evidence detail without nesting another history engine.
+
+Attio's same-interaction full-page expansion informs continuity, and Intercom's persistent messenger access informs availability. The actionable badge semantics are our product decision. Preserve the approved serif/sans typography, neutral copy and restrained navy actions. No backdrop, automatic popup or artificial completion percentage. Desktop supports both sizes; mobile uses an unobstructed full-height sheet.
+
+Demo role switching and authored examples remain in a separate console. A notification is navigation, never a grant of another role or acceptance/release authorization. The business app's Home/Configure/record navigation is not a second feedback entry.

@@ -2398,6 +2398,180 @@ body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
 @media(min-width:1650px){body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:344px; }}
 @media(min-width:901px) and (max-width:1180px){body:not(.feedback-compose-minimized) #feedback-root .fs-app:has(.fs-ticket-layout) > .fs-console-launcher { right:274px; }}
 
+/* One persistent Feedback entry, expanding the same task without a backdrop. */
+#feedback-root .fs-hub-app { min-height:100dvh; background:#fff; }
+#feedback-root .fs-host-surface { display:grid; grid-template-columns:202px minmax(0,1fr); min-height:100dvh; }
+#feedback-root .fs-host-navigation { position:sticky; top:0; height:100dvh; padding:26px 14px 18px; border-right:1px solid var(--fs-line); background:#fafafa; display:flex; flex-direction:column; }
+#feedback-root .fs-host-brand { display:flex; align-items:center; gap:8px; padding:0 7px; min-height:32px; }
+#feedback-root .fs-host-brand .winquote-symbol { width:29px; height:29px; }
+#feedback-root .fs-host-brand .winquote-wordmark { color:var(--fs-action); font-size:21px; }
+#feedback-root .fs-host-navigation nav { display:grid; gap:5px; margin-top:34px; }
+#feedback-root .fs-host-navigation nav > span { display:flex; align-items:center; gap:10px; min-height:39px; padding:9px 11px; border-radius:6px; color:#595959; font:450 12px/1.5 var(--fs-sans); }
+#feedback-root .fs-host-navigation nav .fs-host-active { background:#edf1f4; color:var(--fs-action); font-weight:550; }
+#feedback-root .fs-host-account { display:flex; align-items:center; gap:9px; margin-top:auto; border-top:1px solid var(--fs-line); padding:18px 7px 0; font:450 11px/1.5 var(--fs-sans); }
+#feedback-root .fs-host-account small { display:block; color:#737373; font-size:10px; }
+#feedback-root .fs-host-main { min-width:0; }
+#feedback-root .fs-host-topbar { display:flex; align-items:center; justify-content:space-between; min-height:60px; gap:16px; padding:0 30px; border-bottom:1px solid var(--fs-line); }
+#feedback-root .fs-host-topbar > div { display:flex; align-items:center; gap:11px; min-width:0; color:#737373; font-size:11px; }
+#feedback-root .fs-host-topbar strong { color:#454545; font-weight:500; }
+#feedback-root .fs-host-topbar .fs-button { font-size:11px; min-height:30px; }
+#feedback-root .fs-host-content { outline:0; }
+#feedback-root .fs-hub-launcher { position:fixed; z-index:80; right:24px; bottom:max(24px,env(safe-area-inset-bottom)); display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:48px; padding:12px 16px; border:0; border-radius:12px; background:var(--fs-action); color:white; box-shadow:0 5px 18px #153e5c29; font:550 13px/1.5 var(--fs-sans); }
+#feedback-root .fs-hub-launcher:hover { background:var(--fs-action-hover); }
+#feedback-root .fs-hub-task-count { min-width:21px; height:21px; display:inline-grid; place-items:center; padding:0 5px; border-radius:5px; background:#fff; color:var(--fs-action); font:600 11px/1 var(--fs-sans); font-variant-numeric:tabular-nums; }
+#feedback-root .fs-hub-unread-dot { position:absolute; right:8px; top:8px; width:6px; height:6px; border-radius:50%; background:#b9d8ee; }
+#feedback-root .fs-hub-draft-indicator { padding-left:8px; border-left:1px solid #ffffff4a; font:450 10px/1.5 var(--fs-sans); color:#dce8f0; }
+#feedback-root .fs-hub-surface { position:fixed; z-index:85; display:flex; flex-direction:column; min-width:0; background:#fff; overflow:hidden; box-shadow:0 8px 34px #1b263324; animation:fs-hub-arrive .18s cubic-bezier(.16,1,.3,1); }
+#feedback-root .fs-hub-compact { right:24px; bottom:max(24px,env(safe-area-inset-bottom)); width:min(430px,calc(100vw - 48px)); max-height:min(760px,calc(100dvh - 48px)); border-radius:14px; }
+#feedback-root .fs-hub-full { inset:0; border-radius:0; box-shadow:none; }
+#feedback-root .fs-hub-header { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:64px; padding:14px 20px; background:#fff; border-bottom:1px solid var(--fs-line); flex:none; }
+#feedback-root .fs-hub-header-title { display:flex; align-items:center; gap:7px; min-width:0; }
+#feedback-root .fs-hub-header-title h1 { margin:0; font:400 27px/1.2 var(--fs-serif); letter-spacing:-.025em; }
+#feedback-root .fs-hub-header-title > .fs-button { min-height:30px; padding:4px 0; font-size:12px; }
+#feedback-root .fs-hub-header-title > span { color:#b5b5b5; font-size:12px; }
+#feedback-root .fs-hub-header-title > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:500 11px/1.5 var(--fs-sans); color:#737373; }
+#feedback-root .fs-hub-header-actions { display:flex; align-items:center; gap:3px; flex:none; }
+#feedback-root .fs-hub-header-actions > .fs-button { min-height:32px; padding:6px; border-radius:5px; }
+#feedback-root .fs-hub-demo-controls { margin-right:8px; padding-right:11px; border-right:1px solid var(--fs-line); }
+#feedback-root .fs-hub-demo-controls > .fs-button { min-height:30px; padding:4px 0; font-size:10px; color:#737373; }
+#feedback-root .fs-hub-compact .fs-hub-header-actions > .fs-button span { position:absolute; clip:rect(0,0,0,0); clip-path:inset(50%); height:1px; width:1px; overflow:hidden; white-space:nowrap; }
+#feedback-root .fs-hub-header-actions > .fs-button svg { width:16px; height:16px; }
+#feedback-root .fs-hub-content { min-height:0; flex:1; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#c8c8c8 #fff; }
+#feedback-root .fs-hub-home { padding:22px 20px 20px; }
+#feedback-root .fs-hub-home > .fs-message { margin:0 0 20px; }
+#feedback-root .fs-hub-needs > header,#feedback-root .fs-hub-recent > header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:5px; }
+#feedback-root .fs-hub-home h2 { display:flex; align-items:center; gap:8px; font:550 13px/1.5 var(--fs-sans); color:#303030; letter-spacing:0; }
+#feedback-root .fs-hub-home h2 > small { display:inline-grid; place-items:center; min-width:18px; height:18px; border-radius:4px; background:#f0f1f2; color:#595959; font:500 10px/1 var(--fs-sans); }
+#feedback-root .fs-hub-home header > .fs-button { min-height:29px; padding:4px 0 4px 7px; font-size:10px; }
+#feedback-root .fs-hub-task-row { display:grid; grid-template-columns:18px minmax(0,1fr) 14px; align-items:start; gap:10px; width:100%; padding:16px 0; border:0; border-bottom:1px solid #eeeeee; border-radius:0; background:transparent; text-align:left; }
+#feedback-root .fs-hub-task-row:hover { background:#fafafa; }
+#feedback-root .fs-hub-task-row:last-child { border-bottom:0; }
+#feedback-root .fs-hub-row-icon { color:#737373; padding-top:2px; }
+#feedback-root .fs-hub-task-row > span:nth-child(2),#feedback-root .fs-hub-update-row > span:nth-child(2) { min-width:0; }
+#feedback-root .fs-hub-task-row strong { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; font:550 12px/1.55 var(--fs-sans); color:#303030; }
+#feedback-root .fs-hub-requested-action { display:block; margin-top:4px; color:var(--fs-action); font:500 11px/1.55 var(--fs-sans); }
+#feedback-root .fs-hub-task-row small { display:block; margin-top:7px; color:#737373; font:400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-hub-task-row > svg { margin-top:4px; color:#8b8b8b; }
+#feedback-root .fs-hub-row-timing { display:flex; flex-wrap:wrap; gap:3px 10px; margin-top:5px; color:#737373; font:400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-hub-row-timing .fs-overdue { color:#9b582e; }
+#feedback-root .fs-hub-caught-up { display:flex; align-items:flex-start; gap:10px; padding:15px 0 7px; }
+#feedback-root .fs-hub-caught-up > svg { color:#61796d; margin-top:3px; }
+#feedback-root .fs-hub-caught-up strong { display:block; color:#454545; font:500 12px/1.55 var(--fs-sans); }
+#feedback-root .fs-hub-caught-up p { margin:4px 0 0; color:#737373; font:400 11px/1.65 var(--fs-sans); }
+#feedback-root .fs-hub-recent { margin-top:22px; padding-top:18px; border-top:1px solid var(--fs-line); }
+#feedback-root .fs-hub-update-row { display:grid; grid-template-columns:17px minmax(0,1fr) 13px; align-items:start; gap:9px; width:100%; padding:10px 0; border:0; background:transparent; text-align:left; }
+#feedback-root .fs-hub-update-row:hover { background:#fafafa; }
+#feedback-root .fs-hub-update-row strong { font:450 11px/1.55 var(--fs-sans); color:#595959; overflow-wrap:anywhere; }
+#feedback-root .fs-hub-update-row small { display:block; margin-top:4px; font:400 10px/1.5 var(--fs-sans); color:#737373; }
+#feedback-root .fs-hub-update-unread strong::after { display:inline-block; content:''; width:5px; height:5px; margin:0 0 1px 6px; border-radius:50%; background:#52778f; }
+#feedback-root .fs-hub-update-row > svg { margin-top:3px; color:#8b8b8b; }
+#feedback-root .fs-hub-empty-updates { padding:12px 0 2px; font-size:11px; color:#737373; }
+#feedback-root .fs-hub-new-report { margin-top:22px; padding-top:19px; border-top:1px solid var(--fs-line); }
+#feedback-root .fs-hub-new-report > div > span { display:block; margin-top:5px; font:400 10px/1.5 var(--fs-sans); color:#737373; }
+#feedback-root .fs-hub-compose-entry { display:flex; align-items:center; gap:9px; width:100%; min-height:47px; padding:12px 13px; margin-top:13px; border:1px solid #d7dfe5; border-radius:6px; color:var(--fs-action); background:#f9fbfc; font:450 12px/1.5 var(--fs-sans); }
+#feedback-root .fs-hub-compose-entry > span { flex:1; }
+#feedback-root .fs-hub-compose-entry:hover { background:#f1f5f8; border-color:#b8c8d4; }
+#feedback-root .fs-hub-new-report > p { color:#737373; margin-top:8px; font:400 10px/1.6 var(--fs-sans); }
+#feedback-root .fs-hub-saved-draft { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding-top:16px; font-size:11px; color:#595959; }
+#feedback-root .fs-hub-saved-draft > .fs-button { margin-left:auto; min-height:28px; padding:3px; font-size:10px; }
+#feedback-root .fs-hub-ticket { padding:22px 20px 15px; }
+#feedback-root .fs-hub-ticket-heading > span { display:block; margin-bottom:8px; color:#737373; font:400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-hub-ticket-heading h2 { font:400 25px/1.24 var(--fs-serif); letter-spacing:-.025em; overflow-wrap:anywhere; }
+#feedback-root .fs-hub-ticket-heading > div { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }
+#feedback-root .fs-hub-ticket-heading > div > span:last-child { color:#737373; font:400 10px/1.5 var(--fs-sans); }
+#feedback-root .fs-hub-compact-task { margin-top:24px; }
+#feedback-root .fs-hub-compact-task h2 { font-size:24px; }
+#feedback-root .fs-hub-compact-task .fs-task-intro { font-size:12px; line-height:1.75; margin-bottom:18px; }
+#feedback-root .fs-hub-compact-task .fs-options { margin-left:0; }
+#feedback-root .fs-hub-compact-task .fs-question > p { margin-left:0; }
+#feedback-root .fs-hub-compact-task .fs-question legend { font-size:13px; }
+#feedback-root .fs-hub-compact-task .fs-question { margin-block:23px; }
+#feedback-root .fs-hub-compact-task .fs-task-actions { display:flex; justify-content:stretch; }
+#feedback-root .fs-hub-compact-task .fs-task-actions > .fs-primary { width:100%; margin-left:0; }
+#feedback-root .fs-hub-compact-task .fs-waiting-details { grid-template-columns:1fr; }
+#feedback-root .fs-hub-expand-task { margin-top:25px; }
+#feedback-root .fs-hub-expand-task h3 { color:#303030; font:550 14px/1.55 var(--fs-sans); }
+#feedback-root .fs-hub-expand-task p { margin-top:8px; color:#595959; font:400 12px/1.7 var(--fs-sans); }
+#feedback-root .fs-hub-expand-task > .fs-button { width:100%; margin-top:19px; }
+#feedback-root .fs-hub-original-report { border-top:1px solid var(--fs-line); padding-top:16px; margin-top:24px; }
+#feedback-root .fs-hub-original-report > summary { display:flex; justify-content:space-between; gap:8px; font:500 11px/1.5 var(--fs-sans); color:#595959; }
+#feedback-root .fs-hub-original-report > p { margin-top:12px; white-space:pre-wrap; overflow-wrap:anywhere; color:#595959; font:400 12px/1.75 var(--fs-sans); }
+#feedback-root .fs-hub-ticket-footer { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin-top:19px; border-top:1px solid var(--fs-line); padding-top:12px; }
+#feedback-root .fs-hub-ticket-footer > .fs-button { font-size:10px; padding:4px 0; min-height:30px; }
+#feedback-root .fs-hub-ticket-footer > span { margin-left:auto; font-size:9px; color:#737373; }
+#feedback-root .fs-hub-workspace-tabs { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-height:47px; padding:6px 28px; border-bottom:1px solid var(--fs-line); flex:none; }
+#feedback-root .fs-hub-workspace-tabs > .fs-button { min-height:31px; font-size:11px; }
+#feedback-root .fs-hub-workspace-tabs > .fs-button:last-child { margin-left:auto; }
+#feedback-root .fs-hub-tab-selected { color:var(--fs-action); background:#edf1f4; }
+#feedback-root .fs-hub-full .fs-hub-header { min-height:61px; padding:12px 28px; }
+#feedback-root .fs-hub-full .fs-hub-header-title h1 { font-size:25px; }
+#feedback-root .fs-hub-full .fs-inbox { padding-top:34px; }
+#feedback-root .fs-hub-full .fs-ticket-layout { min-height:calc(100dvh - 108px); }
+#feedback-root .fs-hub-full .fs-details { height:calc(100dvh - 108px); }
+#feedback-root .fs-hub-compact .fs-inbox { padding:22px 20px 24px; }
+#feedback-root .fs-hub-compact .fs-page-heading { margin-bottom:22px; }
+#feedback-root .fs-hub-compact .fs-page-heading h1 { font-size:28px; }
+#feedback-root .fs-hub-compact .fs-page-heading p { font-size:11px; }
+#feedback-root .fs-hub-compact .fs-update { grid-template-columns:22px minmax(0,1fr) 13px; gap:10px; padding:14px 0; }
+#feedback-root .fs-hub-compact .fs-update .fs-row-main > strong { font-size:12px; }
+#feedback-root .fs-hub-compact .fs-update .fs-row-main > span { font-size:11px; }
+#feedback-root .fs-hub-compact .fs-update .fs-row-main > small { font-size:10px; }
+#feedback-root .fs-hub-compact .fs-page-heading > .fs-button { font-size:10px; }
+#feedback-root .fs-hub-app > .fs-console { z-index:110; right:auto; left:14px; }
+@keyframes fs-hub-arrive { from { opacity:.92; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:900px) {
+ #feedback-root .fs-host-surface { grid-template-columns:160px minmax(0,1fr); }
+ #feedback-root .fs-host-navigation { padding-inline:10px; }
+ #feedback-root .fs-host-brand .winquote-wordmark { font-size:18px; }
+ #feedback-root .fs-host-topbar { padding-inline:23px; }
+ #feedback-root .fs-hub-full .fs-details { height:auto; }
+}
+@media(max-width:640px) {
+ #feedback-root .fs-host-surface { display:block; }
+ #feedback-root .fs-host-navigation { display:none; }
+ #feedback-root .fs-host-topbar { padding:0 18px; min-height:57px; gap:10px; }
+ #feedback-root .fs-host-topbar > div { font-size:10px; gap:7px; }
+ #feedback-root .fs-host-topbar .fs-button { font-size:10px; padding-inline:0; }
+ #feedback-root .fs-hub-launcher { right:16px; bottom:max(16px,env(safe-area-inset-bottom)); min-height:48px; padding:12px 15px; font-size:13px; }
+ #feedback-root .fs-hub-compact,#feedback-root .fs-hub-full { inset:0; width:100%; max-height:none; height:100dvh; border-radius:0; box-shadow:none; }
+ #feedback-root .fs-hub-header,#feedback-root .fs-hub-full .fs-hub-header { min-height:60px; padding:12px 17px; }
+ #feedback-root .fs-hub-header-actions { gap:4px; }
+ #feedback-root .fs-hub-header-actions > .fs-button { min-width:39px; min-height:39px; padding:8px; }
+ #feedback-root .fs-hub-header-actions > .fs-button span { position:absolute; clip:rect(0,0,0,0); clip-path:inset(50%); height:1px; width:1px; overflow:hidden; white-space:nowrap; }
+ #feedback-root .fs-hub-demo-controls { margin-right:2px; padding-right:7px; }
+ #feedback-root .fs-hub-demo-controls > .fs-button { gap:4px; min-height:39px; padding:7px 0; font-size:10px; }
+ #feedback-root .fs-hub-full .fs-hub-header-title { flex:1; overflow:hidden; }
+ #feedback-root .fs-hub-full .fs-hub-header-title > strong { display:none; }
+ #feedback-root .fs-hub-home,#feedback-root .fs-hub-ticket { padding:22px 20px max(24px,env(safe-area-inset-bottom)); }
+ #feedback-root .fs-hub-home h2 { font-size:14px; }
+ #feedback-root .fs-hub-task-row strong { font-size:13px; }
+ #feedback-root .fs-hub-requested-action { font-size:12px; }
+ #feedback-root .fs-hub-task-row small,#feedback-root .fs-hub-row-timing { font-size:11px; }
+ #feedback-root .fs-hub-update-row { min-height:58px; padding-block:13px; }
+ #feedback-root .fs-hub-update-row strong { font-size:12px; }
+ #feedback-root .fs-hub-update-row small { font-size:11px; }
+ #feedback-root .fs-hub-home header > .fs-button { min-height:39px; font-size:11px; }
+ #feedback-root .fs-hub-new-report > div > span,#feedback-root .fs-hub-new-report > p { font-size:11px; }
+ #feedback-root .fs-hub-compose-entry { min-height:50px; font-size:13px; }
+ #feedback-root .fs-hub-ticket-heading h2 { font-size:28px; }
+ #feedback-root .fs-hub-ticket-heading > span,#feedback-root .fs-hub-ticket-heading > div > span:last-child { font-size:11px; }
+ #feedback-root .fs-hub-compact-task .fs-options { margin-left:0; }
+ #feedback-root .fs-hub-compact-task :is(input[type=text],textarea) { font-size:16px; }
+ #feedback-root .fs-hub-compact-task .fs-task-intro { font-size:13px; }
+ #feedback-root .fs-hub-compact-task .fs-task-actions > .fs-button { min-height:44px; font-size:12px; }
+ #feedback-root .fs-hub-ticket-footer > .fs-button { min-height:39px; font-size:11px; }
+ #feedback-root .fs-hub-ticket-footer > span { font-size:10px; }
+ #feedback-root .fs-hub-workspace-tabs { padding:5px 16px; gap:2px; }
+ #feedback-root .fs-hub-workspace-tabs > .fs-button { padding-inline:8px; min-height:39px; font-size:11px; }
+ #feedback-root .fs-hub-full .fs-ticket-layout { min-height:calc(100dvh - 109px); }
+ #feedback-root .fs-hub-app > .fs-console { left:12px; right:12px; width:auto; bottom:12px; max-height:calc(100dvh - 24px); }
+}
+@media(prefers-reduced-motion:reduce) { #feedback-root .fs-hub-surface { animation:none; } }
+
+#feedback-root .fs-hub-draft-list{margin-top:22px;padding-top:18px;border-top:1px solid var(--fs-line)}
+#feedback-root .fs-hub-draft-list h2{font:550 13px/1.5 var(--fs-sans);margin:0 0 8px}
+#feedback-root .fs-hub-draft-list h2 small{font-size:11px;color:#737373;margin-left:5px}
+
 </style><style>
 .feedback-composer{--fc-ink:#262626;--fc-muted:#666;--fc-rule:#e6e6e6;--fc-blue:#153e5c;position:fixed;right:24px;bottom:24px;z-index:240;box-sizing:border-box;width:min(460px,calc(100vw - 48px));max-height:calc(100dvh - 96px);margin:0;padding:0;border:0;border-radius:12px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 6px 18px #18242e14,0 22px 64px #18242e26;overflow:hidden;isolation:isolate;caret-color:var(--fc-blue);scrollbar-color:#b9b9b9 #f5f5f5;scrollbar-width:thin}
 .feedback-composer[hidden],.feedback-composer [hidden]{display:none!important}
@@ -2453,6 +2627,61 @@ body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
 .fc-viewer{width:min(1000px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:16px;border:0;border-radius:8px;background:#fff;color:#262626;box-shadow:0 16px 48px #0002}.fc-viewer::backdrop{background:#17171755}.fc-viewer header{display:flex;gap:20px;align-items:center;justify-content:space-between;margin-bottom:12px;font:13px/1.5 Inter,system-ui,sans-serif}.fc-viewer header strong{overflow-wrap:anywhere;font-weight:500}.fc-viewer button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:#fff;cursor:pointer}.fc-viewer>img{display:block;max-width:100%;max-height:calc(100dvh - 120px);height:auto;object-fit:contain;margin:auto}
 @media(max-width:600px){.feedback-composer{right:10px;bottom:max(10px,env(safe-area-inset-bottom));width:calc(100vw - 20px);max-height:calc(100dvh - 92px);border-radius:12px}.fc-form{max-height:calc(100dvh - 92px)}.fc-header{padding:17px 16px 13px}.fc-header h2{font-size:24px}.fc-body{padding:16px}.fc-intro{font-size:13px}.feedback-composer textarea,.feedback-composer select{font-size:16px}.fc-label{flex-wrap:wrap;gap:3px 8px}.fc-footer{padding:13px 16px;gap:9px}.feedback-composer button{min-height:44px}.feedback-composer .fc-icon-button{width:44px;height:44px;min-height:44px}.fc-window-actions{margin:-8px -9px 0 -6px;gap:0}.feedback-composer .fc-primary{min-height:44px;padding:9px 12px}.fc-tools{gap:2px}.feedback-composer .fc-tools button{min-height:44px;padding:8px;white-space:nowrap}.fc-recording{flex-wrap:wrap}.fc-picker-banner{top:10px;width:calc(100vw - 20px);gap:10px;font-size:12px}.fc-picker-banner button{min-height:44px}.fc-attachment{gap:8px}.fc-attachment audio{min-width:0}.fc-footer small{max-width:22ch}.fc-save-status{font-size:11px}.fc-audio-help summary,.fc-context summary,.fc-timing summary{min-height:36px;line-height:2.5}.feedback-composer .fc-audio-help button{min-height:44px}.feedback-composer.fc-minimized{right:10px;bottom:max(10px,env(safe-area-inset-bottom));width:min(320px,calc(100vw - 20px))}}
 @media(prefers-reduced-motion:no-preference){.feedback-composer{animation:fc-enter .18s cubic-bezier(.16,1,.3,1)}@keyframes fc-enter{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:none}}}
+
+/* Capture choices stay beside supporting-material tools, separate from Send. */
+body.feedback-hub-full{overflow:hidden}
+.feedback-composer.fc-managed-hub:not(.fc-expanded){width:min(430px,calc(100vw - 48px));max-height:min(760px,calc(100dvh - 48px))}
+.fc-managed-hub:not(.fc-expanded) .fc-form{max-height:min(760px,calc(100dvh - 48px))}
+.fc-heading{display:flex;align-items:flex-start;gap:8px;min-width:0;flex:1}.fc-heading>div{min-width:0}
+.feedback-composer .fc-back{margin:-1px 0 0 -7px;flex-shrink:0;color:#666}
+.feedback-composer .fc-back:hover{color:var(--fc-blue)}
+.fc-back svg{width:17px;height:17px}
+.fc-capture-tools{position:relative;min-width:0;color:#595959}
+.fc-capture-tools>summary{display:flex;align-items:center;gap:7px;min-height:36px;padding:8px 9px;border-radius:6px;cursor:pointer;list-style:none;font:400 12px/1.4 Inter,system-ui,sans-serif}
+.fc-capture-tools>summary::-webkit-details-marker{display:none}
+.fc-capture-tools>summary:hover,.fc-capture-tools[open]>summary{background:#f2f3f4;color:#262626}
+.fc-capture-tools>summary>svg:last-child{width:12px;height:12px}
+.fc-capture-tools[open]>summary>svg:last-child{transform:rotate(180deg)}
+.fc-capture-tools>summary:focus-visible{outline:2px solid #516579;outline-offset:3px}
+.fc-capture-options{position:absolute;top:calc(100% + 4px);left:0;z-index:5;width:260px;padding:6px;background:#fff;border:1px solid #d9dfe3;border-radius:8px;box-shadow:0 8px 22px #18242e17}
+.feedback-composer .fc-tools .fc-capture-options>button{width:100%;justify-content:flex-start;align-items:flex-start;gap:10px;border-radius:5px;min-height:54px;text-align:left;padding:10px}
+.fc-capture-options>button>svg{margin-top:2px}
+.fc-capture-options>button>span{display:block;min-width:0}
+.fc-capture-options strong{display:block;font:500 12px/1.45 Inter,system-ui,sans-serif;color:#303030}
+.fc-capture-options small{display:block;margin-top:4px;font:400 10px/1.5 Inter,system-ui,sans-serif;color:#666}
+.feedback-composer.fc-managed-hub.fc-minimized{display:none}
+.feedback-composer.fc-expanded{inset:0;width:100%;height:100dvh;max-height:none;border-radius:0;box-shadow:none}
+.fc-expanded .fc-form{height:100dvh;max-height:none}
+.fc-expanded .fc-header,.fc-expanded .fc-footer{padding-inline:max(28px,calc((100vw - 880px)/2))}
+.fc-expanded .fc-header{padding-top:24px;padding-bottom:20px}
+.fc-expanded .fc-header h2{font-size:32px}
+.fc-expanded .fc-body{flex:1;width:min(100%,936px);margin:0 auto;padding:28px;scrollbar-gutter:stable both-edges}
+.fc-expanded .fc-intro{max-width:68ch;font-size:14px;line-height:1.7;margin-bottom:23px}
+.fc-expanded .fc-label{font-size:14px;margin-bottom:10px}
+.fc-expanded textarea{min-height:156px;max-height:400px;font-size:14px;line-height:1.7;padding:13px 14px}
+.fc-expanded .fc-attachments{max-width:760px}
+.fc-expanded .fc-context{max-width:760px}
+.fc-expanded .fc-footer{padding-top:18px;padding-bottom:18px}
+.fc-expanded .fc-footer small{max-width:45ch}
+.fc-expanded .fc-capture-options{width:285px}
+@media(max-width:600px){
+ .feedback-composer.fc-managed-hub{inset:0;width:100%;height:100dvh;max-height:none;border-radius:0;box-shadow:none}
+ .feedback-composer.fc-managed-hub:not(.fc-expanded){width:100%;max-height:none}
+ .fc-managed-hub:not(.fc-expanded) .fc-form{height:100dvh;max-height:none}
+ .fc-managed-hub .fc-form{height:100dvh;max-height:none}
+ .fc-managed-hub .fc-body{flex:1}
+ .feedback-composer .fc-back{margin:-8px 0 0 -10px}.fc-heading{gap:4px}
+ .fc-managed-hub .fc-footer{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+ .fc-capture-tools>summary{min-height:44px;padding:8px}
+ .fc-capture-options{width:min(280px,calc(100vw - 40px))}
+ .fc-capture-options strong{font-size:13px}.fc-capture-options small{font-size:11px}
+ .fc-expanded .fc-header{padding:19px 16px 15px}
+ .fc-expanded .fc-header h2{font-size:27px}
+ .fc-expanded .fc-body{padding:19px 16px;width:100%;scrollbar-gutter:stable}
+ .fc-expanded .fc-intro{font-size:13px;line-height:1.65}
+ .fc-expanded textarea{font-size:16px;min-height:140px}
+ .fc-expanded .fc-footer{padding:14px 16px max(14px,env(safe-area-inset-bottom))}
+}
 
 </style><style>
 /* Temporary capture chrome is hidden from the approved screenshot. */
@@ -6541,16 +6770,60 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return {data:next,item,summary};
   }
   /** One digest per customer ticket; events remain independently addressable for stale-link checks. */
-  function digest(data){
+  function groupedUpdates(data,list,taskIds){
     const groups=new Map();
-    for(const event of updates(data)){
+    for(const event of list){
       if(!groups.has(event.ticketId))groups.set(event.ticketId,[]);groups.get(event.ticketId).push(event);
     }
     return [...groups.entries()].map(([ticketId,events])=>{
       const latest=events[0],item=get(data,ticketId),state=status(item,now(data)),unreadCount=events.filter(e=>!e.read).length;
       return {...latest,id:ticketId+':digest',ticketId,eventId:latest.id,latestEventId:latest.id,events:clone(events),count:events.length,unreadCount,read:unreadCount===0,
-        title:events.length===1?latest.title:events.length+' updates · '+(item?.c.reviewFlow?.target||'Your feedback'),summary:latest.title+'. '+state.next,body:latest.title+'. '+state.next,status:state,cta:state.needsInput?'Open current task':'View feedback',at:latest.at,rev:item?.c.rev};
+        title:events.length===1?latest.title:events.length+' updates · '+(item?.c.reviewFlow?.target||'Your feedback'),summary:latest.title+'. '+state.next,body:latest.title+'. '+state.next,status:state,cta:(taskIds?taskIds.has(ticketId):state.needsInput)?'Open current task':'View feedback',at:latest.at,rev:item?.c.rev};
     }).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))||a.ticketId.localeCompare(b.ticketId));
+  }
+  function digest(data){return groupedUpdates(data,updates(data));}
+  /** Role-scoped demo presentation, not authentication or a new workflow engine.
+   * A task is derived from the current case, never from whether an event was read.
+   * Opening this projection does not visit a ticket or consume its return summary.
+   */
+  function attention(data,{actor='Requester'}={}){
+    const items=customerItems(data),supported=Object.prototype.hasOwnProperty.call(permitted,actor),clock=now(data);
+    const tasks=supported?items.flatMap(item=>{
+      const state=status(item,clock),c=item.c,f=c.reviewFlow||{},v='V'+c.rev;
+      if(state.owner!==actor)return [];
+      const actions={
+        clarify:['answer','Answer the question'],
+        'awaiting-answer':['answer','Answer the questions'],
+        review:['review','Review '+v],
+        accepted:['approve-release','Approve '+v+' for release'],
+        release:['approve-release','Approve '+v+' for release'],
+        triage:['review-evidence',f.planPrepared?'Review the draft plan':'Review the evidence'],
+        'question-draft':['screen-questions','Review the questions'],
+        'answer-review':['update-plan',f.planPrepared?'Review the updated plan':'Draft an updated plan'],
+        'spec-review':['prepare-version','Confirm the plan for '+v],
+        candidate:['prepare-version','Prepare '+v],
+        checking:['prepare-version','Check '+v],
+        ready:['send-review','Send '+v+' for review'],
+        authorized:['release','Run the approved '+v+' release'],
+        'release-failed':['retry-release','Retry the '+v+' release'],
+        processing:['prepare-version','Prepare '+v],
+        blocked:['review-evidence','Review the blocked plan'],
+      };
+      const action=actions[state.phase];
+      // A local report draft is resumable, but is not a team-assigned task.
+      // Unknown phases must not create an apparent actionable assignment.
+      if(!action)return [];
+      return [{ticketId:item.id,title:f.target||'Your feedback',owner:state.owner,phase:state.phase,
+        action:action[0],actionLabel:action[1],rev:c.rev,bundleId:state.phase==='awaiting-answer'?f.sentBundle?.id||null:null,
+        sequence:item.sequence,updatedAt:state.updatedAt,nextUpdate:state.nextUpdate,overdue:state.overdue,status:state}];
+    }):[];
+    tasks.sort((a,b)=>Number(b.overdue)-Number(a.overdue)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))||a.ticketId.localeCompare(b.ticketId));
+    const relevantUpdates=supported?updates(data).filter(event=>event.recipient===actor):[];
+    const unreadCount=relevantUpdates.filter(event=>!event.read).length;
+    const taskIds=new Set(tasks.map(task=>task.ticketId));
+    const unreadFyiCount=relevantUpdates.filter(event=>!event.read&&!taskIds.has(event.ticketId)).length;
+    return {actor,items,tasks,taskCount:tasks.length,updates:relevantUpdates,
+      updateGroups:groupedUpdates(data,relevantUpdates,taskIds),unreadCount,hasUnread:unreadCount>0,unreadFyiCount,hasUnreadFyi:unreadFyiCount>0};
   }
   function metadataItem(data,id){const next=clone(data),item=get(next,id);if(!item)fail('This feedback is not available in this workspace.');item.ux||={events:[],drafts:{}};return {next,item};}
   function metadataEvent(item,action,title,at,eventId){
@@ -6597,7 +6870,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const value=P.preparation(item,stage);item.ux.preparation={...value,at:now(next)};
     return {data:next,item,preparation:clone(item.ux.preparation)};
   }
-  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,setExpectation,recordDelay,saveWalk,preparation};
+  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,attention,setExpectation,recordDelay,saveWalk,preparation};
   root.FeedbackStore=api;if(common)module.exports=api;
 })(globalThis);
 
@@ -6892,7 +7165,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
  const copy=value=>JSON.parse(JSON.stringify(value));
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const whenLabels={'just-now':'Just now','earlier-today':'Earlier today','not-sure':'Not sure'};
- const paths={image:'M4 4h16v16H4zM4 15l5-5 5 5 3-3 3 3M15.5 8h.01',mic:'M9 5a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0zM6 10v1a6 6 0 0 0 12 0v-1M12 17v5m-4 0h8',close:'m6 6 12 12M18 6 6 18',minimize:'M5 12h14',expand:'m7 14 5-5 5 5',feedback:'M4 4h16v12h-9l-5 4v-4H4zM8 8h8m-8 4h5',target:'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M12 8a4 4 0 1 0 .1 0z',send:'M4 12h15m-6-6 6 6-6 6'};
+ const paths={image:'M4 4h16v16H4zM4 15l5-5 5 5 3-3 3 3M15.5 8h.01',mic:'M9 5a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0zM6 10v1a6 6 0 0 0 12 0v-1M12 17v5m-4 0h8',close:'m6 6 12 12M18 6 6 18',minimize:'M5 12h14',back:'M20 12H5m6-6-6 6 6 6',expand:'M14 4h6v6m-9 3 9-9M11 6H4v14h14v-7',shrink:'M4 14h6v6m-6 0 7-7M14 4h6v6',down:'m7 10 5 5 5-5',camera:'M3 7h4l2-3h6l2 3h4v13H3zM12 9a4 4 0 1 0 .01 0z',crop:'M7 3v14h14M3 7h14v14',feedback:'M4 4h16v12h-9l-5 4v-4H4zM8 8h8m-8 4h5',target:'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M12 8a4 4 0 1 0 .1 0z',send:'M4 12h15m-6-6 6 6-6 6'};
  const icon=name=>'<svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="'+paths[name]+'"/></svg>';
  let active=null;
  function contextForAttachments(context={},attachments=[]){
@@ -6916,6 +7189,41 @@ if (typeof module==="object" && module.exports) module.exports = api;
   return {captureId:draft.captureId,text,occurredAt:whenLabels[draft.when]||'',context:contextForAttachments(draft.context||{},attachments),attachments,...(draft.transcript?.trim()?{transcript:{text:draft.transcript.trim(),source:'requester-written',generated:false}}:{})};
  }
  function canAdd(attachments,kind){if(kind==='image'&&attachments.filter(a=>a.kind==='image').length>=3)throw new Error('You can attach up to 3 images. Remove one before adding another.');}
+ function legacyDraftMatches(saved,initial){
+  if(saved?.schema!==1||saved.scenarioId!==initial.scenarioId)return false;
+  const a=saved.context||{},b=initial.context||{};
+  const value=(context,primary,alias)=>String(context[primary]??context[alias]??'').trim();
+  // Unbound old drafts are never silently adopted into a named source object.
+  if(!value(a,'quote','quoteId')||!value(a,'page','step')||!value(b,'quote','quoteId')||!value(b,'page','step'))return false;
+  return [['quote','quoteId'],['compartment','compartmentId'],['page','step']].every(([primary,alias])=>value(a,primary,alias)===value(b,primary,alias));
+ }
+ function legacyFingerprint(key,draft){
+  const source=draft.captureId||JSON.stringify({scenarioId:draft.scenarioId,text:draft.text||'',when:draft.when||'',context:draft.context||{},attachments:(draft.attachments||[]).map(a=>a.id)});
+  let hash=2166136261;for(const char of key+'\n'+source){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619);}
+  return (hash>>>0).toString(16);
+ }
+ async function recordLegacyRecovery(Store,draftKey,recovery){
+  if(!recovery?.legacyKey||!recovery.fingerprint)return;
+  const key=draftKey+':legacy-recovery',prior=await Store.getDraft(key);
+  const imports=Array.isArray(prior?.imports)?prior.imports:[];
+  if(imports.some(item=>item.legacyKey===recovery.legacyKey&&item.fingerprint===recovery.fingerprint))return;
+  await Store.saveDraft(key,{schema:1,kind:'feedback-draft-migration-receipt',imports:[...imports,{legacyKey:recovery.legacyKey,fingerprint:recovery.fingerprint}],attachments:[]});
+ }
+ async function recoverDraft(Store,draftKey,legacyKeys,initial){
+  const saved=await Store.getDraft(draftKey);
+  if(saved?.schema===1&&saved.scenarioId===initial.scenarioId)return {draft:saved,legacyKey:null};
+  const keys=[...new Set((Array.isArray(legacyKeys)?legacyKeys:[]).filter(key=>typeof key==='string'&&key&&key!==draftKey))];
+  if(!keys.length)return {draft:null,legacyKey:null};
+  const receipt=await Store.getDraft(draftKey+':legacy-recovery'),imports=Array.isArray(receipt?.imports)?receipt.imports:[];
+  for(const key of keys){
+   const legacy=await Store.getDraft(key);
+   if(legacyDraftMatches(legacy,initial)){
+    const fingerprint=legacyFingerprint(key,legacy);
+    if(!imports.some(item=>item.legacyKey===key&&item.fingerprint===fingerprint))return {draft:{...legacy,legacyRecovery:{legacyKey:key,fingerprint}},legacyKey:key};
+   }
+  }
+  return {draft:null,legacyKey:null};
+ }
  function open(options={}){
   const doc=root.document,Store=options.store||root.FeedbackMediaStore,Context=root.FeedbackCaptureContext,Media=root.FeedbackCaptureMedia;
   if(!doc||!Store||!Context||!Media)throw new Error('Feedback capture is not available yet. Please reload this page.');
@@ -6927,14 +7235,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
   // Take context before attaching the composer. Never capture our overlay or the presenter console.
   const initialContext=Context.capture({...options.context,scenarioId:options.scenarioId||options.context?.scenarioId});
   let state={schema:1,captureId:'capture-'+(root.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),scenarioId:options.scenarioId||'',text:String(options.feedback||''),when:'',context:initialContext,attachments:[]};
-  let closed=false,minimized=false,gathering=false,restoring=true,processing=0,submitting=false,submitted=false,dirty=false,saveRevision=0,saveTimer=null,saveQueue=Promise.resolve(),mediaQueue=Promise.resolve(),picker=null,viewer=null,missing=new Set();
+  let closed=false,minimized=false,gathering=false,expanded=Boolean(options.expanded),restoring=true,processing=0,submitting=false,submitted=false,dirty=false,saveRevision=0,saveTimer=null,saveQueue=Promise.resolve(),mediaQueue=Promise.resolve(),picker=null,viewer=null,missing=new Set();
   const urls=new Map();
-  const dialog=doc.createElement('section');dialog.className='feedback-composer';dialog.dataset.feedbackComposer='true';dialog.dataset.feedbackPrivate='true';dialog.setAttribute('role','region');dialog.setAttribute('aria-labelledby','fc-title');
+  const dialog=doc.createElement('section');dialog.className='feedback-composer'+(options.managedHub?' fc-managed-hub':'')+(expanded?' fc-expanded':'');dialog.dataset.feedbackComposer='true';dialog.dataset.feedbackPrivate='true';dialog.setAttribute('role','region');dialog.setAttribute('aria-labelledby','fc-title');
   dialog.innerHTML=`<button type="button" class="fc-collapsed" data-fc="restore" hidden aria-label="Resume feedback draft">${icon('feedback')}<span><strong class="fc-draft-name">Feedback draft</strong><small class="fc-draft-meta">Saved on this device</small></span>${icon('expand')}</button>
-  <form class="fc-form" novalidate><header class="fc-header"><div><h2 id="fc-title">${escape(options.title||'Share feedback')}</h2><p class="fc-destination">${escape(options.context?.ticket||options.context?.ticketId||'WinQuote')}${options.context?.revision?' · V'+escape(options.context.revision):''} · ${options.context?.ticket||options.context?.ticketId?'Update this feedback':'New feedback'}</p></div><div class="fc-window-actions"><button type="button" class="fc-icon-button" data-fc="minimize" aria-label="Minimize feedback" title="Minimize">${icon('minimize')}</button><button type="button" class="fc-icon-button" data-fc="close" aria-label="Save and close feedback" title="Save and close">${icon('close')}</button></div></header>
+  <form class="fc-form" novalidate><header class="fc-header"><div class="fc-heading">${options.managedHub?'<button type="button" class="fc-icon-button fc-back" data-fc="workspace" aria-label="Back to feedback" title="Back to feedback">'+icon('back')+'</button>':''}<div><h2 id="fc-title">${escape(options.title||'Share feedback')}</h2><p class="fc-destination">${escape(options.context?.ticket||options.context?.ticketId||'WinQuote')}${options.context?.revision?' · V'+escape(options.context.revision):''} · ${options.context?.ticket||options.context?.ticketId?'Update this feedback':'New feedback'}</p></div></div><div class="fc-window-actions"><button type="button" class="fc-icon-button" data-fc="expand" aria-label="${expanded?'Use compact view':'Open feedback in full page'}" title="${expanded?'Compact view':'Open full page'}">${icon(expanded?'shrink':'expand')}</button><button type="button" class="fc-icon-button" data-fc="minimize" aria-label="Minimize feedback" title="Minimize">${icon('minimize')}</button>${options.managedHub?'':'<button type="button" class="fc-icon-button" data-fc="close" aria-label="Save and close feedback" title="Save and close">'+icon('close')+'</button>'}</div></header>
   <div class="fc-body"><p class="fc-intro">${escape(options.description||'Tell us what happened. Keep this page open while you add the details.')}</p><p class="fc-error" role="alert" hidden></p><button type="button" data-fc="discard" class="fc-discard" hidden>Close without saving</button>
   <label class="fc-label" for="fc-text">${escape(options.label||'Your feedback')} <span>Or attach an image / voice note</span></label><textarea id="fc-text" name="feedback" rows="4" maxlength="2000" placeholder="${escape(options.placeholder||'What happened, and what did you expect?')}"></textarea>
-  <div class="fc-tools" aria-label="Add supporting material"><button type="button" data-fc="images">${icon('image')}<span>Add image</span></button><button type="button" data-fc="record">${icon('mic')}<span>Record voice</span></button></div>
+  <div class="fc-tools" aria-label="Add supporting material"><details class="fc-capture-tools"${options.allowSelection===false?' hidden':''}><summary>${icon('camera')}<span>Capture context</span>${icon('down')}</summary><div class="fc-capture-options"><button type="button" data-fc="gather" data-mode="element">${icon('target')}<span><strong>Select an element</strong><small>Attach its location and page state</small></span></button><button type="button" data-fc="gather" data-mode="area">${icon('crop')}<span><strong>Capture an area</strong><small>Choose a tab, then crop its image</small></span></button><button type="button" data-fc="gather" data-mode="page">${icon('camera')}<span><strong>Capture this page</strong><small>Choose this tab's visible view</small></span></button></div></details><button type="button" data-fc="images">${icon('image')}<span>Add image</span></button><button type="button" data-fc="record">${icon('mic')}<span>Record voice</span></button></div>
   <input class="fc-file-input" id="fc-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple tabindex="-1"><input class="fc-file-input" id="fc-audio" type="file" accept="audio/*" tabindex="-1">
   <div class="fc-recording" hidden><span class="fc-recording-label" role="status"></span><div><button type="button" data-fc="stop">Stop recording</button><button type="button" data-fc="cancel-recording">Cancel</button></div></div>
   <div class="fc-attachments" aria-label="Attachments"></div><div class="fc-drop-zone" tabindex="0">Drop or paste an image<span>Up to 3 images · 10 MB each</span></div>
@@ -6951,11 +7259,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
   function saveStatus(text,retry=false){if(closed)return;$('.fc-save-status').textContent=text;$('.fc-retry').hidden=!retry;renderCollapsed();}
   function sync(){state.text=textField.value;state.when=whenField.value;}
   function snapshot(){return copy(state);}
-  function refreshButtons(){if(closed)return;const recording=['requesting','recording','stopping'].includes(recorder.state);submitButton.disabled=restoring||processing>0||submitting||submitted||recording||gathering||missing.size>0;submitButton.querySelector('span').textContent=submitting?'Sending…':processing?'Preparing attachment…':submitted?'Sent':submitLabel;for(const el of dialog.querySelectorAll('[data-fc="images"],[data-fc="audio"],[data-fc="select"],[data-fc="remove"]'))el.disabled=submitting||restoring||recording||processing>0;$('.fc-tools [data-fc="record"]').disabled=submitting||restoring||processing>0||recording;textField.disabled=whenField.disabled=submitting||restoring;for(const el of dialog.querySelectorAll('[data-fc=minimize],[data-fc=close]'))el.disabled=submitting||gathering;renderCollapsed();}
+  function refreshButtons(){if(closed)return;const recording=['requesting','recording','stopping'].includes(recorder.state);submitButton.disabled=restoring||processing>0||submitting||submitted||recording||gathering||missing.size>0;submitButton.querySelector('span').textContent=submitting?'Sending…':processing?'Preparing attachment…':submitted?'Sent':submitLabel;for(const el of dialog.querySelectorAll('[data-fc="images"],[data-fc="audio"],[data-fc="select"],[data-fc="gather"],[data-fc="remove"]'))el.disabled=submitting||restoring||recording||processing>0;$('.fc-tools [data-fc="record"]').disabled=submitting||restoring||processing>0||recording;textField.disabled=whenField.disabled=submitting||restoring;for(const el of dialog.querySelectorAll('[data-fc=minimize],[data-fc=close],[data-fc=expand],[data-fc=workspace]'))el.disabled=submitting||gathering;renderCollapsed();}
   function saveDraft(){
    root.clearTimeout(saveTimer);saveTimer=null;if(closed)return saveQueue;
    sync();const value=snapshot(),revision=++saveRevision;dirty=true;saveStatus('Saving on this device…');
-   const result=saveQueue.catch(()=>{}).then(()=>Store.saveDraft(draftKey,value));saveQueue=result;
+   const result=saveQueue.catch(()=>{}).then(async()=>{await Store.saveDraft(draftKey,value);if(value.legacyRecovery)await recordLegacyRecovery(Store,draftKey,value.legacyRecovery);});saveQueue=result;
    result.then(()=>{if(!closed&&revision===saveRevision){dirty=false;saveStatus('Saved on this device');$('[data-fc="discard"]').hidden=true;}},error=>{if(!closed&&revision===saveRevision){dirty=true;saveStatus('Not saved on this device',true);message(error.message);}});return result;
   }
   function queueSave(){sync();dirty=true;++saveRevision;saveStatus('Saving on this device…');root.clearTimeout(saveTimer);saveTimer=root.setTimeout(()=>saveDraft().catch(()=>{}),250);}
@@ -6988,9 +7296,9 @@ if (typeof module==="object" && module.exports) module.exports = api;
   async function startRecord(){message();try{await recorder.start();}catch(error){message(error.message);refreshButtons();}}
   function preview(id){const url=urls.get(id),a=state.attachments.find(x=>x.id===id);if(!url||!a||viewer)return;const imageDialog=doc.createElement('dialog');viewer=imageDialog;imageDialog.className='fc-viewer';imageDialog.innerHTML='<header><strong>'+escape(a.name)+'</strong><button type="button" aria-label="Close image preview">'+icon('close')+'</button></header><img src="'+escape(url)+'" alt="'+escape(a.name)+'">';dialog.append(imageDialog);imageDialog.querySelector('button').onclick=()=>imageDialog.close();imageDialog.addEventListener('cancel',event=>event.stopPropagation());imageDialog.addEventListener('close',()=>{imageDialog.remove();if(viewer===imageDialog)viewer=null;dialog.querySelector('[data-fc="preview"][data-id="'+id+'"]')?.focus();});imageDialog.showModal();}
   function emitState(){
-   doc.body.classList.toggle('feedback-compose-open',!closed&&!minimized);
+   doc.body.classList.toggle('feedback-compose-open',!closed&&!minimized&&!gathering);
    doc.body.classList.toggle('feedback-compose-minimized',!closed&&minimized);
-   root.dispatchEvent(new CustomEvent('feedback-composer-state',{detail:{open:!closed,minimized:!closed&&minimized,draftKey}}));
+   root.dispatchEvent(new CustomEvent('feedback-composer-state',{detail:{open:!closed,minimized:!closed&&minimized,gathering:!closed&&gathering,expanded,draftKey}}));
   }
   function renderCollapsed(){
    if(closed)return;
@@ -6999,25 +7307,39 @@ if (typeof module==="object" && module.exports) module.exports = api;
    $('.fc-draft-meta').textContent=[$('.fc-error')?.hidden===false?'Needs attention':dirty?'Saving…':'Saved',count?count+' attachment'+(count===1?'':'s'):state.context.selection?'Element selected':'Continue writing'].join(' · ');
   }
   function focusTrigger(){if(focusBefore?.isConnected&&!focusBefore.closest('[inert]'))focusBefore.focus({preventScroll:true});else doc.querySelector('[data-wq="open-composer"]')?.focus({preventScroll:true});}
-  function restore(){if(closed)return;minimized=false;dialog.classList.remove('fc-minimized');$('.fc-form').hidden=false;$('.fc-collapsed').hidden=true;dialog.setAttribute('aria-labelledby','fc-title');emitState();if(!restoring&&!gathering)textField.focus({preventScroll:true});}
+  function setExpanded(value){
+   if(closed)return false;
+   const next=Boolean(value),changed=next!==expanded,body=$('.fc-body'),scroll=body?.scrollTop||0;
+   expanded=next;dialog.classList.toggle('fc-expanded',expanded);
+   const control=$('[data-fc="expand"]');
+   if(control){control.innerHTML=icon(expanded?'shrink':'expand');control.setAttribute('aria-label',expanded?'Use compact view':'Open feedback in full page');control.title=expanded?'Compact view':'Open full page';}
+   if(body)body.scrollTop=scroll;
+   emitState();if(changed)options.onExpand?.(expanded);return true;
+  }
+  async function backToFeedback(){if(closed||submitting||gathering)return;await minimize();if(!closed&&minimized){try{await options.onWorkspace?.();}catch(error){if(!closed){restore();message(error.message||'Your feedback is still open. Try again.');}}}}
+  function restore(){if(closed)return;minimized=false;dialog.hidden=false;dialog.classList.remove('fc-minimized');$('.fc-form').hidden=false;$('.fc-collapsed').hidden=true;dialog.setAttribute('aria-labelledby','fc-title');emitState();if(!restoring&&!gathering)textField.focus({preventScroll:true});}
   async function minimize(){
    if(closed||submitting||gathering)return;
    if(['recording','stopping'].includes(recorder.state)){try{await recorder.stop();await mediaQueue;}catch(error){message(error.message);return;}}else recorder.cancel();
    try{if(restoring)await ready;await mediaQueue.catch(()=>{});await saveDraft();}catch(error){message(error.message);return;}
-   if(closed)return;minimized=true;$('.fc-form').hidden=true;$('.fc-collapsed').hidden=false;dialog.classList.add('fc-minimized');dialog.removeAttribute('aria-labelledby');dialog.setAttribute('aria-label','Saved feedback draft');renderCollapsed();emitState();focusTrigger();
+   if(closed)return;minimized=true;$('.fc-form').hidden=true;$('.fc-collapsed').hidden=Boolean(options.managedHub);dialog.hidden=Boolean(options.managedHub);dialog.classList.add('fc-minimized');dialog.removeAttribute('aria-labelledby');dialog.setAttribute('aria-label','Saved feedback draft');renderCollapsed();emitState();focusTrigger();
   }
   function selectElement(){
-   if(closed||submitting||options.allowSelection===false)return;sync();saveDraft().catch(()=>{});dialog.hidden=true;gathering=true;refreshButtons();
+   if(closed||submitting||options.allowSelection===false)return;
+   let pageContext,selectionRoot;
+   try{const fresh=options.getContext?.();pageContext=fresh?Context.capture(fresh):null;selectionRoot=typeof options.selectionRoot==='function'?options.selectionRoot():options.selectionRoot;}catch(error){message(error.message||'This source page is no longer available. Return to it before selecting an element.');return;}
+   sync();saveDraft().catch(()=>{});dialog.hidden=true;gathering=true;emitState();refreshButtons();
    const back=()=>{if(closed)return;gathering=false;dialog.hidden=false;restore();renderContext();refreshButtons();$('.fc-context').open=true;$('[data-fc="select"]').focus();};
-   try{picker=Context.pick({root:typeof options.selectionRoot==='function'?options.selectionRoot():options.selectionRoot,onSelect:selected=>{picker=null;const fresh=options.getContext?.();if(fresh)state.context=mergePageContext(state.context,Context.capture(fresh));state.context.selection=selected;back();saveDraft().catch(()=>{});},onCancel:()=>{picker=null;back();}});}catch(error){back();message(error.message);}
+   try{picker=Context.pick({root:selectionRoot,onSelect:selected=>{picker=null;try{if(pageContext)state.context=mergePageContext(state.context,pageContext);state.context.selection=selected;back();saveDraft().catch(()=>{});}catch(error){back();message(error.message);}},onCancel:()=>{picker=null;back();}});}catch(error){back();message(error.message);}
   }
   async function gather(mode){
    if(closed||submitting||processing||gathering||recorder.state!=='idle')return;
    restore();message();
+   if(options.allowSelection===false)return;
    if(mode==='element'){await ready;if(!closed)selectElement();return;}
    if(!['area','page'].includes(mode))return;
    // Invoke the browser permission request before the first await, inside the click gesture.
-   gathering=true;refreshButtons();
+   gathering=true;emitState();refreshButtons();
    try{
     if(typeof Context.captureImage!=='function')throw new Error('Screen capture is unavailable. Use Add image to attach a screenshot.');
     const fresh=options.getContext?.(),pageContext=fresh?Context.capture(fresh):null;
@@ -7025,7 +7347,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const result=await captured;await ready;if(!result||closed)return;
     await enqueueFile(result.file,'screen-capture',null,result.context,pageContext);renderContext();
    }catch(error){if(!closed)message(error.message||'The image could not be captured. Use Add image instead.');}
-   finally{gathering=false;if(!closed){refreshButtons();restore();}}
+   finally{gathering=false;if(!closed){refreshButtons();restore();}else emitState();}
   }
   async function submit(){
    if(submitting||submitted||restoring||processing||recorder.state!=='idle')return;
@@ -7051,7 +7373,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   dialog.querySelector('form').addEventListener('submit',event=>{event.preventDefault();submit();});
   dialog.addEventListener('input',event=>{if(event.target===textField)queueSave();});
   whenField.addEventListener('change',queueSave);
-  dialog.addEventListener('click',event=>{const b=event.target.closest('[data-fc]');if(!b||b.disabled)return;const action=b.dataset.fc;event.preventDefault();if(action==='close')close();else if(action==='minimize')minimize();else if(action==='restore')restore();else if(action==='discard')cleanup();else if(action==='images')$('#fc-images').click();else if(action==='audio')$('#fc-audio').click();else if(action==='record')startRecord();else if(action==='stop')recorder.stop().catch(error=>message(error.message));else if(action==='cancel-recording')recorder.cancel();else if(action==='remove')removeAttachment(b.dataset.id);else if(action==='preview')preview(b.dataset.id);else if(action==='select')gather('element');else if(action==='clear-selection'){delete state.context.selection;renderContext();saveDraft().catch(()=>{});}else if(action==='retry'){if(submitted)Store.clearDraft(draftKey).then(()=>cleanup(true),error=>message(error.message));else saveDraft().catch(()=>{});}});
+  dialog.addEventListener('click',event=>{const b=event.target.closest('[data-fc]');if(!b||b.disabled)return;const action=b.dataset.fc;event.preventDefault();if(action==='close')(options.managedHub?minimize():close());else if(action==='workspace')return backToFeedback();else if(action==='minimize')minimize();else if(action==='expand')setExpanded(!expanded);else if(action==='restore')restore();else if(action==='discard')cleanup();else if(action==='images')$('#fc-images').click();else if(action==='audio')$('#fc-audio').click();else if(action==='record')startRecord();else if(action==='stop')recorder.stop().catch(error=>message(error.message));else if(action==='cancel-recording')recorder.cancel();else if(action==='remove')removeAttachment(b.dataset.id);else if(action==='preview')preview(b.dataset.id);else if(action==='select')gather('element');else if(action==='gather'){const menu=$('.fc-capture-tools');if(menu)menu.open=false;gather(b.dataset.mode);}else if(action==='clear-selection'){delete state.context.selection;renderContext();saveDraft().catch(()=>{});}else if(action==='retry'){if(submitted)Store.clearDraft(draftKey).then(()=>cleanup(true),error=>message(error.message));else saveDraft().catch(()=>{});}});
   $('.fc-drop-zone').addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)&&!$('[data-fc="images"]').disabled){event.preventDefault();$('#fc-images').click();}});
   for(const id of ['#fc-images','#fc-audio'])$(id).addEventListener('change',event=>{for(const file of event.target.files||[])enqueueFile(file,'upload').catch(()=>{});event.target.value='';});
   dialog.addEventListener('paste',event=>{const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);if(files.length){event.preventDefault();for(const file of files)enqueueFile(file,'paste').catch(()=>{});}});
@@ -7060,14 +7382,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
   dialog.addEventListener('drop',event=>{event.preventDefault();dialog.classList.remove('fc-dragging');for(const file of event.dataTransfer?.files||[])enqueueFile(file,'drop').catch(()=>{});});
   doc.addEventListener('visibilitychange',onVisibility);root.addEventListener('pagehide',onPageHide);
   const ready=(async()=>{
-   try{const saved=await Store.getDraft(draftKey);if(closed)return;if(saved?.schema===1&&saved.scenarioId===state.scenarioId){state={...state,...saved};state.context=contextForAttachments(state.context,state.attachments);textField.value=state.text;whenField.value=state.when;for(const a of state.attachments){try{const media=await Store.get(a.id);if(closed)return;urls.set(a.id,root.URL.createObjectURL(media.blob));}catch{missing.add(a.id);}}if(missing.size)message('An attachment is no longer on this device. Remove it or add the original again.');}await saveDraft();}
+   try{const recovered=await recoverDraft(Store,draftKey,options.legacyDraftKeys,state),saved=recovered.draft;if(closed)return;if(saved){state={...state,...saved};state.context=contextForAttachments(state.context,state.attachments);textField.value=state.text;whenField.value=state.when;for(const a of state.attachments){try{const media=await Store.get(a.id);if(closed)return;urls.set(a.id,root.URL.createObjectURL(media.blob));}catch{missing.add(a.id);}}if(missing.size)message('An attachment is no longer on this device. Remove it or add the original again.');}await saveDraft();}
    catch(error){if(!closed){message(error.message);saveStatus('Not saved on this device',true);}}
    finally{restoring=false;if(!closed){renderContext();renderAttachments();refreshButtons();if(!gathering&&!minimized)textField.focus();}}
   })();
   renderContext();refreshButtons();emitState();
-  active={ready,close,draftKey,allowSelection:options.allowSelection!==false,get status(){return {minimized,gathering,submitting,restoring,closed};},restore,minimize,gather,destroy:()=>cleanup(),getDraft:()=>{if(!closed)sync();return snapshot();},element:dialog};if(options.initialGather)void gather(options.initialGather);return active;
+  active={ready,close,setExpanded,draftKey,allowSelection:options.allowSelection!==false,get status(){return {minimized,gathering,expanded,submitting,restoring,closed};},restore,minimize,gather,destroy:()=>cleanup(),getDraft:()=>{if(!closed)sync();return snapshot();},element:dialog};if(options.initialGather)void gather(options.initialGather);return active;
  }
- const api={open,payload,canAdd,contextForAttachments,mergePageContext};root.FeedbackComposer=api;if(typeof module==='object'&&module.exports)module.exports=api;
+ const api={open,payload,canAdd,contextForAttachments,mergePageContext,legacyDraftMatches,recoverDraft,recordLegacyRecovery};root.FeedbackComposer=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
 
 </script><script>
@@ -7193,7 +7515,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
 
   function sampleEntry(vm) {
-    if (!array(vm.scenarios).length) return '';
+    if (vm.hub || !array(vm.scenarios).length) return '';
     return `<aside class="fs-sample-entry"><span>${icon('play', 16)}<span><strong>Try the same flow with a sample ticket</strong><small>Start with feedback, follow the handoffs, and review the result.</small></span></span>${button('open-console', 'Choose a sample', { quiet: true, arrow: true })}</aside>`;
   }
 
@@ -7220,22 +7542,23 @@ if (typeof module==="object" && module.exports) module.exports = api;
 
   function inbox(vm) {
     const all = array(vm.items);
-    const needsYou = item => ['draft', 'awaiting-answer', 'review'].includes(statusFor(item).phase);
+    const assignedTasks = vm.attention ? new Set(array(vm.attention.tasks).map(row => row.ticketId)) : null;
+    const needsYou = item => assignedTasks ? assignedTasks.has(item.id) : ['draft', 'awaiting-answer', 'review'].includes(statusFor(item).phase);
     const complete = item => statusFor(item).phase === 'published';
     const filter = vm.filter || 'all';
     const query = String(vm.search || '').toLowerCase().trim();
     const filtered = all.filter(item => (filter === 'all' || filter === 'needs-you' && needsYou(item) || filter === 'with-team' && !needsYou(item) && !complete(item) || filter === 'complete' && complete(item)) && (!query || (titleFor(vm, item) + ' ' + item.id + ' ' + item.c?.text).toLowerCase().includes(query)));
     filtered.sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)) || orderTime(entryStatus(b).updatedAt) - orderTime(entryStatus(a).updatedAt));
     const filters = [['all', 'All', all.length], ['needs-you', 'Needs you', all.filter(needsYou).length], ['with-team', 'With the team', all.filter(item => !needsYou(item) && !complete(item)).length], ['complete', 'Complete', all.filter(complete).length]];
-    return `<section class="fs-inbox"><header class="fs-page-heading"><div><h1>My feedback</h1><p>One conversation from your first report to an accepted result.</p></div>${button('open-console', 'Walk through a ticket', { quiet: true, icon: 'play' })}</header>
+    return `<section class="fs-inbox"><header class="fs-page-heading"><div><h1>My feedback</h1><p>One conversation from your first report to an accepted result.</p></div>${vm.hub?'':button('open-console', 'Walk through a ticket', { quiet: true, icon: 'play' })}</header>
       ${notice(vm)}
       ${vm.current && !all.some(item => item.id === vm.current.id) ? `<div class="fs-resume">${icon('history', 17)}<span>Continue your current walkthrough.</span>${button('resume', 'Resume', { quiet: true, arrow: true })}</div>` : ''}
       <div class="fs-list-toolbar"><div class="fs-filters" aria-label="Filter feedback">${filters.map(([id, label, count]) => `<button type="button" data-wq="filter-inbox" data-value="${id}" aria-pressed="${id === filter}">${label}<small>${count}</small></button>`).join('')}</div><label class="fs-search">${icon('search', 15)}<input type="search" data-wq="search-inbox" value="${escape(vm.search)}" placeholder="Search feedback" aria-label="Search feedback"></label></div>
       <div class="fs-ticket-list">${filtered.length ? filtered.map(item => {
         const status = entryStatus(item);
         return `<button type="button" class="fs-ticket-row" data-wq="open-ticket" data-value="${escape(item.id)}"><span class="fs-row-icon">${icon(needsYou(item) ? 'ask' : complete(item) ? 'checks' : 'feedback', 18)}</span><span class="fs-row-main"><strong>${escape(titleFor(vm, item))}</strong><span>${escape(status.next || item.ux?.summary || item.c?.text)}</span><small>${escape(item.id)} <span aria-hidden="true">·</span> ${escape(status.owner)}</small><span class="fs-row-timing">${status.updatedAt ? `<span>Updated ${escape(displayTime(status.updatedAt))}</span>` : ''}${status.nextUpdate && !complete(item) ? `<span${status.overdue ? ' class="fs-overdue"' : ''}>${status.overdue ? 'Update overdue · ' : 'Next update · '}${escape(displayTime(status.nextUpdate))}</span>` : ''}</span></span>${badge(status)}${icon('next', 14)}</button>`;
-      }).join('') : `<div class="fs-empty">${icon(filter === 'all' ? 'feedback' : 'inbox', 24)}<h2>${filter === 'all' && !query ? 'Your feedback starts here' : 'Nothing in this view'}</h2><p>${filter === 'all' && !query ? 'Start from a sample quote, describe what gets in your way, and follow the same request through to a result.' : 'Try a different filter or search.'}</p></div>`}</div>
-      ${sampleEntry(vm)}
+      }).join('') : `<div class="fs-empty">${icon(filter === 'all' ? 'feedback' : 'inbox', 24)}<h2>${filter === 'all' && !query ? 'Your feedback starts here' : 'Nothing in this view'}</h2><p>${filter === 'all' && !query ? (vm.hub?'Report a problem on the page you’re using. Your questions, progress and results will stay together here.':'Start from a sample quote, describe what gets in your way, and follow the same request through to a result.') : 'Try a different filter or search.'}</p></div>`}</div>
+      ${vm.hub?hubDraftList(vm):sampleEntry(vm)}
     </section>`;
   }
 
@@ -7826,7 +8149,71 @@ if (typeof module==="object" && module.exports) module.exports = api;
     return `<div class="fs-app">${navigation(vm)}<section class="fs-main">${topbar(vm)}<main class="fs-content" id="feedback-main" tabindex="-1">${content}</main></section>${demoConsole(vm)}</div>`;
   }
 
-  root.FeedbackView = { render, task, questionGroups };
+  /* The shell changes presentation only. Identity, visits, read state and
+     navigation remain the controller's responsibility. */
+  function hubAttention(vm) {
+    return vm.attention || {tasks:[],taskCount:0,updates:[],unreadCount:0,hasUnread:false};
+  }
+  function hubLauncher(vm) {
+    const attention=hubAttention(vm),count=Math.max(0,Number(attention.taskCount)||0),draft=Boolean(vm.hub?.hasDraft);
+    const unread=Boolean(attention.hasUnreadFyi ?? attention.hasUnread);
+    const label='Feedback'+(count?' · '+count+' '+(count===1?'ticket needs':'tickets need')+' your attention':'')+(unread?' · Unread updates':'')+(draft?' · Saved draft':'');
+    return '<button type="button" class="fs-hub-launcher" data-wq="hub-open" data-feedback-private aria-label="'+escape(label)+'" aria-controls="feedback-hub" aria-expanded="'+(vm.hub?.mode!=='closed')+'">'+icon('feedback',20)+'<span>Feedback</span>'+(count?'<span class="fs-hub-task-count" aria-label="'+count+' actionable '+(count===1?'ticket':'tickets')+'">'+(count>99?'99+':count)+'</span>':'')+(unread?'<span class="fs-hub-unread-dot" aria-label="Unread updates"></span>':'')+(draft?'<span class="fs-hub-draft-indicator">Draft</span>':'')+'</button>';
+  }
+  function hubSource(vm) {
+    const h={...vm,scenario:vm.host?.scenario||vm.scenario,site:vm.host?.site||vm.site},s=h.site||{},kind=siteKind(h);
+    const section=s.section||(kind==='pdf'?'make-pdf':kind==='compartment'?'panels':'refrigeration');
+    return section==='workflow'?'Quote workflow':kind==='pdf'?'Make PDF':kind==='compartment'?'Panel configuration':'Refrigeration';
+  }
+  function hubHost(vm) {
+    const h={...vm,page:'site',current:null,error:'',notice:'',scenario:vm.host?.scenario||vm.scenario,site:vm.host?.site||vm.site};
+    return '<div class="fs-host-surface"><aside class="fs-host-navigation" aria-label="WinQuote navigation"><div class="fs-host-brand"><span class="winquote-symbol" aria-hidden="true"></span><span class="winquote-wordmark">WinQuote</span></div><nav><span>'+icon('globe',16)+'Home</span><span class="fs-host-active" aria-current="page">'+icon('rulers',16)+'Configure</span><span>'+icon('folder',16)+'Win Hub</span></nav><div class="fs-host-account">'+avatar('Requester')+'<span>Sample workspace<small>Quote MW-1042</small></span></div></aside><div class="fs-host-main"><header class="fs-host-topbar"><div><span>WinQuote</span><span aria-hidden="true">/</span><strong>'+escape(hubSource(vm))+'</strong></div>'+button('open-console','Demo controls',{quiet:true,icon:'play'})+'</header><main class="fs-host-content" id="host-main" tabindex="-1">'+sampleSite(h)+'</main></div></div>';
+  }
+  function hubTaskRow(vm,row) {
+    const item=array(vm.items).find(item=>item.id===row.ticketId),title=item?titleFor(vm,item):(row.title||row.ticketId);
+    const label=row.actionLabel||row.action||row.status?.next||'Open the current task',owner=row.owner||row.status?.owner||vm.actor||'Requester';
+    const timing=(row.updatedAt?'<span>Updated '+escape(displayTime(row.updatedAt))+'</span>':'')+(row.nextUpdate?'<span'+(row.overdue?' class="fs-overdue"':'')+'>'+(row.overdue?'Update overdue · ':'Next update · ')+escape(displayTime(row.nextUpdate))+'</span>':'');
+    return '<button type="button" class="fs-hub-task-row" data-wq="open-ticket" data-value="'+escape(row.ticketId)+'"><span class="fs-hub-row-icon">'+icon('ask',17)+'</span><span><strong>'+escape(title)+'</strong><span class="fs-hub-requested-action">'+escape(label)+'</span><small>'+escape(row.ticketId)+' <span aria-hidden="true">·</span> '+escape(actorName(owner))+'</small>'+(timing?'<span class="fs-hub-row-timing">'+timing+'</span>':'')+'</span>'+icon('next',14)+'</button>';
+  }
+  function hubUpdateRow(update) {
+    return '<button type="button" class="fs-hub-update-row'+(!update.read&&!update.readAt?' fs-hub-update-unread':'')+'" data-wq="open-update" data-value="'+escape(update.eventId||update.latestEventId||update.id)+'"><span class="fs-hub-row-icon">'+icon('bell',15)+'</span><span><strong>'+escape(update.title||update.label||'Feedback updated')+'</strong><small>'+escape(update.ticketId||update.recordId||'')+(update.at||update.createdAt?' · '+escape(displayTime(update.at||update.createdAt)):'')+'</small></span>'+icon('next',13)+'</button>';
+  }
+  function hubDraftList(vm) {
+    const drafts=array(vm.hub?.drafts);if(!drafts.length)return '';
+    return '<section class="fs-hub-draft-list"><h2>Saved drafts <small>'+drafts.length+'</small></h2>'+drafts.map(draft=>'<button type="button" class="fs-hub-update-row" data-wq="resume-composer" data-value="'+escape(draft.draftKey)+'"><span class="fs-hub-row-icon">'+icon('edit',15)+'</span><span><strong>'+escape(draft.kind==='update'?'Update '+draft.ticketId+' · V'+draft.rev:'New feedback · '+(draft.context?.page||'This page'))+'</strong><small>Saved on this device · Continue writing</small></span>'+icon('next',13)+'</button>').join('')+'</section>';
+  }
+  function hubHome(vm) {
+    const a=hubAttention(vm),tasks=array(a.tasks),count=Number(a.taskCount)||tasks.length;
+    const recent=array(a.updateGroups).length?array(a.updateGroups):array(a.updates);
+    const ordered=recent.slice().sort((x,y)=>orderTime(y.createdAt||y.at)-orderTime(x.createdAt||x.at)).slice(0,2);
+    const needs=tasks.length?'<div class="fs-hub-task-list">'+tasks.slice(0,3).map(row=>hubTaskRow(vm,row)).join('')+'</div>':'<div class="fs-hub-caught-up">'+icon('checks',20)+'<div><strong>No action needed right now</strong><p>Questions and review requests will appear here when it is your turn.</p></div></div>';
+    const compose='<section class="fs-hub-new-report"><div><h2>Something on this page?</h2><span>'+escape(hubSource(vm))+' · Quote MW-1042</span></div><button type="button" class="fs-hub-compose-entry" data-wq="open-composer">'+icon('edit',17)+'<span>Describe the problem…</span>'+icon('plus',17)+'</button><p>Page context, screenshots and voice notes can be added before you send.</p></section>';
+    return '<section class="fs-hub-home">'+notice(vm)+'<section class="fs-hub-needs"><header><h2>Needs you'+(count?'<small>'+count+'</small>':'')+'</h2>'+(count>3?button('hub-expand','View all',{quiet:true,icon:'next'}):'')+'</header>'+needs+'</section><section class="fs-hub-recent"><header><h2>Recent updates</h2>'+button('nav-updates','View updates',{quiet:true,icon:'next'})+'</header>'+(ordered.length?ordered.map(hubUpdateRow).join(''):'<p class="fs-hub-empty-updates">No updates yet. Your feedback will stay available here.</p>')+'</section>'+compose+hubDraftList(vm)+'</section>';
+  }
+  function hubCompactTicket(vm) {
+    const item=vm.current;if(!item)return hubHome(vm);
+    const status=statusFor(item,vm.status),p=panelPresentation(vm),readonly=Boolean(p.historical||vm.historyVersion||vm.walkHistory?.active);
+    const requested=array(hubAttention(vm).tasks).find(row=>row.ticketId===item.id);
+    const simple=!readonly&&(status.phase==='awaiting-answer'||actorName(status.owner)!==actorName(vm.actor)||status.phase==='published');
+    const requestText=p.request?.text||item.c?.text;
+    const heading='<header class="fs-hub-ticket-heading"><span>'+escape(item.id)+(vm.historyVersion?' · V'+escape(vm.historyVersion):'')+'</span><h2>'+escape(titleFor(vm,item))+'</h2><div>'+(readonly?'<span class="fs-status">Read-only</span>':badge(status))+'<span>'+escape(actorName(status.owner))+'</span></div></header>';
+    const currentTask=simple?'<section class="fs-task fs-hub-compact-task" aria-label="Current task">'+task(vm)+'</section>':'<section class="fs-hub-expand-task"><h3>'+escape(requested?.actionLabel||(readonly?'Review the saved version':status.label||'Open the current task'))+'</h3><p>'+escape(requested?.status?.next||status.next||'Open the workspace to review this task with its full context.')+'</p>'+button('hub-expand',readonly?'Open saved version':'Open full workspace',{primary:true,icon:'next'})+'</section>';
+    return '<article class="fs-hub-ticket">'+heading+notice(vm)+currentTask+(requestText?'<details class="fs-hub-original-report"><summary>Original report '+icon('down',13)+'</summary><p>'+escape(requestText)+'</p></details>':'')+'<div class="fs-hub-ticket-footer">'+button('hub-expand','History & details',{quiet:true,icon:'sidebar'})+'<span>'+(status.updatedAt?'Updated '+escape(displayTime(status.updatedAt)):'')+'</span></div></article>';
+  }
+  function hubHeader(vm,full) {
+    const isTicket=vm.page==='ticket',label=isTicket?vm.current?.id||'Feedback':vm.page==='updates'?'Updates':'Feedback';
+    const heading=isTicket||vm.page==='updates'?button('hub-home','Feedback',{quiet:true,icon:'back'})+'<span aria-hidden="true">/</span><strong>'+escape(label)+'</strong>':'<h1>Feedback</h1>';
+    return '<header class="fs-hub-header"><div class="fs-hub-header-title">'+heading+'</div><div class="fs-hub-header-actions">'+(full?'<div class="fs-hub-demo-controls">'+button('open-console','Demo controls',{quiet:true,icon:'play'})+'</div>':'')+(full&&isTicket?button('toggle-context','Details',{quiet:true,icon:'sidebar',controls:'feedback-details',expanded:vm.contextOpen}):'')+button(full?'hub-shrink':'hub-expand',full?'Compact view':'Open full page',{quiet:true,icon:full?'sidebar':'external'})+button('hub-minimize','Minimize',{quiet:true,icon:'cross'})+'</div></header>';
+  }
+  function renderHub(vm) {
+    const hub={mode:'closed',composing:false,...vm.hub};
+    const content=vm.page==='ticket'?(hub.mode==='full'?ticket(vm):hubCompactTicket(vm)):vm.page==='updates'?updates(vm):(hub.mode==='full'?inbox(vm):hubHome(vm));
+    const tabs=hub.mode==='full'?'<nav class="fs-hub-workspace-tabs" aria-label="Feedback workspace">'+button('nav-inbox','My feedback',{quiet:true,icon:'inbox',className:vm.page!=='updates'?'fs-hub-tab-selected':''})+button('nav-updates','Updates',{quiet:true,icon:'bell',className:vm.page==='updates'?'fs-hub-tab-selected':''})+button('open-composer','New feedback',{quiet:true,icon:'plus'})+'</nav>':'';
+    const surface=hub.mode!=='closed'&&!hub.composing?'<section id="feedback-hub" class="fs-hub-surface fs-hub-'+escape(hub.mode)+'" aria-label="Feedback workspace" data-feedback-private>'+hubHeader(vm,hub.mode==='full')+tabs+'<div class="fs-hub-content"><main id="feedback-main" class="fs-content" tabindex="-1">'+content+'</main></div></section>':'';
+    return '<div class="fs-hub-app" data-hub-mode="'+escape(hub.mode)+'">'+hubHost(vm)+surface+(!hub.composing&&hub.mode==='closed'?hubLauncher({...vm,hub}):'')+(vm.console?.open?demoConsole(vm):'')+'</div>';
+  }
+
+  root.FeedbackView = { render, renderHub, task, questionGroups };
 })(globalThis);
 
 </script><script>
@@ -7962,15 +8349,19 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   data=read();
   const ui=data.feedbackExperience.ui||{};
-  let page=ui.page||'inbox',actor='Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,contextTab='details',historyVersion=null,filter='all',search='';
+  let page=ui.page||'inbox',actor=['Requester','Website team','Site owner'].includes(ui.actor)?ui.actor:'Requester',scenarioId=ui.scenarioId||'pdf',contextOpen=false,contextTab='details',historyVersion=null,filter='all',search='';
   let consoleState={open:false,mode:'practice',playing:false},watchTimer=null,backgroundTimer=null,preparationTimer=null;
-  let site=initialSite(),resultState=null,returnFocus=null,returnFocusSelector=null,composer=null,rendered=null;
+  let hostScenarioId=C.get(ui.hostScenarioId)?ui.hostScenarioId:'pdf',site={...initialSite(),...ui.hostSite},resultState=null,returnFocus=null,returnFocusSelector=null,composer=null,rendered=null;
+  let hub={mode:'closed',composing:false,hasDraft:!!ui.hubDraft},hubLastMode=ui.hubLastMode==='full'?'full':'compact',hubDraft=ui.hubDraft||null;
+  let hubDrafts=Array.isArray(ui.hubDrafts)?ui.hubDrafts:hubDraft?[hubDraft]:[],hubResume=ui.hubResume||'workspace',gatheringContext=false,listReturnFocus=null;
+  const surfacePositions=new Map(),preparations=new Map();let lastSurfaceKey='',lastInspectorPosition=null;
   const app=document.createElement('div');app.id='feedback-root';document.body.appendChild(app);
   const oldApp=document.querySelector('.app');if(oldApp)oldApp.style.display='none';
   document.querySelector('.skip')?.setAttribute('href','#feedback-main');
   const modalRoot=document.createElement('div');modalRoot.id='feedback-modal-root';document.body.appendChild(modalRoot);
   const modal=document.createElement('dialog');modal.className='fs-dialog';modal.id='feedback-dialog';modalRoot.appendChild(modal);
   const current=()=>S.get(data,data.current),scenario=()=>C.get(scenarioId)||C.get('pdf');
+  const hostScenario=()=>C.get(hostScenarioId)||C.get('pdf');
   const mediaCache=new Map();let visibleMediaIds=new Set();
   let walkCursor=null;
   let inspector={key:'',view:null,stack:[]},inspectorRestore=null;
@@ -8000,7 +8391,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     persist(S.saveWalk(fresh,id,{mode:consoleState.mode,role:actor,open:consoleState.open,cursor:walkCursor,historyRev:historyVersion,contextTab}).data);
   }
   function restorePresentation(item){
-    const w=item?.ux?.walk||{};actor=['Requester','Website team','Site owner'].includes(w.role)?w.role:'Requester';
+    const w=item?.ux?.walk||{};
     consoleState={open:!!w.open,mode:w.mode==='watch'?'watch':'practice',playing:false};
     historyVersion=w.historyRev||null;walkCursor=Number.isInteger(w.cursor)?w.cursor:null;contextTab=w.contextTab==='activity'?'activity':'details';
   }
@@ -8032,31 +8423,56 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   function syncUI(){
     const next=read();if(brokenStorage)return;
-    next.current=data.current;next.feedbackExperience.ui={page,scenarioId};persist(next);savePresentation();
+    next.current=data.current;next.feedbackExperience.ui={page,scenarioId,actor,hostScenarioId,hostSite:clone(site),hubLastMode,hubDraft,hubDrafts,hubResume};persist(next);savePresentation();
   }
   function changeRecord(fn){const next=read();if(brokenStorage)throw Error('Saved feedback needs recovery.');const item=S.get(next,data.current);if(!item)throw Error('This feedback is no longer available.');fn(item,next);persist(next);return item;}
   function roleOwner(item=current()){return S.status(item,S.now(data)).owner;}
+  function rememberSurface(){
+    const scroller=app.querySelector('.fs-hub-content');
+    if(scroller&&lastSurfaceKey)surfacePositions.set(lastSurfaceKey,scroller.scrollTop);
+    if(app.querySelector('#feedback-details'))lastInspectorPosition=inspectorPosition();
+  }
+  function configureHub(){
+    const full=(hub.mode==='full'||matchMedia('(max-width:640px)').matches)&&hub.mode!=='closed'&&!composer?.status?.gathering;
+    const host=app.querySelector('.fs-host-surface');if(host)host.inert=full;
+    document.body.classList.toggle('feedback-hub-full',full);
+    document.querySelector('.skip')?.setAttribute('href',hub.mode==='closed'?'#host-main':'#feedback-main');
+  }
+  function setHubMode(mode){
+    saveDraft();rememberSurface();if(mode!=='closed')hubLastMode=mode;
+    hub.mode=mode;syncUI();render();
+    if(mode==='closed')app.querySelector('[data-wq=hub-open]')?.focus({preventScroll:true});
+    else app.querySelector('#feedback-main')?.focus({preventScroll:true});
+  }
   function render(){
+    if(gatheringContext)return;
+    hub.drafts=hubDrafts.filter(draft=>draft.kind!=='update'||draft.actor===actor);hub.hasDraft=hub.drafts.length>0;
+    rememberSurface();
+    const focused=document.activeElement,focusState=app.contains(focused)?{id:focused.id,name:focused.name,wq:focused.dataset?.wq,value:focused.dataset?.value,answer:focused.dataset?.answerId,start:focused.selectionStart,end:focused.selectionEnd}:null;
     const item=current();if(item?.c.reviewFlow?.scenarioId&&page==='ticket')scenarioId=item.c.reviewFlow.scenarioId;
     if(page==='ticket'&&!item){page='inbox';error=error||'Choose a feedback item to continue.';}
     const status=S.status(page==='site'?null:item,S.now(data));
     rendered=item?{ticketId:item.id,sequence:item.sequence,rev:item.c.rev,bundleId:item.c.reviewFlow?.sentBundle?.id}:null;
     const projection=presentationVM(page==='site'?null:item);
     const key=JSON.stringify([page,item?.id,actor,historyVersion||null,walkCursor,projection.presentation?.historical?projection.presentation.viewedRev:item?.sequence,contextTab]);
-    let position=inspectorRestore || inspectorPosition();inspectorRestore=null;
-    if(inspector.key!==key){inspector={key,view:null,stack:[]};position=null;}
+    let position=inspectorRestore || (app.querySelector('#feedback-details')?inspectorPosition():lastInspectorPosition);inspectorRestore=null;
+    if(inspector.key!==key){inspector={key,view:null,stack:[]};position=null;lastInspectorPosition=null;}
     const previousView=inspector.stack.at(-1)?.view;
     const inspectorVM={view:inspector.view,backLabel:previousView?.section?inspectorNames[previousView.section]:previousView?.kind==='basis'?'version basis':previousView?.kind==='plan'?'saved plan':'details'};
-    app.innerHTML=V.render({page,items:S.customerItems(data).map(i=>({...i,status:S.status(i,S.now(data))})),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:S.updates(data),updateGroups:S.digest(data),status,console:consoleState,error,notice,contextOpen,contextTab,historyVersion,preparationPaused:!!item?.ux?.preparation?.paused,...projection,inspector:inspectorVM,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?.c.reviewFlow?E.reviewPreview(item.c):null,clock:S.now(data)});
-    configureDrawer();restoreInspector(position);
+    const attention=S.attention(data,{actor});
+    app.innerHTML=(V.renderHub||V.render)({hub,host:{scenario:hostScenario(),site},attention,page,items:S.customerItems(data).map(i=>({...i,status:S.status(i,S.now(data))})),current:page==='site'?null:item,actor,scenarios:C.list(),scenario:scenario(),updates:attention.updates,updateGroups:attention.updateGroups,status,console:consoleState,error,notice,contextOpen,contextTab,historyVersion,preparationPaused:!!item?.ux?.preparation?.paused,...projection,inspector:inspectorVM,filter,search,site,formDraft:item?.ux?.drafts||{},answers:item?.ux?.drafts?.bundleId===item?.c.reviewFlow?.sentBundle?.id?item?.ux?.drafts?.answers||{}:{},answerNotes:item?.ux?.drafts?.answerNotes||{},preview:item?.c.reviewFlow?E.reviewPreview(item.c):null,clock:S.now(data)});
+    configureDrawer();configureHub();restoreInspector(position);
+    lastSurfaceKey=JSON.stringify([hub.mode,page,page==='ticket'?item?.id:null,page==='ticket'?historyVersion:null,actor,filter,search]);
+    const scroller=app.querySelector('.fs-hub-content');if(scroller)scroller.scrollTop=surfacePositions.get(lastSurfaceKey)||0;
+    if(focusState){const candidates=[...app.querySelectorAll('input,textarea,select,button,[tabindex]')];const replacement=candidates.find(el=>focusState.id?el.id===focusState.id:focusState.answer?el.dataset.answerId===focusState.answer&&el.value===focused.value:focusState.name?el.name===focusState.name:focusState.wq?el.dataset.wq===focusState.wq&&el.dataset.value===focusState.value:false);if(replacement&&!replacement.closest('[inert]')){replacement.focus({preventScroll:true});try{if(typeof focusState.start==='number')replacement.setSelectionRange(focusState.start,focusState.end);}catch{}}}
     document.title=(page==='ticket'&&item?projection.presentation.title+' · ':'')+'WinQuote Feedback';
     void hydrateMedia(projection.presentation);
   }
   function configureDrawer(focus=false){
     const opened=contextOpen&&matchMedia('(max-width:900px)').matches,drawer=app.querySelector('#feedback-details'),wasModal=drawer?.getAttribute('aria-modal')==='true';
     if(drawer){if(opened){drawer.setAttribute('role','dialog');drawer.setAttribute('aria-modal','true');}else{drawer.removeAttribute('role');drawer.removeAttribute('aria-modal');}}
-    app.querySelectorAll('.fs-navigation,.fs-topbar,.fs-ticket-document,.fs-console,.fs-console-launcher').forEach(el=>el.inert=opened);
-    if(focus)(opened?drawer?.querySelector('.fs-close-details'):app.querySelector('.fs-top-actions [data-wq=toggle-context]'))?.focus();
+    app.querySelectorAll('.fs-navigation,.fs-topbar,.fs-ticket-document,.fs-hub-header,.fs-hub-workspace-tabs,.fs-console,.fs-console-launcher').forEach(el=>el.inert=opened);
+    if(focus)(opened?drawer?.querySelector('.fs-close-details'):app.querySelector('.fs-hub-header-actions [data-wq=toggle-context],.fs-top-actions [data-wq=toggle-context]'))?.focus();
     else if(opened&&!drawer?.contains(document.activeElement))drawer?.querySelector('.fs-close-details')?.focus();
     else if(!opened&&wasModal)drawer?.focus();
   }
@@ -8069,23 +8485,32 @@ if (typeof module==="object" && module.exports) module.exports = api;
     if(event.key==='Escape'){event.preventDefault();contextOpen=false;render();configureDrawer(true);}
     if(event.key==='Tab'){const nodes=[...drawer.querySelectorAll('button,a[href],input,textarea,select,summary,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length&&!el.closest('details:not([open]) > :not(summary)')),first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
   });
-  addEventListener('resize',()=>configureDrawer());
+  app.addEventListener('keydown',event=>{if(event.key==='Escape'&&!modal.open&&!composer&&!contextOpen&&hub.mode!=='closed'){event.preventDefault();setHubMode('closed');}});
+  addEventListener('resize',()=>{configureDrawer();configureHub();});
   function showError(e){error=e.message;render();if(modal.open){modal.querySelector('[data-dialog-error]')?.remove();modal.insertAdjacentHTML('afterbegin','<p role="alert" data-dialog-error class="fs-note">'+esc(error)+'</p>');}}
-  function go(nextPage){saveDraft();pausePreparation();page=nextPage;historyVersion=null;error='';if(page==='site'){const snapshot=current()?.ux?.context;if(snapshot?.state)site={...site,...snapshot.state,compartment:snapshot.compartment||site.compartment};history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(scenarioId));}syncUI();render();window.scrollTo(0,0);app.querySelector('#feedback-main')?.focus({preventScroll:true});}
+  function go(nextPage){
+    hubResume='workspace';saveDraft();rememberSurface();page=nextPage;historyVersion=null;walkCursor=null;error='';
+    if(page==='site'){hub.mode='closed';history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(hostScenarioId));}
+    else if(hub.mode==='closed')hub.mode=hubLastMode;
+    syncUI();render();const target=page==='inbox'&&listReturnFocus?app.querySelector('[data-wq="open-ticket"][data-value="'+listReturnFocus+'"]'):null;(target||app.querySelector('#feedback-main'))?.focus({preventScroll:true});
+  }
   function routeTicket(id,eventId){
-    stopWatch();pausePreparation();data=read();const found=S.resolve(data,id,eventId);
-    if(found.missing){page='inbox';error=found.message;render();return;}
+    if(page==='inbox')listReturnFocus=id;hubResume='workspace';saveDraft();rememberSurface();stopWatch();data=read();const found=S.resolve(data,id,eventId);
+    if(found.missing){page='inbox';error=found.message;if(hub.mode==='closed')hub.mode=hubLastMode;render();return;}
+    if(!S.customerItems(data).some(item=>item.id===id)){page='inbox';error='This feedback is not in your current workspace.';render();return;}
     data.current=id;
-    if(eventId)data=S.markRead(data,eventId);
-    notice=found.message||(eventId?'You’re back in the same feedback. Here is the current task.':'');
-    restorePresentation(found.item);if(eventId){actor=found.event?.recipient||'Requester';historyVersion=null;walkCursor=null;}
+    const addressed=!eventId||found.event?.recipient===actor;
+    if(eventId&&addressed)data=S.markRead(data,eventId);
+    notice=!addressed?'This update belongs to another demo role. Your perspective has not changed.':found.message||(eventId?'You’re back in the same feedback. Here is the current task.':'');
+    restorePresentation(found.item);if(eventId){historyVersion=null;walkCursor=null;}
     scenarioId=found.item.c.reviewFlow?.scenarioId||found.item.ux?.scenarioId||'pdf';page='ticket';
+    if(hub.mode==='closed')hub.mode=hubLastMode;
     const visit=S.visit(data,id);data=visit.data;persist(data);syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(id)+(eventId?'&event='+encodeURIComponent(eventId):''));render();
   }
   function startScenario(id){
-    if(!C.get(id))return;saveDraft();stopWatch();pausePreparation();scenarioId=id;site=initialSite();
-    site.section=id==='pdf'?'make-pdf':id==='compartment'?'panels':'refrigeration';page='site';actor='Requester';notice='';error='';consoleState.open=consoleState.mode==='watch';syncUI();
+    if(!C.get(id))return;saveDraft();rememberSurface();stopWatch();scenarioId=hostScenarioId=id;site=initialSite();
+    site.section=id==='pdf'?'make-pdf':id==='compartment'?'panels':'refrigeration';page='site';hub.mode='closed';actor='Requester';notice='';error='';consoleState.open=consoleState.mode==='watch';syncUI();
     history.replaceState({},'',location.pathname+'?workflow='+encodeURIComponent(id));render();
   }
   function field(name){return (modal.open?modal.querySelector('[name="'+name+'"]')?.value:undefined)??app.querySelector('[name="'+name+'"]')?.value??'';}
@@ -8111,9 +8536,9 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   function saveDraft(){
     if(page!=='ticket'||!current()||historyVersion||walkCursor!==null)return;
-    const values={};for(const el of app.querySelectorAll('[name]'))if(['INPUT','TEXTAREA','SELECT'].includes(el.tagName))values[el.name]=el.type==='checkbox'?el.checked:el.value;
+    const values={};for(const el of app.querySelectorAll('[name]'))if(['INPUT','TEXTAREA','SELECT'].includes(el.tagName)&&!el.closest?.('.fs-host-surface'))values[el.name]=el.type==='checkbox'?el.checked:el.value;
     let qs=[];try{qs=readQuestions();}catch(e){error=e.message;}const answers=readAnswers();
-    try{changeRecord(i=>{i.ux||={};i.ux.drafts={...i.ux.drafts,fields:values,...(qs.length?{questions:qs}:{}),...(Object.keys(answers).length?{answers,answerNotes:readAnswerNotes(),bundleId:rendered?.bundleId}:{})};});}catch(e){error='Your draft is still on this page but could not be saved: '+e.message;}
+    try{changeRecord(i=>{i.ux||={};i.ux.drafts={...i.ux.drafts,...(Object.keys(values).length?{fields:values}:{}),...(qs.length?{questions:qs}:{}),...(Object.keys(answers).length?{answers,answerNotes:readAnswerNotes(),bundleId:rendered?.bundleId}:{})};});}catch(e){error='Your draft is still on this page but could not be saved: '+e.message;}
   }
   function questionDraftKey(item){
     const flow=item?.c.reviewFlow;
@@ -8135,22 +8560,21 @@ if (typeof module==="object" && module.exports) module.exports = api;
     if(!quiet)render();return r.item;
   }
   function contextSnapshot(){
-    const state=scenarioId==='refrigeration'?{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration}:scenarioId==='pdf'?{pdfGenerated:site.pdfGenerated,currentStep:site.section,pdfOpened:false}:{specificationTitle:site.title,compartment:site.compartment,sectionsLabeled:false};
-    return {page:scenario().target,route:location.pathname+'?workflow='+scenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-workspace-v4',state,simulated:true};
+    const state=hostScenarioId==='refrigeration'?{noRefrigeration:site.noRefrigeration,savedNoRefrigeration:site.savedNoRefrigeration,equipment:site.equipment,cost:site.cost,hasUnsavedChanges:site.noRefrigeration!==site.savedNoRefrigeration}:hostScenarioId==='pdf'?{pdfGenerated:site.pdfGenerated,currentStep:site.section,pdfOpened:false}:{specificationTitle:site.title,compartment:site.compartment,sectionsLabeled:false};
+    return {page:hostScenario().target,route:location.pathname+'?workflow='+hostScenarioId,quote:'MW-1042',compartment:site.compartment,step:site.section,occurredAt:new Date().toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,viewport:{width:innerWidth,height:innerHeight},build:'feedback-hub-v5',state,simulated:true};
   }
   function pausePreparation(){
-    const running=preparationTimer||backgroundTimer;clearTimeout(preparationTimer);clearTimeout(backgroundTimer);preparationTimer=backgroundTimer=null;
-    if(running&&current()?.c.reviewFlow?.phase==='triage'&&current().ux?.preparation?.stage!=='team-review-pending')changeRecord(i=>{i.ux.preparation={...i.ux.preparation,paused:true};});
+    for(const [id,timers] of preparations){timers.forEach(clearTimeout);const fresh=read(),item=S.get(fresh,id);if(item?.c.reviewFlow?.phase==='triage'&&item.ux?.preparation?.stage!=='team-review-pending'){item.ux.preparation={...item.ux.preparation,paused:true};persist(fresh);}}
+    preparations.clear();
   }
   function schedulePreparation(id,resume=false){
-    clearTimeout(preparationTimer);clearTimeout(backgroundTimer);
-    const prepare=stage=>{try{if(page!=='ticket'||current()?.id!==id||current()?.c.reviewFlow?.phase!=='triage')return;persist(S.preparation(read(),id,stage).data);notice=stage==='draft-ready'?'A simulated context brief is ready for the team to review.':'A draft is ready for team review. No customer question has been sent.';if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else document.getElementById('live').textContent=notice;}catch(e){showError(e);}};
-    if(resume)prepare('draft-ready');
-    else preparationTimer=setTimeout(()=>{preparationTimer=null;prepare('draft-ready');},2000);
-    backgroundTimer=setTimeout(()=>{backgroundTimer=null;prepare('team-review-pending');},resume?38000:40000);
+    (preparations.get(id)||[]).forEach(clearTimeout);
+    const prepare=stage=>{try{const fresh=read(),item=S.get(fresh,id);if(item?.c.reviewFlow?.phase!=='triage')return;persist(S.preparation(fresh,id,stage).data);if(stage==='team-review-pending')preparations.delete(id);if(current()?.id===id)notice=stage==='draft-ready'?'A simulated context brief is ready for the team to review.':'A draft is ready for team review. No customer question has been sent.';if(!app.contains(document.activeElement)||!document.activeElement.matches('input,textarea,select'))render();else if(document.getElementById('live'))document.getElementById('live').textContent=notice;}catch(e){showError(e);}};
+    const timers=[];if(resume)prepare('draft-ready');else timers.push(setTimeout(()=>prepare('draft-ready'),2000));
+    timers.push(setTimeout(()=>prepare('team-review-pending'),resume?38000:40000));preparations.set(id,timers);
   }
   async function submitPayload(payload,simulated=false,sourceScenario=scenario()){
-    const r=S.add(read(),sourceScenario,payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
+    const r=S.add(read(),sourceScenario,payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';hub.mode=hubLastMode;actor='Requester';historyVersion=null;walkCursor=null;syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
     if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>',{floating:true});if(!r.duplicate)celebrateSubmission();}
     schedulePreparation(r.item.id);
@@ -8180,35 +8604,55 @@ if (typeof module==="object" && module.exports) module.exports = api;
       Promise.allSettled(animations.map(animation=>animation.finished)).then(cleanup);
     });
   }
-  async function useComposer(options,mode){
-    stopWatch();
-    if(composer?.element?.isConnected && composer.draftKey!==options.draftKey){
-      if(!await composer.close())return;
-    }
-    // A native capture must start in this user gesture; gather waits for draft restoration internally.
-    composer=root.FeedbackComposer.open({...options,onClose:()=>{composer=null;}});
+  function rememberComposerDraft(descriptor,completedKey){
+    if(completedKey)hubDrafts=hubDrafts.filter(draft=>draft.draftKey!==completedKey);
+    hubDraft=descriptor;if(descriptor)hubDrafts=[descriptor,...hubDrafts.filter(draft=>draft.draftKey!==descriptor.draftKey)];
+    hub.hasDraft=hubDrafts.length>0;syncUI();
+  }
+  function resumeComposer(key){
+    const binding=hubDrafts.find(draft=>draft.draftKey===key)||hubDraft;
+    if(!binding)return openComposer();
+    if(binding.kind==='update'&&binding.actor!==actor)throw Error('This private draft belongs to another demo role. Use Demo controls to return to that perspective.');
+    return binding.kind==='update'?openUpdateComposer(binding.action,'',binding):openComposer(undefined,binding);
+  }
+  async function useComposer(options,mode,descriptor){
+    stopWatch();saveDraft();rememberSurface();
+    if(composer?.element?.isConnected&&composer.draftKey!==options.draftKey){if(!await composer.close())return;}
+    if(hub.mode==='closed')hub.mode=hubLastMode;
+    hubResume='composer';rememberComposerDraft(descriptor);
+    composer=root.FeedbackComposer.open({...options,managedHub:true,expanded:hub.mode==='full',onWorkspace:async()=>{if(composer&&!await composer.close())return;hubResume='workspace';page='inbox';hub.mode=hubLastMode;hub.composing=false;syncUI();render();app.querySelector('#feedback-main')?.focus({preventScroll:true});},onExpand:expanded=>{hub.mode=expanded?'full':'compact';hubLastMode=hub.mode;syncUI();render();},onClose:({submitted,discarded}={})=>{composer=null;hub.composing=false;if(submitted||discarded){hubResume='workspace';rememberComposerDraft(null,options.draftKey);}else hub.hasDraft=hubDrafts.length>0;render();}});
     if(mode)void composer.gather(mode);
     return composer;
   }
-  function openComposer(mode){
-    const sourceScenario=clone(scenario()),id=scenarioId;
-    return useComposer({scenarioId:id,context:contextSnapshot(),feedback:sourceScenario.feedback,draftKey:'winquote:'+id,selectionRoot:()=>app.querySelector('[data-feedback-surface]')||app,getContext:()=>scenarioId===id&&page==='site'?contextSnapshot():null,onSubmit:payload=>submitPayload(payload,false,sourceScenario)},mode);
+  function openComposer(mode,binding){
+    const id=binding?.scenarioId||hostScenarioId,sourceScenario=clone(C.get(id)),context=binding?.context||contextSnapshot();
+    const sourceKey=['winquote',id,context.quote,context.compartment,context.step].join(':');
+    const draftKey=binding?.draftKey||(hubDrafts.some(draft=>draft.draftKey===sourceKey)?sourceKey+':'+Date.now().toString(36):sourceKey);
+    const descriptor={kind:'new',scenarioId:id,context:clone(context),draftKey};
+    return useComposer({scenarioId:id,context,feedback:sourceScenario.feedback,draftKey,legacyDraftKeys:['winquote:'+id],selectionRoot:()=>app.querySelector('.fs-host-surface [data-feedback-surface]'),getContext:()=>{const fresh=contextSnapshot();if(hostScenarioId!==id||fresh.quote!==context.quote||fresh.compartment!==context.compartment||fresh.step!==context.step)throw Error('Return to the original quote and section before adding page context. Your draft is still saved.');return fresh;},onSubmit:payload=>submitPayload(payload,false,sourceScenario)},mode,descriptor);
   }
-  function openUpdateComposer(action,note=''){
-    if(historyVersion||walkCursor!==null)throw Error('Return to the current version before adding feedback.');
-    const id=rendered.ticketId,rev=rendered.rev,sequence=rendered.sequence,author=actor;
-    const correction=action==='correct-understanding';
-    return useComposer({scenarioId:scenarioId,title:correction?'Correct our understanding':'What needs to change?',description:'Your note and attachments stay with '+id+' · V'+rev+'. The website team will review them.',label:'Your note',submitLabel:'Send to the team',showTiming:false,allowSelection:false,feedback:note,draftKey:action+':'+id+':V'+rev+':'+sequence,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
+  function openUpdateComposer(action,note='',binding){
+    if(!binding&&(historyVersion||walkCursor!==null))throw Error('Return to the current version before adding feedback.');
+    const id=binding?.ticketId||rendered.ticketId,rev=binding?.rev||rendered.rev,sequence=binding?.sequence??rendered.sequence,author=binding?.actor||actor;
+    const correction=action==='correct-understanding',sourceId=binding?.scenarioId||scenarioId,context=binding?.context||{page:scenario().target,ticket:id,revision:rev};
+    const draftKey=binding?.draftKey||action+':'+id+':V'+rev+':'+sequence;
+    const descriptor={kind:'update',action,ticketId:id,rev,sequence,actor:author,scenarioId:sourceId,context:clone(context),draftKey};
+    return useComposer({scenarioId:sourceId,title:correction?'Correct our understanding':'What needs to change?',description:'Your note and attachments stay with '+id+' · V'+rev+'. The website team will review them.',label:'Your note',submitLabel:'Send to the team',showTiming:false,allowSelection:false,feedback:note,draftKey,context,onSubmit:async payload=>{
       const fresh=read(),original=S.get(fresh,id);
       if(!original)throw Error('This feedback is unavailable. Your draft has been kept.');
       recordScene(original);
       const message=payload.text||'Please review the attached feedback evidence.';
       const evidence={attachments:payload.attachments,captureId:payload.captureId,context:payload.context};
-      // Bind to the ticket, version and role at compose time, never to the page now behind the panel.
       const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor:author,value:correction?{text:message,...evidence}:{rev,reason:message,...evidence}});
       r.item.ux.drafts={};persist(r.data);routeTicket(id);notice='Your update and materials are with the website team. Saved to '+id+'.';render();
-    }});
+    }},null,descriptor);
   }
+  addEventListener('feedback-composer-state',event=>{
+    const state=event.detail||{};gatheringContext=!!state.gathering;hub.composing=!!(state.open&&!state.minimized);
+    if(state.open){hub.hasDraft=true;hubResume='composer';if(state.minimized)hub.mode='closed';else hub.mode=state.expanded?'full':'compact';}
+    if(state.gathering){hub.composing=true;const host=app.querySelector('.fs-host-surface');if(host)host.inert=false;for(const surface of app.querySelectorAll('.fs-hub-surface,.fs-hub-launcher'))surface.hidden=true;document.body.classList.remove('feedback-hub-full');return;}
+    render();if(state.minimized)app.querySelector('[data-wq=hub-open]')?.focus({preventScroll:true});
+  });
   function showModal(html,{floating=false}={}){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;if(modal.open)modal.close();modal.className='fs-dialog'+(floating?' fs-receipt-floating':'');modal.innerHTML=html;floating?modal.show():modal.showModal();}
   function closeCaptureMenu(focus=false){const menu=app.querySelector('#feedback-context-menu'),trigger=app.querySelector('[data-wq=feedback-context-menu]');if(menu?.matches(':popover-open'))menu.hidePopover();trigger?.setAttribute('aria-expanded','false');if(focus)trigger?.focus();}
   function openCaptureMenu(){const menu=app.querySelector('#feedback-context-menu'),trigger=app.querySelector('[data-wq=feedback-context-menu]');if(!menu||!trigger)return;if(menu.matches(':popover-open')){closeCaptureMenu(true);return;}const box=trigger.getBoundingClientRect();Object.assign(menu.style,{top:Math.round(box.bottom+8)+'px',right:Math.max(12,Math.round(innerWidth-box.right))+'px'});menu.showPopover();trigger.setAttribute('aria-expanded','true');menu.querySelector('button')?.focus();menu.ontoggle=()=>trigger.setAttribute('aria-expanded',String(menu.matches(':popover-open')));}
@@ -8301,9 +8745,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
   async function openAttachment(id){const result=await root.FeedbackMediaStore.get(id);if(!result)throw Error('This attachment is not available on this device.');const url=URL.createObjectURL(result.blob);showModal('<h2>'+esc(result.manifest.name||'Attached evidence')+'</h2>'+(result.manifest.kind==='audio'?'<audio controls src="'+url+'"></audio>':'<img class="fs-evidence-image" alt="Attached feedback evidence" src="'+url+'">')+'<p><button class="fs-button" data-wq="close-dialog">Close</button></p>');modal.addEventListener('close',()=>URL.revokeObjectURL(url),{once:true});}
 
   async function handle(action,value,el){
-    error='';
+    error='';rememberSurface();
     if(action!=='watch-toggle'&&action!=='watch-next'&&consoleState.playing)stopWatch();
     switch(action){
+      case 'hub-open':if(hubResume==='composer'&&hubDraft&&(hubDraft.kind!=='update'||hubDraft.actor===actor))return resumeComposer(hubDraft.draftKey);if(page==='site')page='inbox';if(page==='ticket'&&current())persist(S.visit(read(),current().id).data);return setHubMode(hubLastMode);
+      case 'hub-minimize':return setHubMode('closed');
+      case 'hub-expand':return setHubMode('full');
+      case 'hub-shrink':return setHubMode('compact');
+      case 'hub-home':return go('inbox');
       case 'inspector-open':return openInspector({kind:el.dataset.kind,id:value},el);
       case 'inspector-list':return openInspector({kind:'list',section:value,query:''},el);
       case 'inspector-back':return backInspector();
@@ -8311,15 +8760,16 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'nav-inbox':history.replaceState({},'',location.pathname);return go('inbox');
       case 'nav-updates':return go('updates');
       case 'open-ticket':return routeTicket(value);
-      case 'open-update':{const ev=S.updates(data).find(x=>x.id===value);if(ev)return routeTicket(ev.ticketId,ev.id);break;}
+      case 'open-update':{const ev=S.attention(data,{actor}).updates.find(x=>x.id===value);if(ev)return routeTicket(ev.ticketId,ev.id);break;}
       case 'start-scenario':return startScenario(value||'pdf');
       case 'open-composer':return openComposer();
+      case 'resume-composer':return resumeComposer(value);
       case 'feedback-context-menu':return openCaptureMenu();
       case 'gather-context':closeCaptureMenu();return openComposer(value);
       case 'resume':if(current())return routeTicket(current().id);return startScenario(scenarioId);
       case 'open-console':saveDraft();consoleState.open=true;break;
       case 'close-console':saveDraft();consoleState.open=false;break;
-      case 'change-role':saveDraft();actor=value;historyVersion=null;break;
+      case 'change-role':if(!['Requester','Website team','Site owner'].includes(value))return;saveDraft();actor=value;historyVersion=null;syncUI();break;
       case 'change-mode':saveDraft();consoleState.mode=value;stopWatch();break;
       case 'walk-back':{saveDraft();stopWatch();historyVersion=null;const scenes=current()?.ux?.walk?.scenes||[];walkCursor=walkCursor===null?Math.max(0,scenes.length-1):Math.max(0,walkCursor-1);if(!scenes.length)return go('inbox');notice='Earlier walkthrough view. The current feedback has not changed.';break;}
       case 'walk-current':walkCursor=null;historyVersion=null;notice='Back at the current task. Your work is unchanged.';break;
@@ -8333,7 +8783,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'toggle-context':saveDraft();contextOpen=!contextOpen;render();configureDrawer(true);return;
       case 'filter-inbox':filter=value;break;
       case 'search-inbox':search=value;break;
-      case 'mark-read-all':{const next=read();next.feedbackExperience.read=[...new Set([...(next.feedbackExperience.read||[]),...S.updates(next).map(e=>e.id)])];persist(next);break;}
+      case 'mark-read-all':{const next=read();next.feedbackExperience.read=[...new Set([...(next.feedbackExperience.read||[]),...S.attention(next,{actor}).updates.map(e=>e.id)])];persist(next);break;}
       case 'simulate-email':return openEmail(S.updates(data).find(e=>e.ticketId===data.current));
       case 'open-attachment':return openAttachment(value);
       case 'view-version':saveDraft();walkCursor=null;historyVersion=Number(value);notice='Historical version. Return to the current task to take action.';break;
@@ -8350,12 +8800,12 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'legacy-authorize':return apply('authorize',{rev:rendered.rev});
       case 'legacy-publish':return apply('publish',{rev:rendered.rev});
       case 'legacy-adjust':return openUpdateComposer('adjust');
-      case 'keep-working':closeModal();return go('site');
+      case 'keep-working':closeModal();return setHubMode('closed');
       case 'close-dialog':return closeModal();
       case 'site-select-compartment':site.compartment=value;site.title=value==='1'?'Cooler':'Freezer';break;
       case 'site-title':site.title=value;return;
       case 'site-no-refrigeration':site.noRefrigeration=el.checked;return;
-      case 'site-save':site.savedNoRefrigeration=site.noRefrigeration;site.notice=scenarioId==='compartment'?'Saved. The section labels still do not identify which compartment they belong to.':site.noRefrigeration?'Saved. The selected equipment and amount are still visible — this is the issue to report.':'Saved. Refrigeration is included in this quote.';break;
+      case 'site-save':site.savedNoRefrigeration=site.noRefrigeration;site.notice=hostScenarioId==='compartment'?'Saved. The section labels still do not identify which compartment they belong to.':site.noRefrigeration?'Saved. The selected equipment and amount are still visible — this is the issue to report.':'Saved. Refrigeration is included in this quote.';break;
       case 'site-make-pdf':site.pdfGenerated=true;site.notice='PDF generated. It did not open automatically — this is the issue to report.';break;
       case 'site-workflow':site.section='workflow';break;
       case 'site-back':site.section='make-pdf';break;
@@ -8390,12 +8840,12 @@ if (typeof module==="object" && module.exports) module.exports = api;
   document.addEventListener('click',async event=>{const el=event.target.closest('[data-wq]');if(!el||!app.contains(el)&&!modal.contains(el)||['INPUT','SELECT','TEXTAREA'].includes(el.tagName))return;event.preventDefault();try{await handle(el.dataset.wq,el.dataset.value,el);}catch(e){stopWatch();showError(e);}});
   document.addEventListener('change',async event=>{const el=event.target;if(!app.contains(el)&&!modal.contains(el))return;try{if(el.dataset.wq)await handle(el.dataset.wq,el.value,el);else saveDraft();}catch(e){showError(e);}});
   app.addEventListener('input',event=>{const el=event.target;if(el.dataset.wq==='inspector-search'){const start=el.selectionStart;inspector.view={...inspector.view,query:el.value};render();const input=app.querySelector('[data-wq=inspector-search]');input?.focus({preventScroll:true});try{input?.setSelectionRange(start,start);}catch{}return;}if(el.matches('[data-wq="search-inbox"]')){search=el.value;return;}if(el.dataset.wq==='site-title')site.title=el.value;if(el.name||el.dataset.answerId||el.closest('[data-question-id]'))saveDraft();});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();pausePreparation();savePresentation();}else if(current()?.ux?.preparation?.paused)render();});
-  window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();savePresentation();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
-  window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';document.getElementById('live').textContent=notice;});
-  if(query.has('ticket'))routeTicket(query.get('ticket'),query.get('event'));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopWatch();saveDraft();syncUI();}else if(current()?.ux?.preparation?.paused)render();});
+  window.addEventListener('pagehide',()=>{stopWatch();pausePreparation();saveDraft();syncUI();for(const value of mediaCache.values())if(value.url)URL.revokeObjectURL(value.url);mediaCache.clear();});
+  window.addEventListener('storage',event=>{if(event.key!==S.key)return;notice='Feedback changed in another tab. Your current input is still here; reopen the task to see its latest state.';if(hub.mode==='closed'||page!=='ticket'){data=read();render();}if(document.getElementById('live'))document.getElementById('live').textContent=notice;});
+  if(query.has('ticket')){hub.mode=hubLastMode='full';routeTicket(query.get('ticket'),query.get('event'));}
   else if(query.has('workflow'))startScenario(query.get('workflow'));
-  else {if(page==='ticket'&&!current())page='inbox';if(page==='ticket'&&current()){restorePresentation(current());persist(S.visit(data,current().id).data);}notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
+  else {if(page==='ticket'&&!current())page='inbox';if(page==='ticket'&&current())restorePresentation(current());notice=current()?'Welcome back. Continue your feedback from its current step.':'';render();}
 })(globalThis);
 
 </script>

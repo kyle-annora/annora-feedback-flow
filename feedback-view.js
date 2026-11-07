@@ -120,7 +120,7 @@
   }
 
   function sampleEntry(vm) {
-    if (!array(vm.scenarios).length) return '';
+    if (vm.hub || !array(vm.scenarios).length) return '';
     return `<aside class="fs-sample-entry"><span>${icon('play', 16)}<span><strong>Try the same flow with a sample ticket</strong><small>Start with feedback, follow the handoffs, and review the result.</small></span></span>${button('open-console', 'Choose a sample', { quiet: true, arrow: true })}</aside>`;
   }
 
@@ -147,22 +147,23 @@
 
   function inbox(vm) {
     const all = array(vm.items);
-    const needsYou = item => ['draft', 'awaiting-answer', 'review'].includes(statusFor(item).phase);
+    const assignedTasks = vm.attention ? new Set(array(vm.attention.tasks).map(row => row.ticketId)) : null;
+    const needsYou = item => assignedTasks ? assignedTasks.has(item.id) : ['draft', 'awaiting-answer', 'review'].includes(statusFor(item).phase);
     const complete = item => statusFor(item).phase === 'published';
     const filter = vm.filter || 'all';
     const query = String(vm.search || '').toLowerCase().trim();
     const filtered = all.filter(item => (filter === 'all' || filter === 'needs-you' && needsYou(item) || filter === 'with-team' && !needsYou(item) && !complete(item) || filter === 'complete' && complete(item)) && (!query || (titleFor(vm, item) + ' ' + item.id + ' ' + item.c?.text).toLowerCase().includes(query)));
     filtered.sort((a, b) => Number(needsYou(b)) - Number(needsYou(a)) || orderTime(entryStatus(b).updatedAt) - orderTime(entryStatus(a).updatedAt));
     const filters = [['all', 'All', all.length], ['needs-you', 'Needs you', all.filter(needsYou).length], ['with-team', 'With the team', all.filter(item => !needsYou(item) && !complete(item)).length], ['complete', 'Complete', all.filter(complete).length]];
-    return `<section class="fs-inbox"><header class="fs-page-heading"><div><h1>My feedback</h1><p>One conversation from your first report to an accepted result.</p></div>${button('open-console', 'Walk through a ticket', { quiet: true, icon: 'play' })}</header>
+    return `<section class="fs-inbox"><header class="fs-page-heading"><div><h1>My feedback</h1><p>One conversation from your first report to an accepted result.</p></div>${vm.hub?'':button('open-console', 'Walk through a ticket', { quiet: true, icon: 'play' })}</header>
       ${notice(vm)}
       ${vm.current && !all.some(item => item.id === vm.current.id) ? `<div class="fs-resume">${icon('history', 17)}<span>Continue your current walkthrough.</span>${button('resume', 'Resume', { quiet: true, arrow: true })}</div>` : ''}
       <div class="fs-list-toolbar"><div class="fs-filters" aria-label="Filter feedback">${filters.map(([id, label, count]) => `<button type="button" data-wq="filter-inbox" data-value="${id}" aria-pressed="${id === filter}">${label}<small>${count}</small></button>`).join('')}</div><label class="fs-search">${icon('search', 15)}<input type="search" data-wq="search-inbox" value="${escape(vm.search)}" placeholder="Search feedback" aria-label="Search feedback"></label></div>
       <div class="fs-ticket-list">${filtered.length ? filtered.map(item => {
         const status = entryStatus(item);
         return `<button type="button" class="fs-ticket-row" data-wq="open-ticket" data-value="${escape(item.id)}"><span class="fs-row-icon">${icon(needsYou(item) ? 'ask' : complete(item) ? 'checks' : 'feedback', 18)}</span><span class="fs-row-main"><strong>${escape(titleFor(vm, item))}</strong><span>${escape(status.next || item.ux?.summary || item.c?.text)}</span><small>${escape(item.id)} <span aria-hidden="true">·</span> ${escape(status.owner)}</small><span class="fs-row-timing">${status.updatedAt ? `<span>Updated ${escape(displayTime(status.updatedAt))}</span>` : ''}${status.nextUpdate && !complete(item) ? `<span${status.overdue ? ' class="fs-overdue"' : ''}>${status.overdue ? 'Update overdue · ' : 'Next update · '}${escape(displayTime(status.nextUpdate))}</span>` : ''}</span></span>${badge(status)}${icon('next', 14)}</button>`;
-      }).join('') : `<div class="fs-empty">${icon(filter === 'all' ? 'feedback' : 'inbox', 24)}<h2>${filter === 'all' && !query ? 'Your feedback starts here' : 'Nothing in this view'}</h2><p>${filter === 'all' && !query ? 'Start from a sample quote, describe what gets in your way, and follow the same request through to a result.' : 'Try a different filter or search.'}</p></div>`}</div>
-      ${sampleEntry(vm)}
+      }).join('') : `<div class="fs-empty">${icon(filter === 'all' ? 'feedback' : 'inbox', 24)}<h2>${filter === 'all' && !query ? 'Your feedback starts here' : 'Nothing in this view'}</h2><p>${filter === 'all' && !query ? (vm.hub?'Report a problem on the page you’re using. Your questions, progress and results will stay together here.':'Start from a sample quote, describe what gets in your way, and follow the same request through to a result.') : 'Try a different filter or search.'}</p></div>`}</div>
+      ${vm.hub?hubDraftList(vm):sampleEntry(vm)}
     </section>`;
   }
 
@@ -753,5 +754,69 @@
     return `<div class="fs-app">${navigation(vm)}<section class="fs-main">${topbar(vm)}<main class="fs-content" id="feedback-main" tabindex="-1">${content}</main></section>${demoConsole(vm)}</div>`;
   }
 
-  root.FeedbackView = { render, task, questionGroups };
+  /* The shell changes presentation only. Identity, visits, read state and
+     navigation remain the controller's responsibility. */
+  function hubAttention(vm) {
+    return vm.attention || {tasks:[],taskCount:0,updates:[],unreadCount:0,hasUnread:false};
+  }
+  function hubLauncher(vm) {
+    const attention=hubAttention(vm),count=Math.max(0,Number(attention.taskCount)||0),draft=Boolean(vm.hub?.hasDraft);
+    const unread=Boolean(attention.hasUnreadFyi ?? attention.hasUnread);
+    const label='Feedback'+(count?' · '+count+' '+(count===1?'ticket needs':'tickets need')+' your attention':'')+(unread?' · Unread updates':'')+(draft?' · Saved draft':'');
+    return '<button type="button" class="fs-hub-launcher" data-wq="hub-open" data-feedback-private aria-label="'+escape(label)+'" aria-controls="feedback-hub" aria-expanded="'+(vm.hub?.mode!=='closed')+'">'+icon('feedback',20)+'<span>Feedback</span>'+(count?'<span class="fs-hub-task-count" aria-label="'+count+' actionable '+(count===1?'ticket':'tickets')+'">'+(count>99?'99+':count)+'</span>':'')+(unread?'<span class="fs-hub-unread-dot" aria-label="Unread updates"></span>':'')+(draft?'<span class="fs-hub-draft-indicator">Draft</span>':'')+'</button>';
+  }
+  function hubSource(vm) {
+    const h={...vm,scenario:vm.host?.scenario||vm.scenario,site:vm.host?.site||vm.site},s=h.site||{},kind=siteKind(h);
+    const section=s.section||(kind==='pdf'?'make-pdf':kind==='compartment'?'panels':'refrigeration');
+    return section==='workflow'?'Quote workflow':kind==='pdf'?'Make PDF':kind==='compartment'?'Panel configuration':'Refrigeration';
+  }
+  function hubHost(vm) {
+    const h={...vm,page:'site',current:null,error:'',notice:'',scenario:vm.host?.scenario||vm.scenario,site:vm.host?.site||vm.site};
+    return '<div class="fs-host-surface"><aside class="fs-host-navigation" aria-label="WinQuote navigation"><div class="fs-host-brand"><span class="winquote-symbol" aria-hidden="true"></span><span class="winquote-wordmark">WinQuote</span></div><nav><span>'+icon('globe',16)+'Home</span><span class="fs-host-active" aria-current="page">'+icon('rulers',16)+'Configure</span><span>'+icon('folder',16)+'Win Hub</span></nav><div class="fs-host-account">'+avatar('Requester')+'<span>Sample workspace<small>Quote MW-1042</small></span></div></aside><div class="fs-host-main"><header class="fs-host-topbar"><div><span>WinQuote</span><span aria-hidden="true">/</span><strong>'+escape(hubSource(vm))+'</strong></div>'+button('open-console','Demo controls',{quiet:true,icon:'play'})+'</header><main class="fs-host-content" id="host-main" tabindex="-1">'+sampleSite(h)+'</main></div></div>';
+  }
+  function hubTaskRow(vm,row) {
+    const item=array(vm.items).find(item=>item.id===row.ticketId),title=item?titleFor(vm,item):(row.title||row.ticketId);
+    const label=row.actionLabel||row.action||row.status?.next||'Open the current task',owner=row.owner||row.status?.owner||vm.actor||'Requester';
+    const timing=(row.updatedAt?'<span>Updated '+escape(displayTime(row.updatedAt))+'</span>':'')+(row.nextUpdate?'<span'+(row.overdue?' class="fs-overdue"':'')+'>'+(row.overdue?'Update overdue · ':'Next update · ')+escape(displayTime(row.nextUpdate))+'</span>':'');
+    return '<button type="button" class="fs-hub-task-row" data-wq="open-ticket" data-value="'+escape(row.ticketId)+'"><span class="fs-hub-row-icon">'+icon('ask',17)+'</span><span><strong>'+escape(title)+'</strong><span class="fs-hub-requested-action">'+escape(label)+'</span><small>'+escape(row.ticketId)+' <span aria-hidden="true">·</span> '+escape(actorName(owner))+'</small>'+(timing?'<span class="fs-hub-row-timing">'+timing+'</span>':'')+'</span>'+icon('next',14)+'</button>';
+  }
+  function hubUpdateRow(update) {
+    return '<button type="button" class="fs-hub-update-row'+(!update.read&&!update.readAt?' fs-hub-update-unread':'')+'" data-wq="open-update" data-value="'+escape(update.eventId||update.latestEventId||update.id)+'"><span class="fs-hub-row-icon">'+icon('bell',15)+'</span><span><strong>'+escape(update.title||update.label||'Feedback updated')+'</strong><small>'+escape(update.ticketId||update.recordId||'')+(update.at||update.createdAt?' · '+escape(displayTime(update.at||update.createdAt)):'')+'</small></span>'+icon('next',13)+'</button>';
+  }
+  function hubDraftList(vm) {
+    const drafts=array(vm.hub?.drafts);if(!drafts.length)return '';
+    return '<section class="fs-hub-draft-list"><h2>Saved drafts <small>'+drafts.length+'</small></h2>'+drafts.map(draft=>'<button type="button" class="fs-hub-update-row" data-wq="resume-composer" data-value="'+escape(draft.draftKey)+'"><span class="fs-hub-row-icon">'+icon('edit',15)+'</span><span><strong>'+escape(draft.kind==='update'?'Update '+draft.ticketId+' · V'+draft.rev:'New feedback · '+(draft.context?.page||'This page'))+'</strong><small>Saved on this device · Continue writing</small></span>'+icon('next',13)+'</button>').join('')+'</section>';
+  }
+  function hubHome(vm) {
+    const a=hubAttention(vm),tasks=array(a.tasks),count=Number(a.taskCount)||tasks.length;
+    const recent=array(a.updateGroups).length?array(a.updateGroups):array(a.updates);
+    const ordered=recent.slice().sort((x,y)=>orderTime(y.createdAt||y.at)-orderTime(x.createdAt||x.at)).slice(0,2);
+    const needs=tasks.length?'<div class="fs-hub-task-list">'+tasks.slice(0,3).map(row=>hubTaskRow(vm,row)).join('')+'</div>':'<div class="fs-hub-caught-up">'+icon('checks',20)+'<div><strong>No action needed right now</strong><p>Questions and review requests will appear here when it is your turn.</p></div></div>';
+    const compose='<section class="fs-hub-new-report"><div><h2>Something on this page?</h2><span>'+escape(hubSource(vm))+' · Quote MW-1042</span></div><button type="button" class="fs-hub-compose-entry" data-wq="open-composer">'+icon('edit',17)+'<span>Describe the problem…</span>'+icon('plus',17)+'</button><p>Page context, screenshots and voice notes can be added before you send.</p></section>';
+    return '<section class="fs-hub-home">'+notice(vm)+'<section class="fs-hub-needs"><header><h2>Needs you'+(count?'<small>'+count+'</small>':'')+'</h2>'+(count>3?button('hub-expand','View all',{quiet:true,icon:'next'}):'')+'</header>'+needs+'</section><section class="fs-hub-recent"><header><h2>Recent updates</h2>'+button('nav-updates','View updates',{quiet:true,icon:'next'})+'</header>'+(ordered.length?ordered.map(hubUpdateRow).join(''):'<p class="fs-hub-empty-updates">No updates yet. Your feedback will stay available here.</p>')+'</section>'+compose+hubDraftList(vm)+'</section>';
+  }
+  function hubCompactTicket(vm) {
+    const item=vm.current;if(!item)return hubHome(vm);
+    const status=statusFor(item,vm.status),p=panelPresentation(vm),readonly=Boolean(p.historical||vm.historyVersion||vm.walkHistory?.active);
+    const requested=array(hubAttention(vm).tasks).find(row=>row.ticketId===item.id);
+    const simple=!readonly&&(status.phase==='awaiting-answer'||actorName(status.owner)!==actorName(vm.actor)||status.phase==='published');
+    const requestText=p.request?.text||item.c?.text;
+    const heading='<header class="fs-hub-ticket-heading"><span>'+escape(item.id)+(vm.historyVersion?' · V'+escape(vm.historyVersion):'')+'</span><h2>'+escape(titleFor(vm,item))+'</h2><div>'+(readonly?'<span class="fs-status">Read-only</span>':badge(status))+'<span>'+escape(actorName(status.owner))+'</span></div></header>';
+    const currentTask=simple?'<section class="fs-task fs-hub-compact-task" aria-label="Current task">'+task(vm)+'</section>':'<section class="fs-hub-expand-task"><h3>'+escape(requested?.actionLabel||(readonly?'Review the saved version':status.label||'Open the current task'))+'</h3><p>'+escape(requested?.status?.next||status.next||'Open the workspace to review this task with its full context.')+'</p>'+button('hub-expand',readonly?'Open saved version':'Open full workspace',{primary:true,icon:'next'})+'</section>';
+    return '<article class="fs-hub-ticket">'+heading+notice(vm)+currentTask+(requestText?'<details class="fs-hub-original-report"><summary>Original report '+icon('down',13)+'</summary><p>'+escape(requestText)+'</p></details>':'')+'<div class="fs-hub-ticket-footer">'+button('hub-expand','History & details',{quiet:true,icon:'sidebar'})+'<span>'+(status.updatedAt?'Updated '+escape(displayTime(status.updatedAt)):'')+'</span></div></article>';
+  }
+  function hubHeader(vm,full) {
+    const isTicket=vm.page==='ticket',label=isTicket?vm.current?.id||'Feedback':vm.page==='updates'?'Updates':'Feedback';
+    const heading=isTicket||vm.page==='updates'?button('hub-home','Feedback',{quiet:true,icon:'back'})+'<span aria-hidden="true">/</span><strong>'+escape(label)+'</strong>':'<h1>Feedback</h1>';
+    return '<header class="fs-hub-header"><div class="fs-hub-header-title">'+heading+'</div><div class="fs-hub-header-actions">'+(full?'<div class="fs-hub-demo-controls">'+button('open-console','Demo controls',{quiet:true,icon:'play'})+'</div>':'')+(full&&isTicket?button('toggle-context','Details',{quiet:true,icon:'sidebar',controls:'feedback-details',expanded:vm.contextOpen}):'')+button(full?'hub-shrink':'hub-expand',full?'Compact view':'Open full page',{quiet:true,icon:full?'sidebar':'external'})+button('hub-minimize','Minimize',{quiet:true,icon:'cross'})+'</div></header>';
+  }
+  function renderHub(vm) {
+    const hub={mode:'closed',composing:false,...vm.hub};
+    const content=vm.page==='ticket'?(hub.mode==='full'?ticket(vm):hubCompactTicket(vm)):vm.page==='updates'?updates(vm):(hub.mode==='full'?inbox(vm):hubHome(vm));
+    const tabs=hub.mode==='full'?'<nav class="fs-hub-workspace-tabs" aria-label="Feedback workspace">'+button('nav-inbox','My feedback',{quiet:true,icon:'inbox',className:vm.page!=='updates'?'fs-hub-tab-selected':''})+button('nav-updates','Updates',{quiet:true,icon:'bell',className:vm.page==='updates'?'fs-hub-tab-selected':''})+button('open-composer','New feedback',{quiet:true,icon:'plus'})+'</nav>':'';
+    const surface=hub.mode!=='closed'&&!hub.composing?'<section id="feedback-hub" class="fs-hub-surface fs-hub-'+escape(hub.mode)+'" aria-label="Feedback workspace" data-feedback-private>'+hubHeader(vm,hub.mode==='full')+tabs+'<div class="fs-hub-content"><main id="feedback-main" class="fs-content" tabindex="-1">'+content+'</main></div></section>':'';
+    return '<div class="fs-hub-app" data-hub-mode="'+escape(hub.mode)+'">'+hubHost(vm)+surface+(!hub.composing&&hub.mode==='closed'?hubLauncher({...vm,hub}):'')+(vm.console?.open?demoConsole(vm):'')+'</div>';
+  }
+
+  root.FeedbackView = { render, renderHub, task, questionGroups };
 })(globalThis);

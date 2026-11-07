@@ -272,3 +272,140 @@ test('existing review tickets adopt evidence-first review without replacing manu
   assert.deepEqual(prepared.item.c.reviewFlow.scope,original.reviewFlow.scope);assert.deepEqual(prepared.item.c.versions,original.versions);
   assert.deepEqual(S.updates(prepared.data),[]);assert.deepEqual(S.migrate(prepared.data),prepared.data);
 });
+
+test('attention counts one current task per ticket independently of read events and visits',()=>{
+  let {data,item}=review();const id=item.id;
+  data=S.visit(data,id).data;
+  const before=clone(data),attention=S.attention(freeze(data));
+  assert.deepEqual(data,before,'Projecting the launcher must not consume visits, read state, or case history.');
+  assert.equal(attention.actor,'Requester');
+  assert.equal(attention.taskCount,1);
+  assert.equal(attention.tasks[0].ticketId,id);
+  assert.equal(attention.tasks[0].action,'review');
+  assert.equal(attention.tasks[0].actionLabel,'Review V1');
+  assert.equal(attention.tasks[0].rev,1);
+  assert.equal(attention.tasks[0].sequence,item.sequence);
+  assert.equal(attention.updates.length,2,'Shared plan and V1 delivery are separate events on the same ticket.');
+  assert.equal(attention.unreadCount,2);
+  assert.equal(attention.hasUnread,true);
+  assert.equal(attention.updateGroups.length,1);
+  assert.equal(attention.updateGroups[0].count,2);
+  assert.equal(attention.updateGroups[0].cta,'Open current task');
+  assert.equal(attention.unreadFyiCount,0,'Task-bearing tickets use the task badge rather than a second FYI indication.');
+  assert.equal(attention.hasUnreadFyi,false);
+  for(const event of attention.updates)data=S.markRead(data,event.id);
+  const after=S.attention(data);
+  assert.equal(after.unreadCount,0);
+  assert.equal(after.hasUnread,false);
+  assert.equal(after.taskCount,1,'Reading all messages cannot accept the candidate.');
+  assert.deepEqual(S.get(data,id).c,item.c);
+  assert.deepEqual(data.feedbackExperience.clients,before.feedbackExperience.clients);
+});
+
+test('attention keeps requester review, owner approval and team release as separate assignments',()=>{
+  let {data,item}=review();const id=item.id;
+  ({data,item}=command(data,id,'Requester','accept',{rev:1}));
+  const requester=S.attention(data),owner=S.attention(data,{actor:'Site owner'});
+  assert.equal(requester.taskCount,0);
+  assert.equal(requester.updates.some(event=>event.action==='accept'),false);
+  assert.ok(requester.updates.every(event=>event.recipient==='Requester'));
+  assert.equal(requester.unreadFyiCount,requester.unreadCount);
+  assert.equal(requester.hasUnreadFyi,true);
+  assert.equal(requester.updateGroups[0].cta,'View feedback');
+  assert.equal(owner.taskCount,1);
+  assert.equal(owner.tasks[0].action,'approve-release');
+  assert.equal(owner.tasks[0].rev,1);
+  assert.equal(owner.updates.length,1);
+  assert.equal(owner.updates[0].action,'accept');
+  assert.equal(owner.updateGroups[0].cta,'Open current task');
+  assert.equal(S.attention(data,{actor:'Website team'}).taskCount,0);
+  assert.throws(()=>command(data,id,'Requester','authorize',{rev:1}),/different role/);
+  ({data,item}=command(data,id,'Site owner','authorize',{rev:1}));
+  assert.equal(S.attention(data,{actor:'Site owner'}).taskCount,0);
+  assert.equal(S.attention(data).taskCount,0);
+  assert.equal(S.attention(data,{actor:'Website team'}).tasks[0].action,'release');
+  assert.equal(S.attention(data,{actor:'Website team'}).updates.length,0,'Tasks need not invent a new notification.');
+  ({data,item}=command(data,id,'Website team','publish',{rev:1}));
+  for(const actor of ['Requester','Site owner','Website team'])assert.equal(S.attention(data,{actor}).taskCount,0);
+  assert.equal(S.attention(data).updates[0].action,'publish');
+  assert.equal(item.c.receipt.rev,1);
+});
+
+test('attention follows a screened question to the exact bundle and changes ownership after the answer',()=>{
+  let {data,item}=add();const id=item.id;
+  assert.equal(S.attention(data,{actor:'Website team'}).tasks[0].action,'review-evidence');
+  assert.equal(S.attention(data).taskCount,0);
+  ({data,item}=command(data,id,'Website team','draft-questions'));
+  assert.equal(S.attention(data,{actor:'Website team'}).tasks[0].action,'screen-questions');
+  assert.equal(S.attention(data).taskCount,0);
+  ({data,item}=command(data,id,'Website team','save-questions',[businessQuestion]));
+  ({data,item}=command(data,id,'Website team','send-questions'));
+  const waiting=S.attention(data),event=waiting.updates[0];
+  assert.equal(waiting.taskCount,1);
+  assert.equal(waiting.tasks[0].action,'answer');
+  assert.equal(waiting.tasks[0].bundleId,item.c.reviewFlow.sentBundle.id);
+  assert.equal(S.attention(data,{actor:'Website team'}).taskCount,0);
+  data=S.markRead(data,event.id);
+  assert.equal(S.attention(data).taskCount,1);
+  ({data,item}=command(data,id,'Requester','answer',{bundleId:item.c.reviewFlow.sentBundle.id,answers:{business:'a'}}));
+  assert.equal(S.attention(data).taskCount,0);
+  const team=S.attention(data,{actor:'Website team'});
+  assert.equal(team.taskCount,1);
+  assert.equal(team.tasks[0].action,'update-plan');
+  assert.equal(team.tasks[0].actionLabel,'Draft an updated plan');
+  assert.equal(team.tasks[0].bundleId,null,'The answered bundle is history, not an outstanding answer action.');
+  assert.equal(S.resolve(data,id,event.id).stale,true);
+});
+
+test('attention limits records to the current client and customer provenance while recipient filtering stays fail-closed',()=>{
+  const own=review(),example=add(own.data,'compartment','attention-example',{example:true}),foreign=clone(own.item);
+  foreign.clientId='other-client';foreign.id='other-ticket';
+  foreign.ux.events=foreign.ux.events.map(event=>({...event,id:'other:'+event.id,ticketId:foreign.id}));
+  const data=S.migrate({...example.data,items:[...example.data.items,foreign]});
+  data.items[0].ux.events.push({id:'unknown-recipient',ticketId:own.item.id,action:'deliver',rev:1,title:'Unassigned legacy notice',at:'2026-01-01T00:00:00Z'});
+  const before=clone(data),p=S.attention(freeze(data));
+  assert.deepEqual(p.items.map(item=>item.id),[own.item.id]);
+  assert.deepEqual(p.tasks.map(task=>task.ticketId),[own.item.id]);
+  assert.ok(p.updates.every(event=>event.ticketId===own.item.id&&event.recipient==='Requester'));
+  assert.equal(p.updates.some(event=>event.id==='unknown-recipient'),false);
+  assert.equal(S.updates(data).some(event=>event.id==='unknown-recipient'),true,'Existing broad update API remains backward compatible.');
+  for(const actor of ['Unknown','Reviewer',null,'toString']){
+    const invalid=S.attention(data,{actor});
+    assert.equal(invalid.taskCount,0);
+    assert.deepEqual(invalid.updates,[]);
+    assert.equal(invalid.hasUnread,false);
+  }
+  assert.deepEqual(data,before);
+});
+
+test('attention distinguishes actionable legacy records from local drafts and never changes saved versions',()=>{
+  const E=require('./engine.js');
+  const phases=['draft','clarify','processing','blocked','review','release','authorized','published','unknown'];
+  const data=S.migrate({items:phases.map((stage,index)=>({id:'WQ-'+(400+index),clientId:'winquote',submissionOrigin:'customer',c:{...E.createCase(),stage},ux:{}})),serial:410,current:'WQ-400'});
+  const before=clone(data);
+  assert.deepEqual(S.attention(freeze(data)).tasks.map(task=>task.phase),['clarify','review']);
+  assert.deepEqual(S.attention(data,{actor:'Site owner'}).tasks.map(task=>task.phase),['release']);
+  assert.deepEqual(S.attention(data,{actor:'Website team'}).tasks.map(task=>task.phase),['processing','blocked','authorized']);
+  assert.equal(S.attention(data).items.length,phases.length,'A draft can be resumed without entering the assigned-task badge.');
+  assert.deepEqual(data,before);
+});
+
+test('attention distinguishes tasks on one ticket from unread FYI on another without consuming either',()=>{
+  const active=sentQuestion(),other=add(active.data,'compartment','attention-fyi');
+  let data=other.data;const first=active.item.id,second=other.item.id;
+  data=S.setExpectation(data,second,{at:'2031-01-01T12:00:00Z',reason:'The team will check the records.'}).data;
+  const result=S.attention(data);
+  assert.equal(result.taskCount,1);
+  assert.equal(result.tasks[0].ticketId,first);
+  assert.equal(result.updates.length,2);
+  assert.equal(result.unreadCount,2);
+  assert.equal(result.unreadFyiCount,1);
+  assert.equal(result.hasUnreadFyi,true);
+  assert.equal(result.updateGroups.find(group=>group.ticketId===first).cta,'Open current task');
+  assert.equal(result.updateGroups.find(group=>group.ticketId===second).cta,'View feedback');
+  const read=S.markRead(data,result.updates.find(event=>event.ticketId===second).id);
+  assert.equal(S.attention(read).taskCount,1);
+  assert.equal(S.attention(read).hasUnread,true);
+  assert.equal(S.attention(read).hasUnreadFyi,false);
+  assert.equal(read.feedbackExperience.clients,undefined);
+});

@@ -4,6 +4,15 @@ require('./feedback-view.js');
 const View = globalThis.FeedbackView;
 const E = require('./engine.js');
 const P = require('./feedback-presentation.js');
+function hubVM(overrides={}) {
+  const state=vm({page:'inbox',...overrides});
+  return {
+    ...state,
+    host:{scenario:{id:'refrigeration',ticketId:'fb_2026-09-23_001'},site:{section:'refrigeration',compartment:'1',cost:2400}},
+    hub:{mode:'closed',composing:false,hasDraft:false,...overrides.hub},
+    attention:{actor:'Requester',tasks:[],taskCount:0,updates:[],updateGroups:[],unreadCount:0,hasUnread:false,...overrides.attention}
+  };
+}
 function vm(overrides={}) {
   const c = E.createCase('Change the WinQuote homepage button from “Create” to “Start a quote”.');
   const item = {id:'WQ-TEST',c,ux:{}};
@@ -15,6 +24,73 @@ test('plain legacy feedback stays actionable in the unified workspace', () => {
   assert.match(html,/data-wq="legacy-submit"/);
   assert.doesNotMatch(html,/needs a different view|Open earlier paths/);
   assert.match(html,/role="tab"[^>]*data-wq="context-tab"/);
+});
+test('hub uses one persistent launcher with separate task, FYI and draft signals',()=>{
+  const state=hubVM({hub:{hasDraft:true},attention:{taskCount:2,hasUnread:true,hasUnreadFyi:true,unreadCount:7}});
+  const before=JSON.stringify(state),html=View.renderHub(state);
+  assert.equal((html.match(/data-wq="hub-open"/g)||[]).length,1);
+  assert.match(html,/2 actionable tickets/);assert.match(html,/Unread updates/);assert.match(html,/Saved draft/);
+  assert.doesNotMatch(html,/class="fs-feedback-split"|data-wq="feedback-context-menu"|fs-console-launcher/);
+  const host=html.match(/<aside class="fs-host-navigation"[\s\S]*?<\/aside>/)[0];
+  assert.doesNotMatch(host,/Feedback|data-wq="nav-inbox"/);
+  assert.match(html,/data-capture-region="Refrigeration options"/);
+  assert.equal(JSON.stringify(state),before);
+});
+test('compact home bounds personal tasks and recent updates without consuming or mutating them',()=>{
+  const tasks=Array.from({length:5},(_,i)=>({ticketId:'WQ-'+i,title:'Ticket '+i,owner:'Requester',actionLabel:'Answer question '+i,updatedAt:'2026-11-06T12:00:00Z'}));
+  const updates=Array.from({length:4},(_,i)=>({id:'event-'+i,ticketId:'WQ-'+i,title:'Update '+i,at:'2026-11-0'+(3+i)+'T12:00:00Z',read:false}));
+  const state=hubVM({hub:{mode:'compact'},attention:{tasks,taskCount:5,updates,hasUnread:true}});
+  const before=JSON.stringify(state),html=View.renderHub(state);
+  assert.equal((html.match(/class="fs-hub-task-row"/g)||[]).length,3);
+  assert.equal((html.match(/class="fs-hub-update-row/g)||[]).length,2);
+  assert.match(html,/Answer question 0/);assert.match(html,/Update 3/);assert.doesNotMatch(html,/Update 0/);
+  assert.match(html,/Something on this page\?/);assert.match(html,/Describe the problem/);
+  assert.match(html,/data-wq="open-composer"/);assert.doesNotMatch(html,/aria-modal|backdrop/);
+  assert.equal(JSON.stringify(state),before);
+});
+test('hub composition hides launcher and workspace while preserving the host capture surface',()=>{
+  const html=View.renderHub(hubVM({hub:{mode:'compact',composing:true}}));
+  assert.match(html,/class="fs-host-surface"/);assert.match(html,/data-feedback-surface/);
+  assert.doesNotMatch(html,/id="feedback-hub"|class="fs-hub-launcher"/);
+});
+test('compact review expands the same version rather than offering acceptance or release out of context',()=>{
+  const state=hubVM({page:'ticket',hub:{mode:'compact'},actor:'Requester',status:{owner:'Requester',label:'Ready for review',phase:'review'}});
+  state.current.c.reviewFlow={phase:'review'};state.current.c.rev=2;
+  state.presentation={request:{text:'Saved report'},candidate:'Saved V2',versions:[],basis:[],checks:[]};
+  const html=View.renderHub(state);
+  assert.match(html,/data-wq="hub-expand"/);
+  assert.doesNotMatch(html,/data-wq="accept"|data-wq="authorize"|data-wq="legacy-accept"/);
+  assert.match(html,/Saved report/);
+});
+test('full hub reuses the version inspector and shared attention predicate without a second workflow',()=>{
+  const state=hubVM({page:'inbox',hub:{mode:'full'},filter:'needs-you',attention:{taskCount:1,tasks:[{ticketId:'WQ-OWNER',actionLabel:'Approve release'}]}});
+  state.items=[
+    {id:'WQ-OLD',c:{text:'Not assigned to the current actor',stage:'review'},status:{phase:'review'}},
+    {id:'WQ-OWNER',c:{text:'Owner assigned release',stage:'accepted'},status:{phase:'accepted',owner:'Site owner'}}
+  ];
+  const html=View.renderHub(state);
+  const list=html.match(/<div class="fs-ticket-list">[\s\S]*?<\/section>/)[0];
+  assert.match(list,/WQ-OWNER/);assert.doesNotMatch(list,/WQ-OLD/);
+  assert.match(html,/class="fs-hub-surface fs-hub-full"/);assert.match(html,/data-wq="hub-shrink"/);
+  assert.match(html,/data-wq="nav-updates"/);
+});
+test('full hub keeps demo controls accessible in its own header without embedding role controls',()=>{
+  const state=hubVM({hub:{mode:'full'}}),html=View.renderHub(state);
+  const header=html.match(/<header class="fs-hub-header">[\s\S]*?<\/header>/)[0];
+  assert.match(header,/class="fs-hub-demo-controls"[\s\S]*?data-wq="open-console"[\s\S]*?Demo controls/);
+  assert.doesNotMatch(header,/change-role|change-mode|start-scenario/);
+  assert.doesNotMatch(html,/class="fs-console"/);
+  const compact=View.renderHub(hubVM({hub:{mode:'compact'}})).match(/<header class="fs-hub-header">[\s\S]*?<\/header>/)[0];
+  assert.doesNotMatch(compact,/open-console/);
+});
+test('compact task headline and next step have readable fallbacks when status has no next action',()=>{
+  const state=hubVM({page:'ticket',hub:{mode:'compact'},status:{phase:'review',owner:'Requester',label:undefined,next:undefined}});
+  state.current.c.reviewFlow={phase:'review'};
+  state.presentation={request:{text:'Saved report'},versions:[],basis:[],candidate:'Saved candidate',checks:[]};
+  const html=View.renderHub(state);
+  assert.match(html,/<h3>Open the current task<\/h3>/);
+  assert.match(html,/Open the workspace to review this task with its full context\./);
+  assert.doesNotMatch(html,/undefined/);
 });
 test('historical detail never borrows current request, basis, media or approval controls', () => {
   const state=vm({historyVersion:1,presentation:{historical:true,viewedRev:1,request:{text:null,attachments:[]},basis:[],versions:[],candidate:'Saved old wording',checks:[]}});

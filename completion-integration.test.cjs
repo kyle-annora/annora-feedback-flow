@@ -25,7 +25,7 @@ function controller(data,{query='',getMedia=async()=>{throw Error('No media fixt
  class URLWithMedia extends URL{}URLWithMedia.createObjectURL=blob=>{const url='blob:test-'+(createdURLs.length+1);createdURLs.push({url,blob});return url;};URLWithMedia.revokeObjectURL=url=>revokedURLs.push(url);
  const context={document,location,URL:URLWithMedia,URLSearchParams,Date,Intl,console,Promise,Map,Set,JSON,Math,Number,String,Boolean,Object,Array,
   FeedbackStore:S,CaseEngine:E,FeedbackPresentation:P,FlowScenarios:C,ResultModel:require('./result-model.js'),FeedbackMediaStore:{get:getMedia},
-  FeedbackView:{render(view){renders.push(clone(view));return '<div>Rendered test surface</div>';}},
+  FeedbackView:{renderHub(view){renders.push(clone(view));return '<div>Rendered test surface</div>';}},
   localStorage:{getItem:k=>local.get(k)||null,setItem:(k,v)=>local.set(k,String(v)),removeItem:k=>local.delete(k)},
   history:{replaceState(_state,_title,url){const next=new URL(url,location);location.href=next.href;}},
   matchMedia:()=>({matches:false}),innerWidth:1440,innerHeight:900,addEventListener(){},removeEventListener(){},scrollTo(){},
@@ -33,7 +33,7 @@ function controller(data,{query='',getMedia=async()=>{throw Error('No media fixt
  context.window=context;context.globalThis=context;vm.createContext(context);
  const ending=source.lastIndexOf('})(globalThis);');assert.ok(ending>0);
  const instrumented=source.slice(0,ending)+`globalThis.__test={handle,routeTicket,render,hydrateMedia,savePresentation,submitPayload,apply,
- state:()=>({data,page,actor,historyVersion,walkCursor,consoleState,contextTab,rendered,mediaCache:[...mediaCache]}),
+ state:()=>({data,page,actor,hub,hostScenarioId,site,hubDraft,historyVersion,walkCursor,consoleState,contextTab,rendered,mediaCache:[...mediaCache]}),
  set:patch=>{if('historyVersion'in patch)historyVersion=patch.historyVersion;if('walkCursor'in patch)walkCursor=patch.walkCursor;}};`+source.slice(ending);
  vm.runInContext(instrumented,context,{filename:'feedback-app.js'});
  return {api:context.__test,context,renders,last:()=>renders.at(-1),persisted:()=>JSON.parse(local.get(S.key)),externalWrite:value=>local.set(S.key,JSON.stringify(value)),createdURLs,revokedURLs,values,timers};
@@ -64,18 +64,20 @@ test('initial business-question preview stays private and its sent update return
  assert.ok(event);assert.equal(item.c.reviewFlow.sentBundle.id,'Q1');
  assert.equal(item.c.reviewFlow.sharedUnderstanding,null,'Asking did not require or silently share a default plan.');
  const returned=controller(data,{query:'?ticket='+id+'&event='+encodeURIComponent(event.id)});
- assert.equal(returned.last().actor,'Requester');
+ assert.equal(returned.last().actor,'Website team','A notification never changes the current demo role.');
+ assert.equal(S.updates(returned.persisted()).find(row=>row.id===event.id).read,false,'A team view cannot consume a customer notification.');
+ await returned.api.handle('change-role','Requester');returned.api.routeTicket(id,event.id);assert.equal(returned.last().actor,'Requester');
  assert.equal(returned.last().current.id,id);
  assert.equal(returned.last().current.c.reviewFlow.phase,'awaiting-answer');
  assert.equal(returned.last().current.c.reviewFlow.questionRounds.length,1);
  assert.equal(returned.last().historyVersion,null);
 });
 
-test('role, Watch mode and inspector tab restore on ordinary reload; notification deep links reset only the actionable perspective',async()=>{
+test('role, Watch mode and inspector tab restore on ordinary reload; notification deep links preserve the explicitly selected role',async()=>{
  const data=submitted(),id=data.current,app=controller(data,{query:'?ticket='+id});
  await app.api.handle('change-role','Website team');await app.api.handle('change-mode','watch');await app.api.handle('open-console');await app.api.handle('context-tab','activity');
  const reloaded=controller(app.persisted(),{query:'?ticket='+id});assert.equal(reloaded.last().actor,'Website team');assert.equal(reloaded.last().console.mode,'watch');assert.equal(reloaded.last().console.open,true);assert.equal(reloaded.last().contextTab,'activity');assert.equal(reloaded.last().console.playing,false);
- const event=S.get(data,id).ux.events.find(e=>e.action==='deliver');const notification=controller(app.persisted(),{query:'?ticket='+id+'&event='+encodeURIComponent(event.id)});assert.equal(notification.last().actor,'Requester');assert.equal(notification.last().historyVersion,null);assert.equal(notification.last().walkHistory.active,false);assert.equal(S.get(notification.persisted(),id).c.accepted,null);
+ const event=S.get(data,id).ux.events.find(e=>e.action==='deliver');const notification=controller(app.persisted(),{query:'?ticket='+id+'&event='+encodeURIComponent(event.id)});assert.equal(notification.last().actor,'Website team');assert.equal(notification.last().historyVersion,null);assert.equal(notification.last().walkHistory.active,false);assert.equal(S.get(notification.persisted(),id).c.accepted,null);
 });
 
 test('walkthrough back/current/restart changes presentation only and rejects business actions while replaying',async()=>{
@@ -158,16 +160,18 @@ test('2s and 40s preparation organizes materials without prematurely drafting a 
  const prepared=S.get(app.persisted(),item.id);assert.equal(prepared.c.reviewFlow.planPrepared,true);assert.ok(prepared.c.reviewFlow.scope.checks.length>0);assert.equal(prepared.c.reviewFlow.phase,'triage');assert.deepEqual(prepared.ux.events,[]);
 });
 
-test('leaving preparation pauses local timers and does not invent a completed background draft on return',async()=>{
+test('minimizing leaves each submitted ticket preparing in the background without inventing a plan',async()=>{
  const app=controller(workspace(),{query:'?workflow=pdf'});
- const item=await app.api.submitPayload({text:C.get('pdf').feedback,captureId:'paused-capture',context:{page:'Make PDF'},attachments:[]},true);
- await app.api.handle('keep-working');
- assert.equal([...app.timers.values()].some(timer=>timer.delay===2000||timer.delay===40000),false);
- app.api.routeTicket(item.id);
- assert.equal(S.get(app.persisted(),item.id).ux.preparation.stage,'context-ready');assert.equal(S.get(app.persisted(),item.id).c.reviewFlow.phase,'triage');
- await app.api.handle('resume-preparation');
- assert.equal(S.get(app.persisted(),item.id).ux.preparation.stage,'draft-ready');assert.ok([...app.timers.values()].some(timer=>timer.delay===38000));
- assert.equal(S.get(app.persisted(),item.id).c.reviewFlow.phase,'triage');
+ const item=await app.api.submitPayload({text:C.get('pdf').feedback,captureId:'background-capture',context:{page:'Make PDF'},attachments:[]},true);
+ const before=clone(S.get(app.persisted(),item.id).c);
+ await app.api.handle('keep-working');assert.equal(app.last().hub.mode,'closed');
+ const first=[...app.timers.values()].find(timer=>timer.delay===2000),second=[...app.timers.values()].find(timer=>timer.delay===40000);
+ assert.ok(first);assert.ok(second);first.fn();
+ assert.equal(S.get(app.persisted(),item.id).ux.preparation.stage,'draft-ready');assert.equal(app.last().hub.mode,'closed');
+ await app.api.handle('nav-inbox');second.fn();
+ assert.equal(S.get(app.persisted(),item.id).ux.preparation.stage,'team-review-pending');assert.deepEqual(S.get(app.persisted(),item.id).c,before);
+ assert.equal(S.updates(app.persisted()).length,0,'Preparation is not an invented sent customer update.');
+ app.api.routeTicket(item.id);assert.equal(app.last().current.id,item.id);
 });
 
 test('delay, return summary and revised checkpoints stay per-ticket and appear in the actual list/update renderer',async()=>{
@@ -185,7 +189,7 @@ test('delay, return summary and revised checkpoints stay per-ticket and appear i
  assert.equal(S.get(app.persisted(),first).ux.timing.expectationHistory.at(-1).at,promise);
  assert.equal(S.get(app.persisted(),second).ux.timing.nextUpdateAt,S.get(data,second).ux.timing.nextUpdateAt,'changing one checkpoint must not reschedule another ticket');
  await app.api.handle('nav-inbox');let html=View.render(app.last());assert.match(html,/Updated /);assert.match(html,/Next update/);assert.match(html,/Update overdue/);
- await app.api.handle('nav-updates');html=View.render(app.last());assert.equal((html.match(/class="fs-update-group"/g)||[]).length,2);assert.match(html,/earlier update/);assert.match(html,/The team set the next update/);
+ await app.api.handle('change-role','Requester');await app.api.handle('nav-updates');html=View.render(app.last());assert.equal((html.match(/class="fs-update-group"/g)||[]).length,2);assert.match(html,/earlier update/);assert.match(html,/The team set the next update/);
  const firstGroup=app.last().updateGroups.find(group=>group.ticketId===first);await app.api.handle('open-update',firstGroup.latestEventId);
  assert.equal(app.last().current.id,first);assert.equal(app.last().actor,'Requester');assert.deepEqual(S.get(app.persisted(),first).c,original.c);
 });
@@ -257,4 +261,65 @@ test('a stale floating update cannot mutate a version that advanced while compos
  await app.api.handle('adjust');const advanced=commit(data,'Requester','accept',{rev:1});app.externalWrite(advanced);
  await assert.rejects(()=>options.onSubmit({text:'An older draft',captureId:'stale-update',attachments:[],context:{}}),/changed/);
  assert.deepEqual(app.persisted(),advanced);
+ options.onClose({discarded:true});assert.equal(app.persisted().feedbackExperience.ui.hubDraft,null);
+ await app.api.handle('open-composer');assert.equal(options.context.ticket,undefined,'An explicitly discarded stale update no longer captures every new-report entry.');
+ assert.equal(options.context.quote,'MW-1042');assert.deepEqual(S.get(app.persisted(),id).c,S.get(advanced,id).c,'Discard never changes the accepted case or version.');
+});
+
+
+test('hub size changes preserve the exact version and business context and overview does not consume updates',async()=>{
+ const data=submitted(),id=data.current,app=controller(data,{query:'?ticket='+id});
+ const before=clone(S.get(app.persisted(),id).c),readBefore=clone(app.persisted().feedbackExperience.read);
+ await app.api.handle('view-version','1');await app.api.handle('hub-shrink');await app.api.handle('hub-minimize');await app.api.handle('hub-open');
+ assert.equal(app.last().historyVersion,1);assert.equal(app.last().current.id,id);assert.equal(app.last().hub.mode,'compact');
+ await app.api.handle('hub-expand');assert.equal(app.last().historyVersion,1);assert.equal(app.last().hub.mode,'full');
+ assert.deepEqual(S.get(app.persisted(),id).c,before);assert.deepEqual(app.persisted().feedbackExperience.read,readBefore);
+ await app.api.handle('hub-home');assert.equal(app.last().page,'inbox');assert.deepEqual(app.persisted().feedbackExperience.read,readBefore);
+ assert.equal(app.last().attention.taskCount,1);
+});
+
+test('report capture stays pinned to the host quote while another feedback ticket is open',async()=>{
+ const data=submitted(),id=data.current,app=controller(data,{query:'?workflow=refrigeration'});let options;
+ app.context.FeedbackComposer={open(value){options=value;return {close(){}};}};
+ app.api.routeTicket(id);await app.api.handle('open-composer');
+ assert.equal(options.scenarioId,'refrigeration');assert.equal(options.context.quote,'MW-1042');
+ assert.match(options.draftKey,/winquote:refrigeration:MW-1042:1:refrigeration/);
+ assert.equal(options.getContext().state.cost,2400);
+ await app.api.handle('start-scenario','compartment');assert.throws(()=>options.getContext(),/original quote and section/);
+});
+
+test('a saved draft descriptor resumes the original ticket/version even after a different view is selected',async()=>{
+ const data=submitted(),id=data.current,app=controller(data,{query:'?ticket='+id});let first;
+ app.context.FeedbackComposer={open(options){first=options;return {close(){}};}};
+ await app.api.handle('adjust');assert.equal(app.persisted().feedbackExperience.ui.hubDraft.ticketId,id);
+ const reloaded=controller(app.persisted());let resumed;
+ reloaded.context.FeedbackComposer={open(options){resumed=options;return {close(){}};}};
+ await reloaded.api.handle('hub-open');assert.equal(resumed.draftKey,first.draftKey);assert.equal(resumed.context.ticket,id);assert.equal(resumed.context.revision,1);
+});
+
+
+test('private drafts can return to the hub, start another report and recover the older version binding',async()=>{
+ const data=submitted(),id=data.current,app=controller(data,{query:'?ticket='+id});const openings=[];
+ app.context.FeedbackComposer={open(options){openings.push(options);return {close:async()=>true};}};
+ await app.api.handle('adjust');const old=openings.at(-1);await old.onWorkspace();
+ assert.equal(app.last().page,'inbox');assert.equal(app.last().hub.drafts.length,1);
+ await app.api.handle('start-scenario','refrigeration');await app.api.handle('open-composer');const newer=openings.at(-1);
+ assert.equal(newer.scenarioId,'refrigeration');assert.notEqual(newer.draftKey,old.draftKey);
+ assert.equal(app.persisted().feedbackExperience.ui.hubDrafts.length,2);
+ await newer.onWorkspace();await app.api.handle('resume-composer',old.draftKey);
+ assert.equal(openings.at(-1).context.ticket,id);assert.equal(openings.at(-1).context.revision,1);
+ const advanced=commit(app.persisted(),'Requester','accept',{rev:1});app.externalWrite(advanced);
+ await assert.rejects(()=>openings.at(-1).onSubmit({text:'Older saved request',captureId:'stale-registry',attachments:[],context:{}}),/changed/);
+ assert.equal(app.persisted().feedbackExperience.ui.hubDrafts.length,2);
+});
+
+
+test('submitting one report clears only its draft entry and retains other version-bound drafts',async()=>{
+ const data=submitted(),id=data.current,app=controller(data,{query:'?ticket='+id});const openings=[];
+ app.context.FeedbackComposer={open(options){openings.push(options);return {close:async()=>true};}};
+ await app.api.handle('adjust');const older=openings.at(-1);await older.onWorkspace();
+ await app.api.handle('open-composer');const report=openings.at(-1);assert.equal(app.persisted().feedbackExperience.ui.hubDrafts.length,2);
+ report.onClose({submitted:true});
+ assert.deepEqual(app.persisted().feedbackExperience.ui.hubDrafts.map(draft=>draft.draftKey),[older.draftKey]);
+ assert.equal(app.persisted().feedbackExperience.ui.hubResume,'workspace');
 });
