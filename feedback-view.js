@@ -112,7 +112,11 @@
   function topbar(vm) {
     const isTicket = vm.page === 'ticket';
     const crumb = vm.page === 'updates' ? 'Updates' : vm.page === 'site' ? 'Sample quote' : 'My feedback';
-    return `<header class="fs-topbar"><div class="fs-breadcrumb">${button(isTicket || vm.page === 'site' ? 'back' : 'nav-inbox', isTicket || vm.page === 'site' ? 'Back' : crumb, { quiet: true, icon: isTicket || vm.page === 'site' ? 'back' : 'inbox' })}${isTicket ? `<span class="fs-slash">/</span><span class="fs-ticket-id">${escape(vm.current?.id)}</span>` : ''}</div><div class="fs-top-actions">${isTicket ? button('toggle-context', 'Details', { quiet: true, icon: 'sidebar', controls: 'feedback-details', expanded: vm.contextOpen }) : ''}${button('open-console', 'Walkthrough', { quiet: true, icon: 'play' })}</div></header>`;
+    return `<header class="fs-topbar"><div class="fs-breadcrumb">${button(isTicket || vm.page === 'site' ? 'back' : 'nav-inbox', isTicket || vm.page === 'site' ? 'Back' : crumb, { quiet: true, icon: isTicket || vm.page === 'site' ? 'back' : 'inbox' })}${isTicket ? `<span class="fs-slash">/</span><span class="fs-ticket-id">${escape(vm.current?.id)}</span>` : ''}</div><div class="fs-top-actions">${isTicket ? button('toggle-context', 'Details', { quiet: true, icon: 'sidebar', controls: 'feedback-details', expanded: vm.contextOpen }) : ''}${vm.page === 'site' ? feedbackEntry() : button('open-console', 'Walkthrough', { quiet: true, icon: 'play' })}</div></header>`;
+  }
+
+  function feedbackEntry() {
+    return `<div class="fs-feedback-entry" data-feedback-private><div class="fs-feedback-split">${button('open-composer', 'Feedback', {primary:true, icon:'feedback'})}<button type="button" class="fs-feedback-chevron" data-wq="feedback-context-menu" aria-label="Choose how to gather page context" aria-haspopup="menu" aria-controls="feedback-context-menu" aria-expanded="false">${icon('down',16)}</button></div><div id="feedback-context-menu" class="fs-capture-menu" popover="auto" role="menu" aria-label="Gather page context"><p>Add context to your feedback</p>${[['element','target','Select an element','Attach its location and available page state'],['area','crop','Capture an area','Choose a tab, then crop the screenshot'],['page','camera','Capture this page','Choose this WinQuote tab to capture its visible view']].map(([mode,glyph,label,hint])=>`<button type="button" role="menuitem" data-wq="gather-context" data-value="${mode}">${icon(glyph,18)}<span><strong>${label}</strong><small>${hint}</small></span></button>`).join('')}</div></div>`;
   }
 
   function sampleEntry(vm) {
@@ -566,6 +570,11 @@
     }).join('')}</div>`;
   }
 
+  function correctionEvidence(corrections) {
+    if (!array(corrections).length) return '';
+    return panelFold('Updates to this feedback', corrections.length, corrections.map(correction=>`<section class="fs-correction-evidence"><h3>${escape(correction.id)} · Scope revision ${escape(correction.scopeCycle)}</h3><p>${escape(correction.text)}</p>${attachmentRows(array(correction.evidence?.attachments))}</section>`).join(''));
+  }
+
   function details(vm) {
     const p = panelPresentation(vm), c = vm.current.c;
     const tab = vm.contextTab === 'activity' ? 'activity' : 'details';
@@ -584,7 +593,7 @@
     const focus = versionFocus(p);
     const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + panelFold('Full saved plan', undefined, basisContents(p), { hint: 'V' + p.viewedRev }) : basisRows(p);
     const sourceNote = request.source?.note || request.sourceNote;
-    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${correctionEvidence(p.corrections)}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
       ${panelFold('Original feedback', undefined, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${sourceNote ? `<p class="fs-panel-note">${escape(sourceNote)}</p>` : ''}`)}
       ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
       ${questionHistory(p)}
@@ -632,7 +641,7 @@
       const cost = site.cost !== undefined && Number.isFinite(Number(site.cost)) ? Number(site.cost) : second ? 3200 : 2400;
       content = `<section class="fs-site-section" data-capture-region="Refrigeration options"><div class="fs-site-section-heading"><div><h2>Refrigeration equipment</h2><p>Compartment ${escape(compartment)} · ${second ? 'Freezer' : 'Cooler'}</p></div><span class="fs-small-status">Demo prices</span></div><label class="fs-refrigeration-option"><input type="checkbox" data-wq="site-no-refrigeration"${site.noRefrigeration ? ' checked' : ''}><span><strong>No Refrigeration Required</strong><small>The customer will supply their own refrigeration.</small></span></label><div class="fs-config-table"><div><span>Selected equipment</span><strong>${escape(equipment)}</strong></div><div><span>Equipment cost</span><strong>$${escape(cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</strong></div></div>${actions(button('site-save', 'Save refrigeration', { primary: true }))}<p class="fs-footnote">Sample quote values are used for this walkthrough.</p></section>`;
     }
-    return `<section class="fs-site" data-feedback-surface><div class="fs-site-heading"><div><span class="fs-quote-id">Quote MW-1042</span><h1>${pageTitle}</h1></div><span class="fs-small-status">Simulation</span></div><div class="fs-site-tabs"><span>Quote details</span><span>Compartments</span><span class="fs-site-tab-active">${pageTitle}</span><span>Workflow</span></div>${notice(vm)}${site.notice ? `<p class="fs-site-saved" role="status">${icon('check', 15)}${escape(site.notice)}</p>` : ''}${content}<div class="fs-site-report"><div>${icon('feedback', 19)}<span><strong>Something getting in your way?</strong><small>Your page context stays with the request.</small></span></div>${button('open-composer', 'Give feedback', { primary: true, icon: 'plus' })}</div></section>`;
+    return `<section class="fs-site" data-feedback-surface><div class="fs-site-heading"><div><span class="fs-quote-id">Quote MW-1042</span><h1>${pageTitle}</h1></div><span class="fs-small-status">Simulation</span></div><div class="fs-site-tabs"><span>Quote details</span><span>Compartments</span><span class="fs-site-tab-active">${pageTitle}</span><span>Workflow</span></div>${notice(vm)}${site.notice ? `<p class="fs-site-saved" role="status">${icon('check', 15)}${escape(site.notice)}</p>` : ''}${content}</section>`;
   }
 
   function demoConsole(vm) {

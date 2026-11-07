@@ -26,3 +26,29 @@ test('three image limit is actionable and requester-written transcript stays exp
  assert.throws(()=>Composer.canAdd([{kind:'image'},{kind:'image'},{kind:'image'}],'image'),/up to 3/);assert.doesNotThrow(()=>Composer.canAdd([{kind:'image'},{kind:'audio'}],'image'));
  const result=Composer.payload({text:'Issue',transcript:'I typed this',attachments:[]});assert.deepEqual(result.transcript,{text:'I typed this',source:'requester-written',generated:false});
 });
+
+test('screenshot crop bounds stay inside the original image, including overshoot and malformed edits',()=>{
+ assert.deepEqual(Context.cropBounds({x:-20,y:600,width:1000,height:1000},640,480),{x:0,y:479,width:640,height:1});
+ assert.deepEqual(Context.cropBounds({x:100.6,y:80.4,width:199.6,height:120.6},800,600),{x:101,y:80,width:200,height:121});
+ assert.deepEqual(Context.cropBounds({x:NaN,y:Infinity,width:-10,height:0},640,480),{x:0,y:0,width:1,height:1});
+});
+
+test('screenshot requires a supported browser and never silently fabricates an image',async()=>{
+ const original=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ try{Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{}}});await assert.rejects(Context.captureImage({mode:'page'}),/cannot capture a tab.*Add image/);}
+ finally{if(original)Object.defineProperty(globalThis,'navigator',original);else delete globalThis.navigator;}
+});
+
+test('capture approval starts synchronously, refuses non-tab sharing, stops every track and restores chrome',async()=>{
+ const originalNavigator=Object.getOwnPropertyDescriptor(globalThis,'navigator'),originalDocument=globalThis.document;
+ const flags=new Set();let invoked=false,stopped=0,release;
+ try{
+  globalThis.document={documentElement:{classList:{add:value=>flags.add(value),remove:value=>flags.delete(value)}}};
+  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getDisplayMedia:options=>{invoked=true;assert.equal(options.audio,false);assert.equal(options.preferCurrentTab,true);return new Promise(resolve=>release=resolve);}}}});
+  const pending=Context.captureImage({mode:'area'});assert.equal(invoked,true);assert.equal(flags.has('fc-capturing'),true);
+  const video={getSettings:()=>({displaySurface:'monitor'}),stop:()=>stopped++},audio={stop:()=>stopped++};release({getVideoTracks:()=>[video],getTracks:()=>[video,audio]});
+  await assert.rejects(pending,/Choose a browser tab/);assert.equal(stopped,2);assert.equal(flags.has('fc-capturing'),false);
+  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getDisplayMedia:()=>Promise.reject(Object.assign(new Error('Denied'),{name:'NotAllowedError'}))}}});
+  await assert.rejects(Context.captureImage({mode:'page'}),/permission was not granted.*draft is safe/);assert.equal(flags.has('fc-capturing'),false);
+ }finally{globalThis.document=originalDocument;if(originalNavigator)Object.defineProperty(globalThis,'navigator',originalNavigator);else delete globalThis.navigator;}
+});

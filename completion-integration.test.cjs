@@ -239,3 +239,22 @@ test('Back preserves incomplete private question edits across reload without mix
  assert.equal(resumed.last().formDraft?.questions,undefined,'The initial private editor cache cannot overwrite a different round.');
  assert.ok(S.get(resumed.persisted(),id).c.reviewFlow.questionDraft[0].text);
 });
+
+test('a floating update stays bound to its opening ticket even after navigation and role changes',async()=>{
+ let data=submitted(),id=data.current;
+ data=S.add(data,C.get('refrigeration'),{text:C.get('refrigeration').feedback,captureId:'second-ticket',attachments:[]}).data;
+ const other=data.current,otherBefore=JSON.stringify(S.get(data,other).c),v1=JSON.stringify(S.get(data,id).c.versions[0]);
+ const app=controller(data,{query:'?ticket='+id});let options;
+ app.context.FeedbackComposer={open(value){options=value;return {close(){}};}};
+ await app.api.handle('adjust');app.api.routeTicket(other);await app.api.handle('change-role','Website team');
+ await options.onSubmit({text:'Please keep the PDF result easy to find.',captureId:'bound-update',attachments:[{id:'bound-image',kind:'image',name:'Screenshot'}],context:{ticket:id,revision:1}});
+ const saved=app.persisted();assert.equal(saved.items.length,2);assert.equal(S.get(saved,id).c.rev,2);assert.equal(S.get(saved,id).c.reviewFlow.adjustmentEvidence.attachments[0].id,'bound-image');assert.equal(JSON.stringify(S.get(saved,other).c),otherBefore);assert.equal(JSON.stringify(S.get(saved,id).c.versions[0]),v1);assert.equal(app.last().current.id,id);
+});
+
+test('a stale floating update cannot mutate a version that advanced while composing',async()=>{
+ const data=submitted(),id=data.current,app=controller(data,{query:'?ticket='+id});let options;
+ app.context.FeedbackComposer={open(value){options=value;return {close(){}};}};
+ await app.api.handle('adjust');const advanced=commit(data,'Requester','accept',{rev:1});app.externalWrite(advanced);
+ await assert.rejects(()=>options.onSubmit({text:'An older draft',captureId:'stale-update',attachments:[],context:{}}),/changed/);
+ assert.deepEqual(app.persisted(),advanced);
+});

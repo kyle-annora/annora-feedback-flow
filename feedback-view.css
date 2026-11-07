@@ -787,3 +787,38 @@
   #feedback-root .fs-team-preparation > summary > svg { grid-column: 2; grid-row: 1/3; }
   #feedback-root .fs-team-preparation-body dl > div { grid-template-columns: 88px minmax(0,1fr); gap: 10px; }
 }
+
+/* In-page reporting: one split entry, evidence tools separate from sending. */
+#feedback-root .fs-feedback-split { display:flex; align-items:stretch; }
+#feedback-root .fs-feedback-split > .fs-button { min-height:38px; padding:8px 12px; border-radius:6px 0 0 6px; font-size:12px; }
+#feedback-root .fs-feedback-chevron { display:flex; align-items:center; justify-content:center; width:37px; border:1px solid #153e5c; border-left:1px solid #ffffff45; border-radius:0 6px 6px 0; background:#153e5c; color:#fff; cursor:pointer; }
+#feedback-root .fs-feedback-chevron:hover { background:#10334d; }
+#feedback-root .fs-capture-menu { position:fixed; inset:auto; margin:0; width:min(320px,calc(100vw - 24px)); padding:7px; border:1px solid #e6e6e6; border-radius:8px; background:#fff; color:#262626; box-shadow:0 10px 32px #00000018; font:13px/1.45 Inter,system-ui,sans-serif; }
+#feedback-root .fs-capture-menu::backdrop { background:transparent; }
+#feedback-root .fs-capture-menu > p { margin:5px 9px 8px; color:#595959; font-size:12px; }
+#feedback-root .fs-capture-menu > button { display:flex; align-items:flex-start; gap:11px; padding:11px 9px; width:100%; border:0; border-radius:5px; background:#fff; color:#262626; text-align:left; cursor:pointer; font:inherit; }
+#feedback-root .fs-capture-menu > button:hover { background:#f5f5f5; }
+#feedback-root .fs-capture-menu > button > svg { margin-top:2px; flex-shrink:0; }
+#feedback-root .fs-capture-menu strong { display:block; font-size:13px; font-weight:550; }
+#feedback-root .fs-capture-menu small { display:block; font-size:12px; line-height:1.5; color:#595959; margin-top:3px; }
+#feedback-root .fs-feedback-entry :focus-visible { outline:2px solid #516579; outline-offset:3px; }
+body.feedback-compose-open #feedback-root :is(.fs-console,.fs-console-launcher) { visibility:hidden; pointer-events:none; }
+body.feedback-compose-open #feedback-root .fs-app:has(.fs-console) :is(.fs-site,.fs-inbox) { margin-right:auto; padding-right:30px; }
+body.feedback-compose-minimized #feedback-root .fs-console-launcher { right:auto; left:220px; max-width:240px; }
+body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
+#feedback-modal-root .fs-dialog.fs-receipt-floating { position:fixed; inset:auto 24px 24px auto; margin:0; width:min(400px,calc(100vw - 32px)); padding:24px; max-height:calc(100dvh - 90px); z-index:1100; }
+#feedback-modal-root .fs-receipt-floating h2 { font-size:28px; }
+#feedback-modal-root .fs-receipt-floating .fs-receipt-mark { width:34px;height:34px;margin-bottom:12px; }
+#feedback-modal-root .fs-receipt-floating .fs-eyebrow { font:500 12px/1.5 Inter,system-ui,sans-serif; }
+#feedback-root .fs-correction-evidence { border-top:1px solid #e6e6e6; padding-top:16px; margin-top:16px; }
+#feedback-root .fs-correction-evidence h3 { font:550 12px/1.5 Inter,system-ui,sans-serif; margin:0 0 8px; }
+#feedback-root .fs-correction-evidence p { font-size:12px; color:#595959; margin:0 0 8px; }
+@media(max-width:600px){
+ #feedback-root .fs-feedback-split > .fs-button { min-height:44px; padding:9px 11px; font-size:12px; }
+ #feedback-root .fs-feedback-chevron { width:44px; }
+ #feedback-root .fs-topbar:has(.fs-feedback-entry) { min-height:60px; }
+ #feedback-root .fs-capture-menu > button { min-height:58px; }
+ body.feedback-compose-minimized #feedback-root .fs-console-launcher { left:14px; bottom:78px; max-width:220px; }
+ body.feedback-compose-minimized #feedback-root .fs-console { bottom:78px; max-height:calc(100dvh - 160px); }
+ #feedback-modal-root .fs-dialog.fs-receipt-floating { right:12px; bottom:max(12px,env(safe-area-inset-bottom)); width:calc(100vw - 24px); padding:22px; }
+}

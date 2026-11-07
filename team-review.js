@@ -448,7 +448,7 @@
         if (!hasJourney(f)) fail("This case does not use a shared-understanding step.");
         requirePhase(c,["spec-review","candidate","checking","ready"],action);
         if (!f.sharedUnderstanding) fail("The team must share an understanding before it can be corrected.");
-        const correction = {id:"C" + (f.understandingCorrections.length + 1),text:text(value?.text,"Understanding correction"),scopeCycle:f.journey.scopeCycle,understanding:clone(f.sharedUnderstanding)};
+        const correction = {id:"C" + (f.understandingCorrections.length + 1),text:text(value?.text,"Understanding correction"),scopeCycle:f.journey.scopeCycle,understanding:clone(f.sharedUnderstanding),evidence:revisionEvidence(value,c.rev,"Requester")};
         f.understandingCorrections = [...f.understandingCorrections,correction];
         resetPlan(f);
         f.sharedUnderstanding = {...f.sharedUnderstanding,needsRevision:true};

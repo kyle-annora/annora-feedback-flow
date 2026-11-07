@@ -50,7 +50,7 @@
     }
     async function put(blob, meta = {}) {
       const kind=validate(blob,meta), id=newId();
-      const manifest={id,blobKey:id,kind,mime:blob.type,name:String(meta.name || blob.name || (kind==='audio'?'Voice feedback':'Image')).replace(/[\u0000-\u001f]/g,'').slice(0,120),size:blob.size,createdAt:now(),source:['upload','paste','drop','recording'].includes(meta.source)?meta.source:'upload',localOnly:true,...(kind==='audio'?{duration:Math.min(meta.duration,limits.audioSeconds)}:{})};
+      const manifest={id,blobKey:id,kind,mime:blob.type,name:String(meta.name || blob.name || (kind==='audio'?'Voice feedback':'Image')).replace(/[\u0000-\u001f]/g,'').slice(0,120),size:blob.size,createdAt:now(),source:['upload','paste','drop','recording','screen-capture'].includes(meta.source)?meta.source:'upload',localOnly:true,...(kind==='audio'?{duration:Math.min(meta.duration,limits.audioSeconds)}:{})};
       await transaction(['media'],'readwrite',(tx,c)=>{tx.objectStore('media').add({id,blob,manifest,references:[]});c.set(copy(manifest));});
       return Object.freeze(copy(manifest));
     }

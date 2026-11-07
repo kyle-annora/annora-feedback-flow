@@ -261,3 +261,16 @@ The preparation sequence has two distinct artifacts: the early context brief lis
 The current team answer-review screen leads with Draft an updated plan beside the task heading (stacked beneath it at narrow widths), with an explicit private-draft boundary. Its first viewport exposes the next action at 1440px desktop and 390px mobile. This uses the existing Attio current-decision emphasis and Cycle team-verification reference; typography, neutral body copy and WinQuote navy stay unchanged.
 
 Show the latest requester answer once, followed by its proposed behavior and acceptance checks. Keep distinct answers, unsupported-answer notes and conflicting prior decisions visible. A pending adjustment with no changed behavior belongs in the flat Answer & adjustment context disclosure alongside original answer attribution. Drafting stays separate from Confirm & share plan. Submitted V1/V2 rendering and stored snapshots are unchanged.
+
+
+## Floating feedback composer · November 6 approved correction
+
+This section supersedes earlier modal/fullscreen capture descriptions for the current customer workspace. Legacy story URLs remain unchanged. The user approved one top-right split entry on the source business page: icon plus Feedback opens the draft; the icon-only chevron gathers context. Existing ticket correction and adjustment actions open the same composer and retain ticket/version identity.
+
+Keep the approved Cycle workspace and Attio type roles (Refero style 9f0c028b-6b11-415e-ab92-f32e4597cbe2); borrow only the attachment-next-to-input separation from Missive (Refero screen 42cdc92f-9db1-41d0-8b2e-320cd4f16b37). The floating panel is the user's explicit interaction decision. Use a 26px Source Serif Pro title, 13–14px Inter input/body, neutral text, 6px controls and a single navy Send footer. The panel has a soft offset shadow and 12px radius to distinguish its movable layer from the flat workspace.
+
+The editor is a nonmodal section at the bottom right, not a dialog backdrop. Minimize leaves a compact resumable draft with attachment count; save-close retains IndexedDB text and files. The page remains usable. Attachment input belongs near the textarea, not beside Send. Timing, audio alternatives and context use one-level disclosures. Mobile keeps the panel below a visible page strip with bounded scrolling and 44px controls. Demo controls yield the lower-right corner while composing.
+
+Select an element attaches allowlisted rendered context. Page/area screenshots require a user-selected browser tab and explicit preview confirmation, with keyboard crop adjustment. The stream stops after one frame; no source-code or full-page capture is implied. Unsupported capture retains the draft and points to Add image. The submission receipt is also nonmodal; optional confetti follows durable creation only.
+
+Corrections and adjustments are bound to the ticket/version/role at opening. Stale versions cannot be submitted silently. Correction materials appear in Details under Updates to this feedback, and each submitted version snapshots its own correction evidence. No later media is substituted into historical records.

@@ -238,6 +238,7 @@
       phase:historical?'history':c.reviewFlow?.phase||c.stage,kind:f?.kind||view.kind||'other',title:title(presentationCase,scenario),target:historical?(f?.target||null):knownTarget(c,scenario),
       request:{text,context,attachments,at:context?.capturedAt||sourceTrail.find(t=>t.action==='submit')?.at||(historical?null:item.ux?.createdAt)||null,unavailable:historical&&(!f||text===null),source:clone(f?.source)},understanding,basis,answers,
       candidate,checks,proposal:team||submitted?clone(view.proposal):null,versions:versionRows(c),recordedDecisions:decisions,questionRounds,
+      corrections:rows(f?.understandingCorrections).map((correction,index)=>({...clone(correction),evidence:clone(correction.evidence||(!historical&&index===f.understandingCorrections.length-1?item.ux?.correctionEvidence:null))})),
       activity,adjustment:historical?snapshot.adjustment:c.adjustment,adjustmentEvidence:clone(f?.adjustmentEvidence||(historical?snapshot.evidence?.adjustment:item.ux?.adjustmentEvidence)),preview:E.reviewPreview(historical?snapshot:c),
       why:why(item,{actor,rev:historical?snapshot.rev:undefined}),preparation:historical?null:preparation(item,undefined,{actor})};
     projection.reasoning=reasoningFor(item,projection,{actor,snapshot:basisSnapshot});

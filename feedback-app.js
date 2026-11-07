@@ -44,11 +44,11 @@
     const scenes=item?.ux?.walk?.scenes||[],snap=walkCursor===null?null:scenes[walkCursor];
     const display=snap?{...item,c:snap.c,ux:clone(snap.ux||{})}:item;
     const presentation=display?P.describe(display,{rev:historyVersion||undefined,actor}):null;
-    if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[]]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
+    if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[],...(presentation.corrections||[]).flatMap(c=>c.evidence?.attachments||[])]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
     return {presentation,walkHistory:{active:!!snap,index:snap?walkCursor:scenes.length,total:scenes.length,canBack:scenes.length>0&&(walkCursor===null||walkCursor>0),canForward:!!snap,label:snap?.label||'Current task',why:presentation?.why?.text||''}};
   }
   async function hydrateMedia(presentation){
-    const attachments=[...presentation?.request?.attachments||[],...presentation?.adjustmentEvidence?.attachments||[]];
+    const attachments=[...presentation?.request?.attachments||[],...presentation?.adjustmentEvidence?.attachments||[],...(presentation?.corrections||[]).flatMap(c=>c.evidence?.attachments||[])];
     const ids=new Set(attachments.map(a=>a.id).filter(Boolean));visibleMediaIds=ids;
     for(const [id,value] of mediaCache)if(!ids.has(id)){if(value.url)URL.revokeObjectURL(value.url);mediaCache.delete(id);}
     const pending=attachments.filter(a=>a.id&&!mediaCache.has(a.id));if(!pending.length)return;
@@ -175,10 +175,10 @@
     else preparationTimer=setTimeout(()=>{preparationTimer=null;prepare('draft-ready');},2000);
     backgroundTimer=setTimeout(()=>{backgroundTimer=null;prepare('team-review-pending');},resume?38000:40000);
   }
-  async function submitPayload(payload,simulated=false){
-    const r=S.add(read(),scenario(),payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
+  async function submitPayload(payload,simulated=false,sourceScenario=scenario()){
+    const r=S.add(read(),sourceScenario,payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
-    if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');if(!r.duplicate)celebrateSubmission();}
+    if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>',{floating:true});if(!r.duplicate)celebrateSubmission();}
     schedulePreparation(r.item.id);
     return r.item;
   }
@@ -206,8 +206,39 @@
       Promise.allSettled(animations.map(animation=>animation.finished)).then(cleanup);
     });
   }
-  function openComposer(){stopWatch();composer=root.FeedbackComposer.open({scenarioId,context:contextSnapshot(),feedback:scenario().feedback,draftKey:'winquote:'+scenarioId,selectionRoot:app.querySelector('[data-feedback-surface]')||app,onSubmit:payload=>submitPayload(payload),onClose:()=>{composer=null;}});}
-  function showModal(html){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;modal.innerHTML=html;if(!modal.open)modal.showModal();}
+  async function useComposer(options,mode){
+    stopWatch();
+    if(composer?.element?.isConnected && composer.draftKey!==options.draftKey){
+      if(!await composer.close())return;
+    }
+    // A native capture must start in this user gesture; gather waits for draft restoration internally.
+    composer=root.FeedbackComposer.open({...options,onClose:()=>{composer=null;}});
+    if(mode)void composer.gather(mode);
+    return composer;
+  }
+  function openComposer(mode){
+    const sourceScenario=clone(scenario()),id=scenarioId;
+    return useComposer({scenarioId:id,context:contextSnapshot(),feedback:sourceScenario.feedback,draftKey:'winquote:'+id,selectionRoot:()=>app.querySelector('[data-feedback-surface]')||app,getContext:()=>scenarioId===id&&page==='site'?contextSnapshot():null,onSubmit:payload=>submitPayload(payload,false,sourceScenario)},mode);
+  }
+  function openUpdateComposer(action,note=''){
+    if(historyVersion||walkCursor!==null)throw Error('Return to the current version before adding feedback.');
+    const id=rendered.ticketId,rev=rendered.rev,sequence=rendered.sequence,author=actor;
+    const correction=action==='correct-understanding';
+    return useComposer({scenarioId:scenarioId,title:correction?'Correct our understanding':'What needs to change?',description:'Your note and attachments stay with '+id+' · V'+rev+'. The website team will review them.',label:'Your note',submitLabel:'Send to the team',showTiming:false,allowSelection:false,feedback:note,draftKey:action+':'+id+':V'+rev+':'+sequence,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
+      const fresh=read(),original=S.get(fresh,id);
+      if(!original)throw Error('This feedback is unavailable. Your draft has been kept.');
+      recordScene(original);
+      const message=payload.text||'Please review the attached feedback evidence.';
+      const evidence={attachments:payload.attachments,captureId:payload.captureId,context:payload.context};
+      // Bind to the ticket, version and role at compose time, never to the page now behind the panel.
+      const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor:author,value:correction?{text:message,...evidence}:{rev,reason:message,...evidence}});
+      r.item.ux.drafts={};persist(r.data);routeTicket(id);notice='Your update and materials are with the website team. Saved to '+id+'.';render();
+    }});
+  }
+  function showModal(html,{floating=false}={}){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;if(modal.open)modal.close();modal.className='fs-dialog'+(floating?' fs-receipt-floating':'');modal.innerHTML=html;floating?modal.show():modal.showModal();}
+  function closeCaptureMenu(focus=false){const menu=app.querySelector('#feedback-context-menu'),trigger=app.querySelector('[data-wq=feedback-context-menu]');if(menu?.matches(':popover-open'))menu.hidePopover();trigger?.setAttribute('aria-expanded','false');if(focus)trigger?.focus();}
+  function openCaptureMenu(){const menu=app.querySelector('#feedback-context-menu'),trigger=app.querySelector('[data-wq=feedback-context-menu]');if(!menu||!trigger)return;if(menu.matches(':popover-open')){closeCaptureMenu(true);return;}const box=trigger.getBoundingClientRect();Object.assign(menu.style,{top:Math.round(box.bottom+8)+'px',right:Math.max(12,Math.round(innerWidth-box.right))+'px'});menu.showPopover();trigger.setAttribute('aria-expanded','true');menu.querySelector('button')?.focus();menu.ontoggle=()=>trigger.setAttribute('aria-expanded',String(menu.matches(':popover-open')));}
+  app.addEventListener('keydown',event=>{const menu=app.querySelector('#feedback-context-menu');if(event.target.closest('[data-wq=feedback-context-menu]')&&event.key==='ArrowDown'){event.preventDefault();openCaptureMenu();return;}if(!menu?.matches(':popover-open')||!menu.contains(event.target))return;if(event.key==='Escape'){event.preventDefault();closeCaptureMenu(true);return;}const buttons=[...menu.querySelectorAll('button')],index=buttons.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}else if(event.key==='Tab')closeCaptureMenu(false);});
   function restoreFocus(){const usable=el=>el?.isConnected&&el.matches('a[href],button,input,textarea,select,summary,[tabindex]')&&!el.disabled&&!el.closest('[inert]')&&el.getClientRects().length;const prior=usable(returnFocus)?returnFocus:null,matched=returnFocusSelector?app.querySelector(returnFocusSelector):null;const target=prior||(usable(matched)?matched:null)||app.querySelector('#feedback-main');target?.focus({preventScroll:true});}
   function closeModal(){if(modal.open)modal.close();resultState=null;restoreFocus();}
   modal.addEventListener('close',restoreFocus);
@@ -305,6 +336,8 @@
       case 'open-update':{const ev=S.updates(data).find(x=>x.id===value);if(ev)return routeTicket(ev.ticketId,ev.id);break;}
       case 'start-scenario':return startScenario(value||'pdf');
       case 'open-composer':return openComposer();
+      case 'feedback-context-menu':return openCaptureMenu();
+      case 'gather-context':closeCaptureMenu();return openComposer(value);
       case 'resume':if(current())return routeTicket(current().id);return startScenario(scenarioId);
       case 'open-console':saveDraft();consoleState.open=true;break;
       case 'close-console':saveDraft();consoleState.open=false;break;
@@ -338,7 +371,7 @@
       case 'legacy-accept':return apply('accept',{rev:rendered.rev});
       case 'legacy-authorize':return apply('authorize',{rev:rendered.rev});
       case 'legacy-publish':return apply('publish',{rev:rendered.rev});
-      case 'legacy-adjust':{const reason=field('reason').trim();if(!reason){showModal('<h2>What needs to change?</h2><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="legacy-adjust">Send to the team</button></div>');return;}const result=apply('adjust',{rev:rendered.rev,reason});closeModal();return result;}
+      case 'legacy-adjust':return openUpdateComposer('adjust');
       case 'keep-working':closeModal();return go('site');
       case 'close-dialog':return closeModal();
       case 'site-select-compartment':site.compartment=value;site.title=value==='1'?'Cooler':'Freezer';break;
@@ -356,14 +389,8 @@
       case 'confirm-scope':return apply('confirm-scope',formScope());
       case 'edit-candidate':{if(!app.querySelector('[name=approach]')&&(!modal.open||!modal.querySelector('[name=approach]'))){const scope=current().c.reviewFlow.candidateDraft||current().c.reviewFlow.scope;showModal('<h2>Edit version '+current().c.rev+'</h2><p>Editing this candidate clears its prepared result. Prepare it again before sending.</p><label class="fs-field">Proposed behavior<textarea name="approach" rows="5">'+esc(scope.approach)+'</textarea></label><label class="fs-field">Acceptance checks<textarea name="checks" rows="5">'+esc(scope.checks)+'</textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="edit-candidate">Save draft</button></div>');return;}const updated=apply('edit-candidate',{approach:field('approach'),checks:field('checks')});if(modal.open)closeModal();return updated;}
       case 'prepare-result':if(app.querySelector('[name=approach]'))apply('edit-candidate',{approach:field('approach'),checks:field('checks')},{quiet:true});return apply('prepare-result');
-      case 'adjust':case 'request-release-changes':case 'correct-understanding':{const reason=field('reason').trim();if(!reason){showModal('<h2>'+esc(action==='correct-understanding'?'Correct our understanding':'What needs to change?')+'</h2><p>Tell the team what is missing. Your note stays with this feedback.</p><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="'+action+'">Send to the team</button><button class="fs-button" data-wq="adjustment-media" data-value="'+action+'">Add image or recording</button></div>');return;}const v=action==='correct-understanding'?{text:reason}:{rev:rendered.rev,reason};const result=apply(action,v);closeModal();return result;}
-      case 'adjustment-media':{
-        const note=field('reason'),action=value,rev=rendered.rev,id=rendered.ticketId,sequence=rendered.sequence;
-        closeModal();composer=root.FeedbackComposer.open({title:'What needs to change?',description:'Add a note, image or recording for the website team. It will stay with this version.',label:'Your adjustment',submitLabel:'Send adjustment',showTiming:false,allowSelection:false,feedback:note,draftKey:'adjust:'+id+':V'+rev,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
-          if(action==='correct-understanding'){const result=apply(action,{text:payload.text||'Please review the attached adjustment evidence.'},{quiet:true});changeRecord(i=>{i.ux.correctionEvidence={rev,attachments:payload.attachments,context:payload.context};});render();return result;}
-          const fresh=read();recordScene(S.get(fresh,id));const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);savePresentation();notice='Your adjustment and materials are with the website team.';render();
-        },onClose:()=>{composer=null;}});return;
-      }
+      case 'adjust':case 'request-release-changes':case 'correct-understanding':return openUpdateComposer(action);
+      case 'adjustment-media':{const note=field('reason');closeModal();return openUpdateComposer(value,note);}
       case 'accept':case 'authorize':case 'publish':case 'retry-publish':return apply(action,{rev:current().c.rev});
       case 'publish-failed':return apply(action,{rev:current().c.rev,reason:'The simulated release attempt did not complete. The approved version is unchanged.'});
       case 'open-result':if(value)historyVersion=Number(value);return openResult();

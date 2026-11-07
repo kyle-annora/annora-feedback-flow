@@ -14,7 +14,7 @@ These cases have different evidence labels. Historical requests, recorded decisi
 
 ## How to try it
 
-1. Open **Walkthrough**, choose a **Sample ticket**, use its business page and select **Give feedback**. All examples enter the same feedback workspace. Keep the supplied text or write your own. Add real images or an audio recording, or select a page region to attach allowed DOM context.
+1. Open **Walkthrough**, choose a **Sample ticket**, use its business page and select **Feedback** in the top-right split button. All examples enter the same feedback workspace. Keep the supplied text or write your own. Add real images or an audio recording, or use the adjacent chevron to select an element, capture an area or capture the visible tab. The nonmodal panel can be minimized while you keep working; text, attachments and context stay in its local draft.
 2. Submit and keep working, or open the saved feedback. **My feedback** and **Updates** show only the current local customer's records. Images, audio and drafts stay on this device; a submitted attachment is not uploaded to a service.
 3. Open the floating **Walkthrough** console when you need to change perspective. **Practice** waits for your decisions. **Watch** runs explicitly labelled scripted decisions. Starting a watched example does not add it to the customer's feedback count.
 4. As **Website team**, start with the complaint, sourced facts and earlier decisions. New feedback has no prefilled complete plan. Choose **Use existing evidence** to prepare a private editable plan, or **Confirm with the customer** to review a question before sharing a plan. In the refrigeration example, the optional equipment-return question is available in this first review. Edit or omit it, answer from records, and keep technical decisions with the team. Only an explicitly sent batch reaches the requester. Initial clarification and later detailed questions remain optional; a preference already answered in the current scope is treated as a record instead of being asked again by default.
@@ -42,11 +42,11 @@ Selecting a submitted version reads only its frozen evidence. Older records that
 
 ## Real local behavior and simulated behavior
 
-Real: local form interaction, file upload/paste/drop, image previews, microphone recording and playback where supported, IndexedDB attachment persistence, allowed DOM region selection, local record/version guards, authored result interactions.
+Real: local form interaction, file upload/paste/drop, image previews, microphone recording and playback where supported, IndexedDB attachment persistence, allowed DOM region selection, user-authorized single-frame tab screenshots where supported, local record/version guards, authored result interactions.
 
 Simulated: AI drafting and interpretation, customer-message delivery, engineering implementation, quote/PDF amounts and documents, and business release. No live WinQuote quote, email, repository or deployment changes when a demo button is pressed. A perspective switch is a demo control, not authentication.
 
-The capture adapter records an allowlisted page/quote/compartment/time/build/state snapshot before opening the composer. Selected DOM text is not repository source code. It does not read cookies, credentials, all browser storage, production logs or arbitrary source files. Screenshots can be uploaded or pasted; this version does not automatically take a screenshot or share a screen. Audio is never given an invented transcript.
+The capture adapter records an allowlisted page/quote/compartment/time/build/state snapshot before opening the composer. Selected DOM text is not repository source code. It does not read cookies, credentials, all browser storage, production logs or arbitrary source files. Screenshots can be uploaded or pasted. On supported browsers, explicit screenshot capture asks you to choose a browser tab, captures one visible frame, immediately stops sharing, and lets you review or crop before attaching. It does not capture a full scrolling page or guarantee which tab you chose; choose the WinQuote tab. Unsupported devices and permission refusal retain the draft and offer Add image. Audio is never given an invented transcript.
 
 Data is local to the browser and origin. The standalone HTML may have different persistence or microphone behavior when opened as a local file; use the HTTPS demo or localhost for recording. No cross-device sync is promised.
 
@@ -69,3 +69,9 @@ Run `npm start` and open its printed local address. `npm test` checks the shared
 The current customer shell is `feedback-app.js` and `feedback-view.js`. `feedback-store.js` commits through the existing CaseEngine and storage key. `scenario-catalog.js` defines the three authored scenarios; `result-model.js` operates only their local result fixtures. Original walkthrough query routes continue through `studio.js`; old `legacy=1&ticket=...` links now open the canonical customer workspace. `feedback-presentation.js` projects current and historical evidence without mutating the case.
 
 The approved Source Serif Pro headings, Inter body and original WinQuote mark are bundled locally with provenance/licenses in `assets/`. Wesley's independent homepage design and the WinHub sitemap are separate deliverables.
+
+## Floating feedback composer
+
+The business page owns the top-right Feedback split button. Its main action opens a draft; the chevron offers page context capture. Attachment actions (Add image and Record voice) sit next to the text field, separate from Send. Minimize and save-close retain the draft and local files. Escape minimizes; focus returns to the entry without locking the business page. Mobile uses a partial-height bottom panel.
+
+Correct our understanding and Request changes use this same panel. Their submission is bound to the original ticket, role, version and sequence. Navigating elsewhere cannot redirect the update. A stale version fails safely with the draft intact. Correction evidence is saved with its scope revision and included in later submitted snapshots; historical versions keep their original evidence.

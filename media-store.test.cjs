@@ -55,3 +55,9 @@ test('storage unavailable and unsupported, oversize or overlong media give actio
  assert.throws(()=>validate(new Blob(['voice'],{type:'audio/webm'}),{duration:Infinity}),/playable/);
  assert.equal(validate(new Blob(['voice'],{type:'audio/webm;codecs=opus'}),{duration:120}),'audio');
 });
+
+test('screen capture keeps its actual source provenance across storage and reopen',async()=>{
+ const {store,indexedDB}=setup(),manifest=await store.put(image(),{name:'Captured tab.png',source:'screen-capture'});
+ assert.equal(manifest.source,'screen-capture');assert.equal((await createStore({indexedDB}).get(manifest.id)).manifest.source,'screen-capture');
+ const fallback=await store.put(image(),{source:'unverified-browser-context'});assert.equal(fallback.source,'upload');
+});

@@ -565,3 +565,16 @@ test("opt-in walkthroughs include public understanding and optional detailed dec
   assert.ok(legacy.every(frame=>frame.case.reviewFlow.journey === undefined));
   assert.ok(!legacy.some(frame=>frame.case.reviewFlow.phase === "spec-review"));
 });
+
+test('correction attachments remain with their own submitted snapshot and reject inline binary',()=>{
+ const source=sharedJourney();
+ assert.throws(()=>act(source,'correct-understanding',{text:'See screenshot',attachments:[{id:'x',kind:'image',dataUrl:'data:image/png;base64,AA=='}]}),/binary originals/);
+ let c=act(source,'correct-understanding',{text:'Keep the same quote open.',captureId:'correction-capture',context:{ticket:'WQ-X',revision:1},attachments:[{id:'original-image',kind:'image',name:'Quote.png'}]});
+ const evidence=c.reviewFlow.understandingCorrections[0].evidence;assert.equal(evidence.captureId,'correction-capture');assert.equal(evidence.attachments[0].id,'original-image');
+ c=act(c,'confirm-scope',{...c.reviewFlow.scope});for(const action of ['finish-spec','prepare-result','deliver'])c=act(c,action);
+ const v1=JSON.stringify(c.versions[0]);assert.equal(c.versions[0].reviewFlow.understandingCorrections[0].evidence.attachments[0].id,'original-image');
+ c=act(c,'adjust',{rev:1,reason:'Please clarify the next step.'});
+ c=act(c,'correct-understanding',{text:'Another observation.',attachments:[{id:'later-image',kind:'image',name:'Later.png'}]});
+ assert.equal(JSON.stringify(c.versions[0]),v1);
+ const P=require('./feedback-presentation.js'),old=P.describe({c,ux:{}},{rev:1});assert.equal(old.corrections.length,1);assert.equal(old.corrections[0].evidence.attachments[0].id,'original-image');assert.doesNotMatch(JSON.stringify(old.corrections),/later-image/);
+});

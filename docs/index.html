@@ -2300,30 +2300,111 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
   #feedback-root .fs-team-preparation-body dl > div { grid-template-columns: 88px minmax(0,1fr); gap: 10px; }
 }
 
+/* In-page reporting: one split entry, evidence tools separate from sending. */
+#feedback-root .fs-feedback-split { display:flex; align-items:stretch; }
+#feedback-root .fs-feedback-split > .fs-button { min-height:38px; padding:8px 12px; border-radius:6px 0 0 6px; font-size:12px; }
+#feedback-root .fs-feedback-chevron { display:flex; align-items:center; justify-content:center; width:37px; border:1px solid #153e5c; border-left:1px solid #ffffff45; border-radius:0 6px 6px 0; background:#153e5c; color:#fff; cursor:pointer; }
+#feedback-root .fs-feedback-chevron:hover { background:#10334d; }
+#feedback-root .fs-capture-menu { position:fixed; inset:auto; margin:0; width:min(320px,calc(100vw - 24px)); padding:7px; border:1px solid #e6e6e6; border-radius:8px; background:#fff; color:#262626; box-shadow:0 10px 32px #00000018; font:13px/1.45 Inter,system-ui,sans-serif; }
+#feedback-root .fs-capture-menu::backdrop { background:transparent; }
+#feedback-root .fs-capture-menu > p { margin:5px 9px 8px; color:#595959; font-size:12px; }
+#feedback-root .fs-capture-menu > button { display:flex; align-items:flex-start; gap:11px; padding:11px 9px; width:100%; border:0; border-radius:5px; background:#fff; color:#262626; text-align:left; cursor:pointer; font:inherit; }
+#feedback-root .fs-capture-menu > button:hover { background:#f5f5f5; }
+#feedback-root .fs-capture-menu > button > svg { margin-top:2px; flex-shrink:0; }
+#feedback-root .fs-capture-menu strong { display:block; font-size:13px; font-weight:550; }
+#feedback-root .fs-capture-menu small { display:block; font-size:12px; line-height:1.5; color:#595959; margin-top:3px; }
+#feedback-root .fs-feedback-entry :focus-visible { outline:2px solid #516579; outline-offset:3px; }
+body.feedback-compose-open #feedback-root :is(.fs-console,.fs-console-launcher) { visibility:hidden; pointer-events:none; }
+body.feedback-compose-open #feedback-root .fs-app:has(.fs-console) :is(.fs-site,.fs-inbox) { margin-right:auto; padding-right:30px; }
+body.feedback-compose-minimized #feedback-root .fs-console-launcher { right:auto; left:220px; max-width:240px; }
+body.feedback-compose-minimized #feedback-root .fs-console { bottom:90px; }
+#feedback-modal-root .fs-dialog.fs-receipt-floating { position:fixed; inset:auto 24px 24px auto; margin:0; width:min(400px,calc(100vw - 32px)); padding:24px; max-height:calc(100dvh - 90px); z-index:1100; }
+#feedback-modal-root .fs-receipt-floating h2 { font-size:28px; }
+#feedback-modal-root .fs-receipt-floating .fs-receipt-mark { width:34px;height:34px;margin-bottom:12px; }
+#feedback-modal-root .fs-receipt-floating .fs-eyebrow { font:500 12px/1.5 Inter,system-ui,sans-serif; }
+#feedback-root .fs-correction-evidence { border-top:1px solid #e6e6e6; padding-top:16px; margin-top:16px; }
+#feedback-root .fs-correction-evidence h3 { font:550 12px/1.5 Inter,system-ui,sans-serif; margin:0 0 8px; }
+#feedback-root .fs-correction-evidence p { font-size:12px; color:#595959; margin:0 0 8px; }
+@media(max-width:600px){
+ #feedback-root .fs-feedback-split > .fs-button { min-height:44px; padding:9px 11px; font-size:12px; }
+ #feedback-root .fs-feedback-chevron { width:44px; }
+ #feedback-root .fs-topbar:has(.fs-feedback-entry) { min-height:60px; }
+ #feedback-root .fs-capture-menu > button { min-height:58px; }
+ body.feedback-compose-minimized #feedback-root .fs-console-launcher { left:14px; bottom:78px; max-width:220px; }
+ body.feedback-compose-minimized #feedback-root .fs-console { bottom:78px; max-height:calc(100dvh - 160px); }
+ #feedback-modal-root .fs-dialog.fs-receipt-floating { right:12px; bottom:max(12px,env(safe-area-inset-bottom)); width:calc(100vw - 24px); padding:22px; }
+}
+
 </style><style>
-.feedback-composer{--fc-ink:#262626;--fc-muted:#737373;--fc-rule:#e6e6e6;--fc-blue:#153e5c;box-sizing:border-box;width:min(600px,calc(100vw - 40px));max-height:calc(100dvh - 64px);margin:auto;padding:0;border:1px solid var(--fc-rule);border-radius:10px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 18px 64px #0002;overflow:hidden}
-.feedback-composer::backdrop,.fc-viewer::backdrop{background:#17171755}
-.feedback-composer .fc-discard{margin:-6px 0 16px;font-size:12px}.feedback-composer [hidden]{display:none!important}
+.feedback-composer{--fc-ink:#262626;--fc-muted:#666;--fc-rule:#e6e6e6;--fc-blue:#153e5c;position:fixed;right:24px;bottom:24px;z-index:240;box-sizing:border-box;width:min(460px,calc(100vw - 48px));max-height:calc(100dvh - 96px);margin:0;padding:0;border:0;border-radius:12px;background:#fff;color:var(--fc-ink);font:14px/1.55 Inter,system-ui,sans-serif;box-shadow:0 6px 18px #18242e14,0 22px 64px #18242e26;overflow:hidden;isolation:isolate;caret-color:var(--fc-blue);scrollbar-color:#b9b9b9 #f5f5f5;scrollbar-width:thin}
+.feedback-composer[hidden],.feedback-composer [hidden]{display:none!important}
 .feedback-composer *,.fc-picker *,.fc-viewer *{box-sizing:border-box}
-.fc-form{display:flex;flex-direction:column;max-height:calc(100dvh - 66px);margin:0}
-.fc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:24px 28px 20px;border-bottom:1px solid var(--fc-rule)}
-.fc-eyebrow{font-size:12px;color:#737373}.fc-header h2{margin:5px 0 0;font:400 29px/1.2 "Source Serif Pro",Georgia,serif;letter-spacing:-.025em;text-wrap:balance}
-.fc-body{overflow-y:auto;overscroll-behavior:contain;padding:22px 28px;min-height:0}.fc-intro{margin:0 0 20px;color:#595959;max-width:45ch}
-.feedback-composer button,.feedback-composer select,.feedback-composer textarea{font:inherit;color:inherit}.feedback-composer button{cursor:pointer;border:1px solid var(--fc-rule);border-radius:6px;background:#fff;padding:7px 11px;line-height:1.4;min-height:36px}
-.feedback-composer button:hover{background:#f5f5f5}.feedback-composer button:disabled{opacity:.5;cursor:default}.feedback-composer :focus-visible,.fc-picker button:focus-visible,.fc-viewer button:focus-visible{outline:2px solid #516579;outline-offset:3px}
-.feedback-composer .fc-icon-button{font:25px/1 system-ui;border:0;width:32px;padding:0;flex-shrink:0}.fc-label{display:flex;justify-content:space-between;gap:12px;font-size:13px;font-weight:550;margin:0 0 8px}.fc-label span{font-size:12px;font-weight:400;color:#737373}
-.feedback-composer textarea{display:block;width:100%;min-height:110px;resize:vertical;max-height:240px;border:1px solid #d4d4d4;border-radius:6px;padding:12px;background:#fff}.feedback-composer textarea::placeholder{color:#8a8a8a}.feedback-composer select{border:1px solid #d4d4d4;border-radius:6px;min-height:38px;width:100%;padding:7px 10px;background:#fff}
-.fc-tools{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 14px}.fc-tools button{font-size:12px}.fc-file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(100%);pointer-events:none}
-.fc-drop-zone{padding:13px 16px;border:1px dashed #d4d4d4;border-radius:6px;background:#fafafa;color:#595959;font-size:12px;text-align:center}.fc-drop-zone span{display:block;color:#737373;font-size:11px;margin-top:3px}.fc-dragging .fc-drop-zone{border-color:var(--fc-blue);background:#edf2f6}
-.fc-audio-help{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:11px;color:#737373;margin:10px 0 24px}.fc-audio-help>span:first-child{flex-basis:100%}.feedback-composer .fc-audio-help button{border:0;padding:0;min-height:24px;color:#595959;text-decoration:underline;text-underline-offset:3px;font-size:11px}
-.fc-attachment{display:flex;align-items:center;gap:12px;border:1px solid var(--fc-rule);border-radius:6px;padding:10px;margin:0 0 8px}.feedback-composer .fc-thumbnail{width:64px;height:58px;padding:0;overflow:hidden;flex-shrink:0;background:#fafafa}.fc-thumbnail img{width:100%;height:100%;object-fit:cover}.fc-thumbnail span{font-size:10px}.fc-attachment-body{min-width:0;flex:1}.fc-attachment-body strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:550}.fc-attachment-body>span{display:block;font-size:11px;color:#737373;margin-top:3px}.fc-attachment audio{display:block;width:100%;max-width:350px;height:36px;margin-top:8px}.feedback-composer .fc-remove{font-size:11px;border:0;color:#737373;padding:6px;min-width:48px}
-.fc-recording{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #d4d4d4;border-radius:6px;margin-bottom:12px}.fc-recording[hidden]{display:none}.fc-recording-label{font-size:12px}.fc-recording-label:before{content:"";display:inline-block;width:7px;height:7px;background:#a54b31;border-radius:50%;margin-right:8px}.fc-recording>div{display:flex;gap:5px}.fc-recording button{font-size:11px}
-.fc-context{border-top:1px solid var(--fc-rule);margin-top:24px;padding-top:15px;font-size:12px;color:#595959}.fc-context summary{cursor:pointer;color:#595959;font-weight:500}.fc-context dl{display:grid;grid-template-columns:100px 1fr;gap:6px 12px;margin:14px 0 8px}.fc-context dt{color:#737373}.fc-context dd{margin:0;overflow-wrap:anywhere}.fc-context p{font-size:11px;color:#737373;margin:12px 0 0;line-height:1.6}.fc-context button{font-size:11px}
-.fc-footer{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 28px;border-top:1px solid var(--fc-rule);background:#fff;flex-shrink:0}.fc-footer>div{min-width:0}.fc-save-status{display:block;font-size:11px;color:#595959}.fc-footer small{display:block;font-size:10px;color:#737373;margin-top:4px;max-width:31ch}.feedback-composer .fc-primary{background:var(--fc-blue);border-color:var(--fc-blue);color:#fff;min-height:40px;white-space:nowrap;font-weight:550;padding:9px 15px}.feedback-composer .fc-primary:hover{background:#10334d}.feedback-composer .fc-retry{font-size:11px;padding:3px 0;min-height:25px;border:0;text-decoration:underline}.fc-error{padding:10px 12px;border:1px solid #d4d4d4;border-left:3px solid #a54b31;border-radius:4px;color:#595959;font-size:12px;margin:0 0 16px}.fc-error[hidden]{display:none}
-.fc-picker{position:fixed;inset:0;z-index:2147483000;cursor:crosshair;background:#00000006}.fc-picker-banner{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:20px;max-width:calc(100vw - 28px);padding:12px 16px;background:#fff;border:1px solid #d4d4d4;box-shadow:0 6px 24px #0002;border-radius:8px;color:#262626;font:13px/1.5 Inter,system-ui,sans-serif;cursor:default;z-index:1}.fc-picker-banner button{border:1px solid #d4d4d4;border-radius:5px;background:#fff;padding:6px 10px;white-space:nowrap;font:inherit;cursor:pointer}.fc-picker-outline{pointer-events:none;position:fixed;border:2px solid #153e5c;background:#153e5c0c;border-radius:4px}.fc-picker-outline[hidden]{display:none}
-.fc-viewer{width:min(1000px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:16px;border:1px solid #d4d4d4;border-radius:8px;background:#fff;color:#262626}.fc-viewer header{display:flex;gap:20px;align-items:center;justify-content:space-between;margin-bottom:12px;font:13px/1.5 Inter,system-ui,sans-serif}.fc-viewer header strong{overflow-wrap:anywhere;font-weight:500}.fc-viewer button{font-size:25px;padding:0 10px;border:0;background:#fff;cursor:pointer}.fc-viewer>img{display:block;max-width:100%;max-height:calc(100dvh - 120px);height:auto;object-fit:contain;margin:auto}
-@media(max-width:600px){.feedback-composer{width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0}.fc-form{height:100dvh;max-height:100dvh}.fc-header{padding:22px 20px 18px}.fc-header h2{font-size:28px}.fc-body{padding:20px;flex:1}.feedback-composer textarea,.feedback-composer select{font-size:16px}.fc-label{flex-wrap:wrap;gap:3px 8px}.fc-footer{padding:16px 20px max(16px,env(safe-area-inset-bottom));gap:12px}.feedback-composer button{min-height:40px}.feedback-composer .fc-primary{min-height:44px}.fc-tools{gap:7px}.fc-tools button{flex:1;padding:8px;font-size:12px;white-space:nowrap}.fc-recording{flex-wrap:wrap}.fc-picker-banner{top:10px;width:calc(100vw - 20px);gap:10px;font-size:12px}.fc-attachment{gap:8px}.fc-thumbnail{width:54px!important}.fc-attachment audio{min-width:0}.fc-footer small{max-width:23ch}.fc-save-status{font-size:10px}}
-@media(prefers-reduced-motion:no-preference){.feedback-composer[open]{animation:fc-enter .18s ease-out}@keyframes fc-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}}
+.feedback-composer ::selection{background:#dae5ec;color:#153e5c}
+.fc-form{display:flex;flex-direction:column;max-height:min(680px,calc(100dvh - 96px));margin:0}
+.fc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 15px;border-bottom:1px solid var(--fc-rule);flex-shrink:0}
+.fc-header>div:first-child{min-width:0}.fc-header h2{margin:0;font:400 26px/1.2 "Source Serif Pro",Georgia,serif;letter-spacing:-.025em;text-wrap:balance;color:var(--fc-ink)}
+.fc-destination{margin:7px 0 0;color:#666;font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums}
+.fc-window-actions{display:flex;gap:2px;flex-shrink:0;margin:-3px -5px 0 0}
+.fc-body{overflow-y:auto;overscroll-behavior:contain;padding:18px 20px 20px;min-height:0;scrollbar-gutter:stable}
+.fc-intro{margin:0 0 17px;color:#595959;font-size:13px;line-height:1.55;max-width:45ch;text-wrap:pretty}
+.feedback-composer button,.feedback-composer select,.feedback-composer textarea{font:inherit;color:inherit}
+.feedback-composer button{cursor:pointer;border:1px solid #d4d4d4;border-radius:6px;background:#fff;padding:7px 11px;line-height:1.4;min-height:36px}
+.feedback-composer button:hover{background:#f5f5f5}.feedback-composer button:active{background:#eceff1}.feedback-composer button:disabled{opacity:.5;cursor:default}
+.feedback-composer :focus-visible,.fc-picker button:focus-visible,.fc-viewer button:focus-visible{outline:2px solid #516579;outline-offset:3px}
+.feedback-composer .fc-icon-button{display:grid;place-items:center;border:0;width:32px;height:32px;min-height:32px;padding:0;flex-shrink:0;color:#595959}
+.fc-label{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:550;margin:0 0 8px}.fc-label span{font-size:11px;font-weight:400;color:#666}
+.feedback-composer textarea{display:block;width:100%;min-height:116px;resize:vertical;max-height:240px;border:1px solid #c9c9c9;border-radius:6px;padding:11px;background:#fff;line-height:1.55}
+.feedback-composer textarea::placeholder{color:#737373}.feedback-composer select{border:1px solid #d4d4d4;border-radius:6px;min-height:38px;width:100%;padding:7px 10px;background:#fff;font-size:13px}
+.fc-tools{display:flex;gap:5px;margin:7px -6px 12px;flex-wrap:wrap}
+.feedback-composer .fc-tools button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;padding:8px 9px;color:#595959;font-size:12px;background:transparent}
+.feedback-composer .fc-tools button:hover{background:#f2f3f4;color:#262626}.fc-tools svg{flex-shrink:0}
+.fc-file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(100%);pointer-events:none}
+.fc-drop-zone{padding:11px 12px;border:1px dashed #d4d4d4;border-radius:6px;color:#595959;font-size:12px;text-align:center;cursor:pointer}
+.fc-drop-zone:hover{background:#fafafa}.fc-drop-zone span{display:block;color:#666;font-size:11px;margin-top:2px}.fc-dragging .fc-drop-zone{border-color:var(--fc-blue);background:#edf2f6}
+.fc-audio-help{font-size:11px;color:#666;margin:12px 0 0}.fc-audio-help summary{cursor:pointer;min-height:24px;display:list-item}.fc-audio-help p{margin:7px 0;line-height:1.55}
+.feedback-composer .fc-audio-help button{border:0;padding:0;min-height:28px;color:#595959;text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.fc-timing{margin-top:12px;color:#595959;font-size:12px}.fc-timing summary{cursor:pointer;min-height:24px}.fc-timing summary span{font-size:11px;color:#666;margin-left:5px}.fc-timing[open] summary{margin-bottom:8px}.fc-time-label{font-size:12px;margin-bottom:6px}
+.fc-attachment{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--fc-rule);margin:0 0 8px}
+.feedback-composer .fc-thumbnail{width:58px;height:54px;padding:0;overflow:hidden;flex-shrink:0;background:#fafafa;border:0}
+.fc-thumbnail img{width:100%;height:100%;object-fit:cover}.fc-thumbnail span{font-size:10px}.fc-attachment-body{min-width:0;flex:1}
+.fc-attachment-body strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:550}
+.fc-attachment-body>span{display:block;font-size:11px;color:#666;margin-top:3px}.fc-attachment audio{display:block;width:100%;max-width:350px;height:36px;margin-top:8px}
+.feedback-composer .fc-remove{font-size:11px;border:0;color:#666;padding:6px;min-width:48px}
+.fc-recording{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid #d4d4d4;border-radius:6px;margin-bottom:12px}
+.fc-recording-label{font-size:12px;font-variant-numeric:tabular-nums}.fc-recording-label:before{content:"";display:inline-block;width:7px;height:7px;background:#a54b31;border-radius:50%;margin-right:8px}
+.fc-recording>div{display:flex;gap:5px}.fc-recording button{font-size:11px}
+.fc-context{border-top:1px solid var(--fc-rule);margin-top:18px;padding-top:14px;font-size:12px;color:#595959}.fc-context summary{cursor:pointer;color:#595959;font-weight:500;min-height:24px}
+.fc-context dl{display:grid;grid-template-columns:92px 1fr;gap:6px 10px;margin:12px 0}.fc-context dt{color:#666}.fc-context dd{margin:0;overflow-wrap:anywhere}
+.fc-context p{font-size:11px;color:#666;margin:10px 0 0;line-height:1.6}.feedback-composer .fc-context button{display:inline-flex;gap:6px;align-items:center;font-size:12px}
+.fc-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-top:1px solid var(--fc-rule);background:#fff;flex-shrink:0}
+.fc-footer>div{min-width:0}.fc-save-status{display:block;font-size:11px;color:#595959}.fc-footer small{display:block;font-size:10px;color:#666;margin-top:3px;max-width:28ch}
+.feedback-composer .fc-primary{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:var(--fc-blue);border-color:var(--fc-blue);color:#fff;min-height:42px;white-space:nowrap;font-weight:550;padding:9px 13px;font-size:13px}
+.feedback-composer .fc-primary:hover{background:#10334d}.feedback-composer .fc-primary:active{background:#0b2c42}
+.feedback-composer .fc-retry{font-size:11px;padding:3px 0;min-height:25px;border:0;text-decoration:underline;text-underline-offset:3px}
+.fc-error{padding:10px 12px;border:1px solid #c9c9c9;border-radius:6px;color:#595959;font-size:12px;margin:0 0 14px}
+.feedback-composer .fc-discard{margin:-6px 0 16px;font-size:12px}
+.feedback-composer.fc-minimized{width:min(320px,calc(100vw - 32px));border-radius:10px}
+.feedback-composer .fc-collapsed{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;border:0;border-radius:0;background:#fff;text-align:left;min-height:62px}
+.fc-collapsed>svg{flex-shrink:0;color:#153e5c}.fc-collapsed>span{min-width:0;flex:1}.fc-collapsed strong{display:block;font-size:13px;font-weight:550;color:#262626}.fc-collapsed small{display:block;font-size:11px;color:#666;margin-top:2px}
+.fc-picker{position:fixed;inset:0;z-index:2147483000;cursor:crosshair;background:transparent}.fc-picker-banner{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:20px;max-width:calc(100vw - 28px);padding:12px 16px;background:#fff;box-shadow:0 6px 24px #0002;border-radius:8px;color:#262626;font:13px/1.5 Inter,system-ui,sans-serif;cursor:default;z-index:1}.fc-picker-banner button{border:1px solid #d4d4d4;border-radius:5px;background:#fff;padding:6px 10px;white-space:nowrap;font:inherit;cursor:pointer}.fc-picker-outline{pointer-events:none;position:fixed;border:2px solid #153e5c;background:#153e5c0c;border-radius:4px}.fc-picker-outline[hidden]{display:none}
+.fc-viewer{width:min(1000px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:16px;border:0;border-radius:8px;background:#fff;color:#262626;box-shadow:0 16px 48px #0002}.fc-viewer::backdrop{background:#17171755}.fc-viewer header{display:flex;gap:20px;align-items:center;justify-content:space-between;margin-bottom:12px;font:13px/1.5 Inter,system-ui,sans-serif}.fc-viewer header strong{overflow-wrap:anywhere;font-weight:500}.fc-viewer button{display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:#fff;cursor:pointer}.fc-viewer>img{display:block;max-width:100%;max-height:calc(100dvh - 120px);height:auto;object-fit:contain;margin:auto}
+@media(max-width:600px){.feedback-composer{right:10px;bottom:max(10px,env(safe-area-inset-bottom));width:calc(100vw - 20px);max-height:calc(100dvh - 92px);border-radius:12px}.fc-form{max-height:calc(100dvh - 92px)}.fc-header{padding:17px 16px 13px}.fc-header h2{font-size:24px}.fc-body{padding:16px}.fc-intro{font-size:13px}.feedback-composer textarea,.feedback-composer select{font-size:16px}.fc-label{flex-wrap:wrap;gap:3px 8px}.fc-footer{padding:13px 16px;gap:9px}.feedback-composer button{min-height:44px}.feedback-composer .fc-icon-button{width:44px;height:44px;min-height:44px}.fc-window-actions{margin:-8px -9px 0 -6px;gap:0}.feedback-composer .fc-primary{min-height:44px;padding:9px 12px}.fc-tools{gap:2px}.feedback-composer .fc-tools button{min-height:44px;padding:8px;white-space:nowrap}.fc-recording{flex-wrap:wrap}.fc-picker-banner{top:10px;width:calc(100vw - 20px);gap:10px;font-size:12px}.fc-picker-banner button{min-height:44px}.fc-attachment{gap:8px}.fc-attachment audio{min-width:0}.fc-footer small{max-width:22ch}.fc-save-status{font-size:11px}.fc-audio-help summary,.fc-context summary,.fc-timing summary{min-height:36px;line-height:2.5}.feedback-composer .fc-audio-help button{min-height:44px}.feedback-composer.fc-minimized{right:10px;bottom:max(10px,env(safe-area-inset-bottom));width:min(320px,calc(100vw - 20px))}}
+@media(prefers-reduced-motion:no-preference){.feedback-composer{animation:fc-enter .18s cubic-bezier(.16,1,.3,1)}@keyframes fc-enter{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:none}}}
+
+</style><style>
+/* Temporary capture chrome is hidden from the approved screenshot. */
+.fc-capturing [data-feedback-composer],.fc-capturing [data-demo-console],.fc-capturing .fs-console,.fc-capturing .fs-console-launcher,.fc-capturing .fs-capture-menu{visibility:hidden!important}
+.fc-screen-preview{position:fixed;z-index:2147483002;right:24px;bottom:24px;width:min(720px,calc(100vw - 48px));max-height:calc(100dvh - 48px);display:flex;flex-direction:column;box-sizing:border-box;background:#fff;color:#262626;border-radius:12px;box-shadow:0 14px 52px #0003;font:14px/1.5 Inter,system-ui,sans-serif;overflow:hidden}
+.fc-screen-preview *{box-sizing:border-box}.fc-screen-preview [hidden]{display:none!important}
+.fc-screen-preview header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border-bottom:1px solid #e6e6e6;flex-shrink:0}
+.fc-screen-preview h2{font:400 25px/1.2 "Source Serif Pro",Georgia,serif;letter-spacing:-.025em;margin:0;text-wrap:balance}
+.fc-screen-preview button{font:500 13px/1.4 Inter,system-ui,sans-serif;border:1px solid #d4d4d4;border-radius:6px;min-height:40px;padding:9px 14px;background:#fff;color:#262626;cursor:pointer}.fc-screen-preview button:hover{background:#f5f5f5}.fc-screen-preview button:disabled{opacity:.55;cursor:wait}.fc-screen-preview header button{display:flex;align-items:center;justify-content:center;border:0;padding:10px;min-width:40px}
+.fc-screen-preview :focus-visible{outline:2px solid #516579;outline-offset:3px}.fc-screen-preview input{font:inherit}
+.fc-screen-body{padding:16px 22px;overflow:auto;min-height:0;overscroll-behavior:contain}.fc-screen-body>p:first-child{margin:0 0 14px;color:#595959;font-size:13px;max-width:64ch}
+.fc-screen-image{position:relative;width:100%;margin:0;overflow:hidden;line-height:0;background:#fafafa;border:1px solid #e6e6e6;border-radius:5px}.fc-screen-image[tabindex]{cursor:crosshair;touch-action:none}.fc-screen-image canvas{display:block;width:100%;height:auto}.fc-screen-selection{position:absolute;pointer-events:none;border:2px solid #153e5c;background:#153e5c12;box-shadow:0 0 0 1000px #ffffff66}
+.fc-screen-adjust{margin:14px 0 0;font-size:12px;color:#595959}.fc-screen-adjust summary{cursor:pointer;min-height:28px}.fc-screen-adjust>div{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.fc-screen-adjust label{display:block;font-size:11px}.fc-screen-adjust input{display:block;width:100%;min-height:36px;margin-top:4px;padding:6px;border:1px solid #d4d4d4;border-radius:5px;background:#fff;color:#262626}
+.fc-screen-source{color:#737373;font-size:11px;margin:14px 0 0;line-height:1.5}.fc-screen-error{font-size:12px;color:#595959;margin:12px 0 0}.fc-screen-preview footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid #e6e6e6;flex-shrink:0}.fc-screen-preview .fc-screen-primary{background:#153e5c;color:#fff;border-color:#153e5c}.fc-screen-preview .fc-screen-primary:hover{background:#10334d}
+@media(max-width:600px){.fc-screen-preview{right:8px;bottom:max(8px,env(safe-area-inset-bottom));width:calc(100vw - 16px);max-height:calc(100dvh - 72px)}.fc-screen-preview header{padding:15px 16px}.fc-screen-preview h2{font-size:23px}.fc-screen-body{padding:14px 16px}.fc-screen-preview footer{padding:12px 16px}.fc-screen-preview button{min-height:44px}.fc-screen-adjust>div{grid-template-columns:repeat(2,1fr)}.fc-screen-adjust input{font-size:16px;min-height:44px}}
 
 </style></head>
 <body>
@@ -4304,7 +4385,7 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
         if (!hasJourney(f)) fail("This case does not use a shared-understanding step.");
         requirePhase(c,["spec-review","candidate","checking","ready"],action);
         if (!f.sharedUnderstanding) fail("The team must share an understanding before it can be corrected.");
-        const correction = {id:"C" + (f.understandingCorrections.length + 1),text:text(value?.text,"Understanding correction"),scopeCycle:f.journey.scopeCycle,understanding:clone(f.sharedUnderstanding)};
+        const correction = {id:"C" + (f.understandingCorrections.length + 1),text:text(value?.text,"Understanding correction"),scopeCycle:f.journey.scopeCycle,understanding:clone(f.sharedUnderstanding),evidence:revisionEvidence(value,c.rev,"Requester")};
         f.understandingCorrections = [...f.understandingCorrections,correction];
         resetPlan(f);
         f.sharedUnderstanding = {...f.sharedUnderstanding,needsRevision:true};
@@ -5342,6 +5423,8 @@ body.showcase-active #nav,body.showcase-active #topbar{display:none}
 </script><script>
 (() => {
 const paths={
+ image:'M3 4h18v16H3zM3 16l5-5 4 4 3-3 6 6M8 8h.01', mic:'M9 4a3 3 0 0 1 6 0v8a3 3 0 0 1-6 0zM5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8', crop:'M7 3v14h14M3 7h14v14',camera:'M3 7h4l2-3h6l2 3h4v13H3zM12 9a4 4 0 1 0 .01 0z',
+
  bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4',
  menu:'M3 6h18M3 12h18M3 18h18',sidebar:'M3 5h18v14H3zM9 5v14', inbox:'M4 5h16l2 10v4H2v-4zM2 14h6l2 3h4l2-3h6', feedback:'M4 4h16v12h-9l-5 4v-4H4zM8 8h8m-8 4h5',
  search:'M16 16l4.5 4.5M10.5 4a6.5 6.5 0 1 0 .01 0z',plus:'M12 5v14M5 12h14',edit:'m14.5 5.5 4 4M4 20l4.8-1.1L20 7.7c.5-.5.5-1.2 0-1.7L18 4c-.5-.5-1.2-.5-1.7 0L5 15.2z',
@@ -6148,6 +6231,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       phase:historical?'history':c.reviewFlow?.phase||c.stage,kind:f?.kind||view.kind||'other',title:title(presentationCase,scenario),target:historical?(f?.target||null):knownTarget(c,scenario),
       request:{text,context,attachments,at:context?.capturedAt||sourceTrail.find(t=>t.action==='submit')?.at||(historical?null:item.ux?.createdAt)||null,unavailable:historical&&(!f||text===null),source:clone(f?.source)},understanding,basis,answers,
       candidate,checks,proposal:team||submitted?clone(view.proposal):null,versions:versionRows(c),recordedDecisions:decisions,questionRounds,
+      corrections:rows(f?.understandingCorrections).map((correction,index)=>({...clone(correction),evidence:clone(correction.evidence||(!historical&&index===f.understandingCorrections.length-1?item.ux?.correctionEvidence:null))})),
       activity,adjustment:historical?snapshot.adjustment:c.adjustment,adjustmentEvidence:clone(f?.adjustmentEvidence||(historical?snapshot.evidence?.adjustment:item.ux?.adjustmentEvidence)),preview:E.reviewPreview(historical?snapshot:c),
       why:why(item,{actor,rev:historical?snapshot.rev:undefined}),preparation:historical?null:preparation(item,undefined,{actor})};
     projection.reasoning=reasoningFor(item,projection,{actor,snapshot:basisSnapshot});
@@ -6473,7 +6557,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     }
     async function put(blob, meta = {}) {
       const kind=validate(blob,meta), id=newId();
-      const manifest={id,blobKey:id,kind,mime:blob.type,name:String(meta.name || blob.name || (kind==='audio'?'Voice feedback':'Image')).replace(/[\u0000-\u001f]/g,'').slice(0,120),size:blob.size,createdAt:now(),source:['upload','paste','drop','recording'].includes(meta.source)?meta.source:'upload',localOnly:true,...(kind==='audio'?{duration:Math.min(meta.duration,limits.audioSeconds)}:{})};
+      const manifest={id,blobKey:id,kind,mime:blob.type,name:String(meta.name || blob.name || (kind==='audio'?'Voice feedback':'Image')).replace(/[\u0000-\u001f]/g,'').slice(0,120),size:blob.size,createdAt:now(),source:['upload','paste','drop','recording','screen-capture'].includes(meta.source)?meta.source:'upload',localOnly:true,...(kind==='audio'?{duration:Math.min(meta.duration,limits.audioSeconds)}:{})};
       await transaction(['media'],'readwrite',(tx,c)=>{tx.objectStore('media').add({id,blob,manifest,references:[]});c.set(copy(manifest));});
       return Object.freeze(copy(manifest));
     }
@@ -6515,7 +6599,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
 })(globalThis);
 
 </script><script>
-/* Explicitly allowlisted DOM context. This is not a screenshot, source-code capture or telemetry SDK. */
+/* Allowlisted DOM context plus explicit, reviewed one-frame browser-tab screenshots. No source-code or telemetry collection. */
 (function(root){
  'use strict';
  const fields=['scenarioId','page','step','quote','quoteId','compartment','compartmentId','ticket','ticketId','revision','build','buildId','origin','simulated'];
@@ -6560,7 +6644,95 @@ if (typeof module==="object" && module.exports) module.exports = api;
   overlay.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(e.target.closest('button'))cancel();else if(!e.target.closest('.fc-picker-banner'))finish(find(e.clientX,e.clientY));});
   doc.addEventListener('keydown',keys,true);overlay.querySelector('button').focus();return {cancel};
  }
- const api={sanitize,capture,selection,pick};root.FeedbackCaptureContext=api;if(typeof module==='object'&&module.exports)module.exports=api;
+ // A one-frame, explicitly approved browser-tab capture. It never reads page source,
+ // records a stream, or attaches an image until the requester has reviewed it.
+ let imageCaptureActive=false;
+ function cropBounds(rect,width,height){
+  const w=Math.max(1,Math.round(Number(width)||1)),h=Math.max(1,Math.round(Number(height)||1));
+  const finite=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
+  const x=Math.max(0,Math.min(w-1,Math.round(finite(rect?.x,0)))),y=Math.max(0,Math.min(h-1,Math.round(finite(rect?.y,0))));
+  return {x,y,width:Math.max(1,Math.min(w-x,Math.round(finite(rect?.width,w)))),height:Math.max(1,Math.min(h-y,Math.round(finite(rect?.height,h))))};
+ }
+ function screenError(error){
+  if(error?.name==='NotAllowedError')return new Error('Screenshot permission was not granted. Your draft is safe. Try again, or use Add image.');
+  if(error?.name==='InvalidStateError')return new Error('Click Capture again to choose this WinQuote tab, or use Add image.');
+  if(error?.name==='NotReadableError')return new Error('The browser could not capture that tab. Try again, or use Add image.');
+  return error instanceof Error?error:new Error('The screenshot could not be captured. Use Add image instead.');
+ }
+ function canvasBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('The screenshot could not be prepared. Use Add image instead.')),'image/png'));}
+ function nextFrame(video){
+  if(video.readyState>=2&&video.videoWidth&&video.videoHeight)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+   let callback=null;
+   const finish=error=>{root.clearTimeout(timer);if(callback!==null)video.cancelVideoFrameCallback?.(callback);error?reject(error):resolve();};
+   const timer=root.setTimeout(()=>video.videoWidth&&video.videoHeight?finish():finish(new Error('No image arrived from the shared tab. Try again or use Add image.')),2200);
+   if(video.requestVideoFrameCallback)callback=video.requestVideoFrameCallback(()=>finish());
+   else root.setTimeout(()=>video.videoWidth&&video.videoHeight?finish():null,180);
+  });
+ }
+ function previewCapture(canvas,mode,source){
+  const doc=root.document,previous=doc.activeElement,panel=doc.createElement('section');
+  panel.className='fc-screen-preview';panel.dataset.feedbackPrivate='true';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');panel.setAttribute('aria-labelledby','fc-screen-title');
+  panel.innerHTML='<header><h2 id="fc-screen-title">'+(mode==='area'?'Select a screenshot area':'Review screenshot')+'</h2><button type="button" data-screen="cancel" aria-label="Cancel screenshot"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header><div class="fc-screen-body"><p id="fc-screen-help">'+(mode==='area'?'Drag over the image to choose an area. Arrow keys move the selection; Shift + arrows resize it.':'Check that this is the WinQuote page you meant to share.')+'</p><div class="fc-screen-image" '+(mode==='area'?'tabindex="0" role="group" aria-label="Screenshot crop selection" aria-describedby="fc-screen-help"':'')+'><canvas aria-label="Captured browser tab"></canvas><div class="fc-screen-selection" hidden></div></div>'+(mode==='area'?'<details class="fc-screen-adjust"><summary>Adjust selection</summary><div>'+['Left','Top','Width','Height'].map((label,index)=>'<label>'+label+' (%)<input type="number" min="0" max="100" step="1" data-crop="'+['x','y','width','height'][index]+'"></label>').join('')+'</div></details>':'')+'<p class="fc-screen-source">Shared tab screenshot · One image, no recording. Only the image you approve will be attached.</p><p class="fc-screen-error" role="alert" hidden></p></div><footer><button type="button" data-screen="cancel">Cancel</button><button type="button" class="fc-screen-primary" data-screen="use">'+(mode==='area'?'Use selected area':'Use screenshot')+'</button></footer>';
+  doc.body.append(panel);const stage=panel.querySelector('.fc-screen-image'),display=stage.querySelector('canvas'),outline=stage.querySelector('.fc-screen-selection'),use=panel.querySelector('[data-screen="use"]');
+  display.width=canvas.width;display.height=canvas.height;display.getContext('2d').drawImage(canvas,0,0);
+  let selection=mode==='area'?cropBounds({x:canvas.width*.1,y:canvas.height*.1,width:canvas.width*.8,height:canvas.height*.8},canvas.width,canvas.height):{x:0,y:0,width:canvas.width,height:canvas.height},start=null,done=false;
+  function draw(){
+   outline.hidden=mode!=='area';if(mode!=='area')return;
+   Object.assign(outline.style,{left:selection.x/canvas.width*100+'%',top:selection.y/canvas.height*100+'%',width:selection.width/canvas.width*100+'%',height:selection.height/canvas.height*100+'%'});
+   for(const input of panel.querySelectorAll('[data-crop]'))input.value=String(Math.round(selection[input.dataset.crop]/(['x','width'].includes(input.dataset.crop)?canvas.width:canvas.height)*100));
+  }
+  const point=event=>{const box=display.getBoundingClientRect();return {x:Math.max(0,Math.min(canvas.width,(event.clientX-box.left)/box.width*canvas.width)),y:Math.max(0,Math.min(canvas.height,(event.clientY-box.top)/box.height*canvas.height))};};
+  const position=event=>{if(!start)return;const end=point(event);selection=cropBounds({x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),width:Math.abs(end.x-start.x),height:Math.abs(end.y-start.y)},canvas.width,canvas.height);draw();};
+  stage.addEventListener('pointerdown',event=>{if(mode!=='area'||event.button!==0)return;event.preventDefault();stage.focus();start=point(event);stage.setPointerCapture(event.pointerId);position(event);});
+  stage.addEventListener('pointermove',position);stage.addEventListener('pointerup',event=>{if(!start)return;position(event);start=null;stage.releasePointerCapture?.(event.pointerId);});stage.addEventListener('pointercancel',()=>{start=null;});
+  stage.addEventListener('keydown',event=>{
+   if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+   event.preventDefault();const horizontal=['ArrowLeft','ArrowRight'].includes(event.key),sign=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1,key=event.shiftKey?(horizontal?'width':'height'):(horizontal?'x':'y'),limit=horizontal?canvas.width:canvas.height;
+   let value=selection[key]+sign*Math.max(1,Math.round(limit*.01));if(!event.shiftKey)value=Math.max(0,Math.min(limit-selection[horizontal?'width':'height'],value));selection=cropBounds({...selection,[key]:value},canvas.width,canvas.height);draw();
+  });
+  panel.addEventListener('change',event=>{const key=event.target.dataset.crop;if(!key)return;const limit=['x','width'].includes(key)?canvas.width:canvas.height;selection=cropBounds({...selection,[key]:Number(event.target.value)/100*limit},canvas.width,canvas.height);draw();});
+  draw();(mode==='area'?stage:use).focus();
+  return new Promise(resolve=>{
+   function cleanup(value){if(done)return;done=true;doc.removeEventListener('keydown',escape,true);root.removeEventListener('pagehide',cancel);panel.remove();if(previous?.isConnected)previous.focus({preventScroll:true});resolve(value);}
+   function cancel(){cleanup(null);}
+   function escape(event){if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cancel();}}
+   doc.addEventListener('keydown',escape,true);root.addEventListener('pagehide',cancel,{once:true});
+   panel.addEventListener('click',async event=>{
+    const action=event.target.closest('[data-screen]')?.dataset.screen;if(action==='cancel'){cancel();return;}if(action!=='use'||use.disabled)return;
+    use.disabled=true;use.textContent='Preparing image…';
+    try{const cropped=doc.createElement('canvas');cropped.width=selection.width;cropped.height=selection.height;cropped.getContext('2d').drawImage(canvas,selection.x,selection.y,selection.width,selection.height,0,0,selection.width,selection.height);const blob=await canvasBlob(cropped);if(done)return;
+     const file=new root.File([blob],mode==='area'?'Shared-tab-selected-area.png':'Shared-tab-screenshot.png',{type:'image/png'});
+     cleanup({file,context:{kind:'Shared tab screenshot',capturedAt:source.capturedAt,source:'user-selected browser tab',screenshot:true,sourceCode:false,width:selection.width,height:selection.height,...(mode==='area'?{crop:{...selection},sourceWidth:canvas.width,sourceHeight:canvas.height}:{})}});
+    }catch(error){const message=panel.querySelector('.fc-screen-error');message.textContent=error.message;message.hidden=false;use.disabled=false;use.textContent=mode==='area'?'Use selected area':'Use screenshot';}
+   });
+  });
+ }
+ async function captureImage({mode='page'}={}){
+  if(!['page','area'].includes(mode))throw new Error('Choose a page screenshot or selected screenshot area.');
+  if(imageCaptureActive)throw new Error('Finish or cancel the current screenshot first.');
+  const doc=root.document,devices=root.navigator?.mediaDevices;
+  if(!doc||!devices?.getDisplayMedia)throw new Error('This browser cannot capture a tab. Take a screenshot and use Add image instead.');
+  imageCaptureActive=true;let stream=null,video=null,canvas=null;const capturedAt=new Date().toISOString();
+  try{
+   // This call intentionally precedes every await: browser approval needs the click's activation.
+   const permission=devices.getDisplayMedia({video:{displaySurface:'browser'},audio:false,preferCurrentTab:true,selfBrowserSurface:'include',surfaceSwitching:'exclude',monitorTypeSurfaces:'exclude'});
+   doc.documentElement.classList.add('fc-capturing');
+   try{
+    stream=await permission;const track=stream.getVideoTracks()[0];if(!track||track.getSettings?.().displaySurface!=='browser')throw new Error('Choose a browser tab for the screenshot. Try again and select this WinQuote tab, or use Add image.');
+    video=doc.createElement('video');video.muted=true;video.playsInline=true;video.srcObject=stream;await video.play();await nextFrame(video);
+    // Capture only the frame after the composer/presenter surfaces have been hidden.
+    await new Promise(resolve=>root.setTimeout(resolve,120));
+    if(!video.videoWidth||!video.videoHeight)throw new Error('The tab returned an empty image. Try again or use Add image.');
+    const scale=Math.min(1,4096/Math.max(video.videoWidth,video.videoHeight));canvas=doc.createElement('canvas');canvas.width=Math.max(1,Math.round(video.videoWidth*scale));canvas.height=Math.max(1,Math.round(video.videoHeight*scale));canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+   }finally{
+    for(const track of stream?.getTracks()||[])track.stop();if(video){video.pause();video.srcObject=null;}doc.documentElement.classList.remove('fc-capturing');
+   }
+   return await previewCapture(canvas,mode,{capturedAt});
+  }catch(error){throw screenError(error);}finally{imageCaptureActive=false;}
+ }
+
+ const api={sanitize,capture,selection,pick,captureImage,cropBounds};root.FeedbackCaptureContext=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
 
 </script><script>
@@ -6617,55 +6789,72 @@ if (typeof module==="object" && module.exports) module.exports = api;
 })(globalThis);
 
 </script><script>
-/* Independent feedback dialog; host owns ticket creation and never shares its business DOM. */
+/* Resumable, nonmodal feedback composer. The host owns the original ticket and submission boundary. */
 (function(root){
  'use strict';
  const copy=value=>JSON.parse(JSON.stringify(value));
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const whenLabels={'just-now':'Just now','earlier-today':'Earlier today','not-sure':'Not sure'};
+ const paths={image:'M4 4h16v16H4zM4 15l5-5 5 5 3-3 3 3M15.5 8h.01',mic:'M9 5a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0zM6 10v1a6 6 0 0 0 12 0v-1M12 17v5m-4 0h8',close:'m6 6 12 12M18 6 6 18',minimize:'M5 12h14',expand:'m7 14 5-5 5 5',feedback:'M4 4h16v12h-9l-5 4v-4H4zM8 8h8m-8 4h5',target:'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M12 8a4 4 0 1 0 .1 0z',send:'M4 12h15m-6-6 6 6-6 6'};
+ const icon=name=>'<svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="'+paths[name]+'"/></svg>';
  let active=null;
+ function contextForAttachments(context={},attachments=[]){
+  const result=copy(context),ids=new Set(attachments.filter(a=>a.kind==='image').map(a=>a.id));
+  // Capture claims are evidence about a particular attached file, never an unbound page flag.
+  delete result.screenCapture;
+  const captures=Object.fromEntries(Object.entries(result.screenCaptures||{}).filter(([id,value])=>ids.has(id)&&value&&typeof value==='object'&&!Array.isArray(value)));
+  if(Object.keys(captures).length)result.screenCaptures=captures;else delete result.screenCaptures;
+  return result;
+ }
+ function mergePageContext(previous,next){
+  if(!next)return copy(previous);
+  const result={...copy(next)};
+  for(const key of ['ticket','ticketId','revision','scenarioId','selection','screenCaptures'])if(previous[key]!==undefined)result[key]=copy(previous[key]);
+  return result;
+ }
  function payload(draft){
   const text=String(draft.text||'').trim(),attachments=copy(draft.attachments||[]);
   if(text.length>2000)throw new Error('Keep feedback to 2,000 characters.');
   if(!text&&!attachments.length)throw new Error('Describe the issue, add an image, or record a voice note.');
-  return {captureId:draft.captureId,text,occurredAt:whenLabels[draft.when]||'',context:copy(draft.context||{}),attachments,...(draft.transcript?.trim()?{transcript:{text:draft.transcript.trim(),source:'requester-written',generated:false}}:{})};
+  return {captureId:draft.captureId,text,occurredAt:whenLabels[draft.when]||'',context:contextForAttachments(draft.context||{},attachments),attachments,...(draft.transcript?.trim()?{transcript:{text:draft.transcript.trim(),source:'requester-written',generated:false}}:{})};
  }
  function canAdd(attachments,kind){if(kind==='image'&&attachments.filter(a=>a.kind==='image').length>=3)throw new Error('You can attach up to 3 images. Remove one before adding another.');}
  function open(options={}){
-  if(active?.element.isConnected){active.element.focus();return active;}
   const doc=root.document,Store=options.store||root.FeedbackMediaStore,Context=root.FeedbackCaptureContext,Media=root.FeedbackCaptureMedia;
   if(!doc||!Store||!Context||!Media)throw new Error('Feedback capture is not available yet. Please reload this page.');
   if(typeof options.onSubmit!=='function')throw new Error('Feedback needs a submission handler.');
   const submitLabel=options.submitLabel||'Send feedback';
   const draftKey=options.draftKey||'feedback-draft:'+String(options.scenarioId||'current');
+  if(active?.element.isConnected){if(active.draftKey!==draftKey)throw new Error('Save and close the current feedback draft before switching.');active.restore();return active;}
   const focusBefore=doc.activeElement;
   // Take context before attaching the composer. Never capture our overlay or the presenter console.
   const initialContext=Context.capture({...options.context,scenarioId:options.scenarioId||options.context?.scenarioId});
   let state={schema:1,captureId:'capture-'+(root.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)),scenarioId:options.scenarioId||'',text:String(options.feedback||''),when:'',context:initialContext,attachments:[]};
-  let closed=false,restoring=true,processing=0,submitting=false,submitted=false,dirty=false,saveRevision=0,saveTimer=null,saveQueue=Promise.resolve(),mediaQueue=Promise.resolve(),picker=null,viewer=null,missing=new Set();
+  let closed=false,minimized=false,gathering=false,restoring=true,processing=0,submitting=false,submitted=false,dirty=false,saveRevision=0,saveTimer=null,saveQueue=Promise.resolve(),mediaQueue=Promise.resolve(),picker=null,viewer=null,missing=new Set();
   const urls=new Map();
-  const dialog=doc.createElement('dialog');dialog.className='feedback-composer';dialog.dataset.feedbackComposer='true';dialog.dataset.feedbackPrivate='true';dialog.setAttribute('aria-labelledby','fc-title');
-  dialog.innerHTML=`<form class="fc-form" novalidate><header class="fc-header"><div><span class="fc-eyebrow">WinQuote · Feedback</span><h2 id="fc-title">${escape(options.title||'What got in your way?')}</h2></div><button type="button" class="fc-icon-button" data-fc="close" aria-label="Close feedback">×</button></header>
-  <div class="fc-body"><p class="fc-intro">${escape(options.description||'Show us the issue. The website team will work out the solution.')}</p><p class="fc-error" role="alert" hidden></p><button type="button" data-fc="discard" class="fc-discard" hidden>Close without saving</button>
-  <label class="fc-label" for="fc-text">${escape(options.label||'Your feedback')} <span>Optional with an attachment</span></label><textarea id="fc-text" name="feedback" rows="4" maxlength="2000" placeholder="${escape(options.placeholder||'What happened, and what did you expect?')}"></textarea>
-  <div class="fc-tools"><button type="button" data-fc="images">Add images</button><button type="button" data-fc="record">Record voice</button><button type="button" data-fc="select">Select an area</button></div>
+  const dialog=doc.createElement('section');dialog.className='feedback-composer';dialog.dataset.feedbackComposer='true';dialog.dataset.feedbackPrivate='true';dialog.setAttribute('role','region');dialog.setAttribute('aria-labelledby','fc-title');
+  dialog.innerHTML=`<button type="button" class="fc-collapsed" data-fc="restore" hidden aria-label="Resume feedback draft">${icon('feedback')}<span><strong class="fc-draft-name">Feedback draft</strong><small class="fc-draft-meta">Saved on this device</small></span>${icon('expand')}</button>
+  <form class="fc-form" novalidate><header class="fc-header"><div><h2 id="fc-title">${escape(options.title||'Share feedback')}</h2><p class="fc-destination">${escape(options.context?.ticket||options.context?.ticketId||'WinQuote')}${options.context?.revision?' · V'+escape(options.context.revision):''} · ${options.context?.ticket||options.context?.ticketId?'Update this feedback':'New feedback'}</p></div><div class="fc-window-actions"><button type="button" class="fc-icon-button" data-fc="minimize" aria-label="Minimize feedback" title="Minimize">${icon('minimize')}</button><button type="button" class="fc-icon-button" data-fc="close" aria-label="Save and close feedback" title="Save and close">${icon('close')}</button></div></header>
+  <div class="fc-body"><p class="fc-intro">${escape(options.description||'Tell us what happened. Keep this page open while you add the details.')}</p><p class="fc-error" role="alert" hidden></p><button type="button" data-fc="discard" class="fc-discard" hidden>Close without saving</button>
+  <label class="fc-label" for="fc-text">${escape(options.label||'Your feedback')} <span>Or attach an image / voice note</span></label><textarea id="fc-text" name="feedback" rows="4" maxlength="2000" placeholder="${escape(options.placeholder||'What happened, and what did you expect?')}"></textarea>
+  <div class="fc-tools" aria-label="Add supporting material"><button type="button" data-fc="images">${icon('image')}<span>Add image</span></button><button type="button" data-fc="record">${icon('mic')}<span>Record voice</span></button></div>
   <input class="fc-file-input" id="fc-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple tabindex="-1"><input class="fc-file-input" id="fc-audio" type="file" accept="audio/*" tabindex="-1">
   <div class="fc-recording" hidden><span class="fc-recording-label" role="status"></span><div><button type="button" data-fc="stop">Stop recording</button><button type="button" data-fc="cancel-recording">Cancel</button></div></div>
-  <div class="fc-attachments" aria-label="Attachments"></div><div class="fc-drop-zone" tabindex="0">Drop images here, or paste an image.<span>Up to 3 images · 10 MB each</span></div>
-  <div class="fc-audio-help"><span>Voice notes stay as audio. No automatic transcription.</span><button type="button" data-fc="audio">Attach audio instead</button><span>Up to 2 minutes</span></div>
-  <label class="fc-label fc-time-label" for="fc-when">When did it happen? <span>Optional</span></label><select id="fc-when"><option value="">Choose a time</option><option value="just-now">Just now</option><option value="earlier-today">Earlier today</option><option value="not-sure">Not sure</option></select>
-  <details class="fc-context"><summary>Included page context</summary><div class="fc-context-content"></div><p>Selected demo context only. No screenshot, source code or browser activity is collected.</p></details>
-  </div><footer class="fc-footer"><div><span class="fc-save-status" role="status">Opening your local draft…</span><button type="button" class="fc-retry" data-fc="retry" hidden>Retry saving</button><small>This feedback and its files stay in this browser’s demo.</small></div><button type="submit" class="fc-primary">Send feedback</button></footer></form>`;
+  <div class="fc-attachments" aria-label="Attachments"></div><div class="fc-drop-zone" tabindex="0">Drop or paste an image<span>Up to 3 images · 10 MB each</span></div>
+  <details class="fc-audio-help"><summary>Audio options</summary><p>Voice notes stay as audio, up to 2 minutes. No automatic transcription.</p><button type="button" data-fc="audio">Attach an audio file</button></details>
+  <details class="fc-timing"><summary>When did it happen? <span>Optional</span></summary><label class="fc-label fc-time-label" for="fc-when">Time of issue</label><select id="fc-when"><option value="">Choose a time</option><option value="just-now">Just now</option><option value="earlier-today">Earlier today</option><option value="not-sure">Not sure</option></select></details>
+  <details class="fc-context"><summary>Included page context</summary><div class="fc-context-content"></div><button type="button" data-fc="select">${icon('target')}Select an element</button><p>Page details stay with this draft. Screenshots are added only when you choose to capture or upload one. No source code or browser history is collected.</p></details>
+  </div><footer class="fc-footer"><div><span class="fc-save-status" role="status">Opening your draft…</span><button type="button" class="fc-retry" data-fc="retry" hidden>Retry saving</button><small>Saved in this browser’s demo.</small></div><button type="submit" class="fc-primary"><span>${escape(submitLabel)}</span>${icon('send')}</button></footer></form>`;
   doc.body.append(dialog);
   const $=selector=>dialog.querySelector(selector),textField=$('#fc-text'),whenField=$('#fc-when'),submitButton=$('[type=submit]');
   textField.value=state.text;whenField.value=state.when;
-  if(options.showTiming===false){$('.fc-time-label').hidden=true;whenField.hidden=true;}
+  if(options.showTiming===false)$('.fc-timing').hidden=true;
   if(options.allowSelection===false)$('[data-fc="select"]').hidden=true;
-  function message(text=''){const el=$('.fc-error');el.textContent=text;el.hidden=!text;}
-  function saveStatus(text,retry=false){if(closed)return;$('.fc-save-status').textContent=text;$('.fc-retry').hidden=!retry;}
+  function message(text=''){const el=$('.fc-error');el.textContent=text;el.hidden=!text;if(text&&minimized)renderCollapsed();}
+  function saveStatus(text,retry=false){if(closed)return;$('.fc-save-status').textContent=text;$('.fc-retry').hidden=!retry;renderCollapsed();}
   function sync(){state.text=textField.value;state.when=whenField.value;}
   function snapshot(){return copy(state);}
-  function refreshButtons(){if(closed)return;const recording=['requesting','recording','stopping'].includes(recorder.state);submitButton.disabled=restoring||processing>0||submitting||submitted||recording||missing.size>0;submitButton.textContent=submitting?'Sending…':processing?'Preparing attachment…':submitted?'Sent':submitLabel;for(const el of dialog.querySelectorAll('[data-fc="images"],[data-fc="audio"],[data-fc="select"],[data-fc="remove"]'))el.disabled=submitting||restoring||recording||processing>0;$('.fc-tools [data-fc="record"]').disabled=submitting||restoring||processing>0||recording;textField.disabled=whenField.disabled=submitting||restoring;}
+  function refreshButtons(){if(closed)return;const recording=['requesting','recording','stopping'].includes(recorder.state);submitButton.disabled=restoring||processing>0||submitting||submitted||recording||gathering||missing.size>0;submitButton.querySelector('span').textContent=submitting?'Sending…':processing?'Preparing attachment…':submitted?'Sent':submitLabel;for(const el of dialog.querySelectorAll('[data-fc="images"],[data-fc="audio"],[data-fc="select"],[data-fc="remove"]'))el.disabled=submitting||restoring||recording||processing>0;$('.fc-tools [data-fc="record"]').disabled=submitting||restoring||processing>0||recording;textField.disabled=whenField.disabled=submitting||restoring;for(const el of dialog.querySelectorAll('[data-fc=minimize],[data-fc=close]'))el.disabled=submitting||gathering;renderCollapsed();}
   function saveDraft(){
    root.clearTimeout(saveTimer);saveTimer=null;if(closed)return saveQueue;
    sync();const value=snapshot(),revision=++saveRevision;dirty=true;saveStatus('Saving on this device…');
@@ -6673,37 +6862,73 @@ if (typeof module==="object" && module.exports) module.exports = api;
    result.then(()=>{if(!closed&&revision===saveRevision){dirty=false;saveStatus('Saved on this device');$('[data-fc="discard"]').hidden=true;}},error=>{if(!closed&&revision===saveRevision){dirty=true;saveStatus('Not saved on this device',true);message(error.message);}});return result;
   }
   function queueSave(){sync();dirty=true;++saveRevision;saveStatus('Saving on this device…');root.clearTimeout(saveTimer);saveTimer=root.setTimeout(()=>saveDraft().catch(()=>{}),250);}
-  function renderContext(){const c=state.context,s=c.selection;$('.fc-context-content').innerHTML='<dl>'+[['Page',c.page||c.step||'Current demo page'],['Feedback',c.ticket||c.ticketId],['Version',c.revision?'V'+c.revision:undefined],['Quote',c.quote||c.quoteId],['Compartment',c.compartment||c.compartmentId],['Selected area',s?.label],['State',Object.entries(c.state||{}).map(([key,value])=>key+': '+String(value)).join(' · ')]].filter(([,v])=>v!==undefined&&v!=='').map(([k,v])=>'<dt>'+escape(k)+'</dt><dd>'+escape(v)+'</dd>').join('')+'</dl>'+(s?'<button type="button" data-fc="clear-selection">Remove selected area</button>':'');}
+  function renderContext(){const c=state.context,s=c.selection;$('.fc-context-content').innerHTML='<dl>'+[['Page',c.page||c.step||'Current demo page'],['Feedback',c.ticket||c.ticketId],['Version',c.revision?'V'+c.revision:undefined],['Quote',c.quote||c.quoteId],['Compartment',c.compartment||c.compartmentId],['Selected element',s?.label],['Screenshots',Object.values(c.screenCaptures||{}).map(value=>value.kind||'Shared tab screenshot').join(' · ')],['State',Object.entries(c.state||{}).map(([key,value])=>key+': '+String(value)).join(' · ')]].filter(([,v])=>v!==undefined&&v!=='').map(([k,v])=>'<dt>'+escape(k)+'</dt><dd>'+escape(v)+'</dd>').join('')+'</dl>'+(s?'<button type="button" data-fc="clear-selection">Remove selected area</button>':'');}
   function revoke(id){if(urls.has(id)){root.URL.revokeObjectURL(urls.get(id));urls.delete(id);}}
   function renderAttachments(){if(closed)return;$('.fc-attachments').innerHTML=state.attachments.map(a=>{
    const url=urls.get(a.id),lost=missing.has(a.id);return '<article class="fc-attachment" data-attachment="'+escape(a.id)+'">'+(a.kind==='image'?'<button type="button" class="fc-thumbnail" data-fc="preview" data-id="'+escape(a.id)+'" '+(!url?'disabled':'')+' aria-label="Enlarge '+escape(a.name)+'">'+(url?'<img src="'+escape(url)+'" alt="Attached '+escape(a.name)+'">':'<span>Image unavailable</span>')+'</button>':'')+'<div class="fc-attachment-body"><strong>'+escape(a.name)+'</strong><span>'+escape(lost?'Original missing on this device':a.kind==='image'?'Image · '+(a.size/1024/1024).toFixed(1)+' MB':'Voice note · '+formatTime(a.duration))+'</span>'+(a.kind==='audio'&&url?'<audio controls preload="metadata" src="'+escape(url)+'"></audio>':'')+'</div><button type="button" class="fc-remove" data-fc="remove" data-id="'+escape(a.id)+'" aria-label="Remove '+escape(a.name)+'">Remove</button></article>';
-  }).join('');$('.fc-tools [data-fc="record"]').textContent=state.attachments.some(a=>a.kind==='audio')?'Record again':'Record voice';refreshButtons();}
+  }).join('');$('.fc-tools [data-fc="record"] span').textContent=state.attachments.some(a=>a.kind==='audio')?'Record again':'Record voice';refreshButtons();}
   function formatTime(seconds=0){return Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');}
-  function enqueueFile(file,source='upload',recorded=null){
+  function enqueueFile(file,source='upload',recorded=null,captureContext=null,pageContext=null){
    processing++;refreshButtons();
    const job=mediaQueue.catch(()=>{}).then(async()=>{
     const kind=recorded?'audio':String(file.type||'').startsWith('image/')?'image':'audio';canAdd(state.attachments,kind);
     const info=recorded||await Media.inspect(file);if(closed)return;
     const manifest=await Store.put(file,{kind:info.kind||kind,duration:info.duration,name:recorded?.name||file.name,source});
     if(closed){await Store.remove(manifest.id);return;}
-    const old=state.attachments;state.attachments=kind==='audio'?[...old.filter(a=>a.kind!=='audio'),manifest]:[...old,manifest];
-    try{await saveDraft();}catch(error){state.attachments=old;await Store.remove(manifest.id).catch(()=>{});throw error;}
+    const old=state.attachments,oldContext=state.context;state.attachments=kind==='audio'?[...old.filter(a=>a.kind!=='audio'),manifest]:[...old,manifest];
+    state.context=contextForAttachments({...mergePageContext(oldContext,pageContext),...(captureContext&&kind==='image'?{screenCaptures:{...(oldContext.screenCaptures||{}),[manifest.id]:copy(captureContext)}}:{})},state.attachments);
+    try{await saveDraft();}catch(error){state.attachments=old;state.context=oldContext;await Store.remove(manifest.id).catch(()=>{});throw error;}
     urls.set(manifest.id,root.URL.createObjectURL(file));
     if(kind==='audio')for(const a of old.filter(a=>a.kind==='audio')){revoke(a.id);await Store.remove(a.id).catch(()=>{});}
-    message();renderAttachments();
+    message();renderAttachments();renderContext();return manifest;
    });
    mediaQueue=job;job.catch(error=>{if(!closed)message(error.message);}).finally(()=>{processing--;refreshButtons();});return job;
   }
-  async function removeAttachment(id){if(submitting||processing||restoring||recorder.state!=='idle')return;const old=state.attachments;let saved=false;processing++;refreshButtons();state.attachments=old.filter(a=>a.id!==id);try{await saveDraft();saved=true;missing.delete(id);revoke(id);await Store.remove(id);message();}catch(error){if(!saved)state.attachments=old;message(saved?'Removed from this draft. Its local file could not be cleaned up yet.':error.message);}finally{processing--;renderAttachments();}}
+  async function removeAttachment(id){if(submitting||processing||restoring||recorder.state!=='idle')return;const old=state.attachments,oldContext=state.context;let saved=false;processing++;refreshButtons();state.attachments=old.filter(a=>a.id!==id);state.context=contextForAttachments(state.context,state.attachments);try{await saveDraft();saved=true;missing.delete(id);revoke(id);await Store.remove(id);message();}catch(error){if(!saved){state.attachments=old;state.context=oldContext;}message(saved?'Removed from this draft. Its local file could not be cleaned up yet.':error.message);}finally{processing--;renderAttachments();renderContext();}}
   const recorder=Media.createRecorder({onState:({state:status,seconds})=>{
    if(closed)return;const active=status!=='idle';$('.fc-recording').hidden=!active;$('.fc-recording-label').textContent=status==='requesting'?'Waiting for microphone permission…':status==='stopping'?'Finishing your recording…':'Recording · '+formatTime(seconds)+' / 2:00';$('[data-fc="stop"]').hidden=status!=='recording';refreshButtons();
   },onComplete:value=>enqueueFile(value.blob,'recording',{kind:'audio',duration:value.duration,name:value.name}).catch(()=>{}),onError:error=>message(error.message)});
   async function startRecord(){message();try{await recorder.start();}catch(error){message(error.message);refreshButtons();}}
-  function preview(id){const url=urls.get(id),a=state.attachments.find(x=>x.id===id);if(!url||!a||viewer)return;const imageDialog=doc.createElement('dialog');viewer=imageDialog;imageDialog.className='fc-viewer';imageDialog.innerHTML='<header><strong>'+escape(a.name)+'</strong><button type="button" aria-label="Close image preview">×</button></header><img src="'+escape(url)+'" alt="'+escape(a.name)+'">';dialog.append(imageDialog);imageDialog.querySelector('button').onclick=()=>imageDialog.close();imageDialog.addEventListener('cancel',event=>event.stopPropagation());imageDialog.addEventListener('close',()=>{imageDialog.remove();if(viewer===imageDialog)viewer=null;dialog.querySelector('[data-fc="preview"][data-id="'+id+'"]')?.focus();});imageDialog.showModal();}
-  function selectArea(){
-   if(submitting||options.allowSelection===false)return;sync();saveDraft().catch(()=>{});dialog.close();
-   const back=()=>{if(closed)return;dialog.showModal();renderContext();$('[data-fc="select"]').focus();};
-   try{picker=Context.pick({root:options.selectionRoot,onSelect:selected=>{picker=null;state.context.selection=selected;back();saveDraft().catch(()=>{});},onCancel:()=>{picker=null;back();}});}catch(error){back();message(error.message);}
+  function preview(id){const url=urls.get(id),a=state.attachments.find(x=>x.id===id);if(!url||!a||viewer)return;const imageDialog=doc.createElement('dialog');viewer=imageDialog;imageDialog.className='fc-viewer';imageDialog.innerHTML='<header><strong>'+escape(a.name)+'</strong><button type="button" aria-label="Close image preview">'+icon('close')+'</button></header><img src="'+escape(url)+'" alt="'+escape(a.name)+'">';dialog.append(imageDialog);imageDialog.querySelector('button').onclick=()=>imageDialog.close();imageDialog.addEventListener('cancel',event=>event.stopPropagation());imageDialog.addEventListener('close',()=>{imageDialog.remove();if(viewer===imageDialog)viewer=null;dialog.querySelector('[data-fc="preview"][data-id="'+id+'"]')?.focus();});imageDialog.showModal();}
+  function emitState(){
+   doc.body.classList.toggle('feedback-compose-open',!closed&&!minimized);
+   doc.body.classList.toggle('feedback-compose-minimized',!closed&&minimized);
+   root.dispatchEvent(new CustomEvent('feedback-composer-state',{detail:{open:!closed,minimized:!closed&&minimized,draftKey}}));
+  }
+  function renderCollapsed(){
+   if(closed)return;
+   const count=state.attachments.length,ticket=state.context.ticket||state.context.ticketId;
+   $('.fc-draft-name').textContent=ticket?'Update '+ticket:'Feedback draft';
+   $('.fc-draft-meta').textContent=[$('.fc-error')?.hidden===false?'Needs attention':dirty?'Saving…':'Saved',count?count+' attachment'+(count===1?'':'s'):state.context.selection?'Element selected':'Continue writing'].join(' · ');
+  }
+  function focusTrigger(){if(focusBefore?.isConnected&&!focusBefore.closest('[inert]'))focusBefore.focus({preventScroll:true});else doc.querySelector('[data-wq="open-composer"]')?.focus({preventScroll:true});}
+  function restore(){if(closed)return;minimized=false;dialog.classList.remove('fc-minimized');$('.fc-form').hidden=false;$('.fc-collapsed').hidden=true;dialog.setAttribute('aria-labelledby','fc-title');emitState();if(!restoring&&!gathering)textField.focus({preventScroll:true});}
+  async function minimize(){
+   if(closed||submitting||gathering)return;
+   if(['recording','stopping'].includes(recorder.state)){try{await recorder.stop();await mediaQueue;}catch(error){message(error.message);return;}}else recorder.cancel();
+   try{if(restoring)await ready;await mediaQueue.catch(()=>{});await saveDraft();}catch(error){message(error.message);return;}
+   if(closed)return;minimized=true;$('.fc-form').hidden=true;$('.fc-collapsed').hidden=false;dialog.classList.add('fc-minimized');dialog.removeAttribute('aria-labelledby');dialog.setAttribute('aria-label','Saved feedback draft');renderCollapsed();emitState();focusTrigger();
+  }
+  function selectElement(){
+   if(closed||submitting||options.allowSelection===false)return;sync();saveDraft().catch(()=>{});dialog.hidden=true;gathering=true;refreshButtons();
+   const back=()=>{if(closed)return;gathering=false;dialog.hidden=false;restore();renderContext();refreshButtons();$('.fc-context').open=true;$('[data-fc="select"]').focus();};
+   try{picker=Context.pick({root:typeof options.selectionRoot==='function'?options.selectionRoot():options.selectionRoot,onSelect:selected=>{picker=null;const fresh=options.getContext?.();if(fresh)state.context=mergePageContext(state.context,Context.capture(fresh));state.context.selection=selected;back();saveDraft().catch(()=>{});},onCancel:()=>{picker=null;back();}});}catch(error){back();message(error.message);}
+  }
+  async function gather(mode){
+   if(closed||submitting||processing||gathering||recorder.state!=='idle')return;
+   restore();message();
+   if(mode==='element'){await ready;if(!closed)selectElement();return;}
+   if(!['area','page'].includes(mode))return;
+   // Invoke the browser permission request before the first await, inside the click gesture.
+   gathering=true;refreshButtons();
+   try{
+    if(typeof Context.captureImage!=='function')throw new Error('Screen capture is unavailable. Use Add image to attach a screenshot.');
+    const fresh=options.getContext?.(),pageContext=fresh?Context.capture(fresh):null;
+    const captured=Context.captureImage({mode});
+    const result=await captured;await ready;if(!result||closed)return;
+    await enqueueFile(result.file,'screen-capture',null,result.context,pageContext);renderContext();
+   }catch(error){if(!closed)message(error.message||'The image could not be captured. Use Add image instead.');}
+   finally{gathering=false;if(!closed){refreshButtons();restore();}}
   }
   async function submit(){
    if(submitting||submitted||restoring||processing||recorder.state!=='idle')return;
@@ -6719,16 +6944,17 @@ if (typeof module==="object" && module.exports) module.exports = api;
    finally{submitting=false;refreshButtons();}
   }
   function cleanup(success=false){
-   if(closed)return;closed=true;active=null;root.clearTimeout(saveTimer);recorder.destroy();picker?.cancel();viewer?.close();for(const audio of dialog.querySelectorAll('audio')){audio.pause();audio.removeAttribute('src');audio.load();}for(const id of urls.keys())revoke(id);doc.removeEventListener('visibilitychange',onVisibility);root.removeEventListener('pagehide',onPageHide);dialog.remove();if(focusBefore?.isConnected)focusBefore.focus({preventScroll:true});options.onClose?.({submitted:success||submitted,draftKey});
+   if(closed)return;closed=true;active=null;emitState();root.clearTimeout(saveTimer);recorder.destroy();picker?.cancel();viewer?.close();for(const audio of dialog.querySelectorAll('audio')){audio.pause();audio.removeAttribute('src');audio.load();}for(const id of urls.keys())revoke(id);doc.removeEventListener('visibilitychange',onVisibility);doc.removeEventListener('keydown',onKeyDown);root.removeEventListener('pagehide',onPageHide);dialog.remove();focusTrigger();options.onClose?.({submitted:success||submitted,draftKey});
   }
-  async function close(){if(closed||submitting)return;if(recorder.state==='recording'){await recorder.stop().catch(error=>message(error.message));await mediaQueue.catch(()=>{});}else recorder.cancel();if(submitted){await Store.clearDraft(draftKey).catch(()=>{});cleanup(true);return;}try{if(restoring)await ready;await mediaQueue.catch(()=>{});await saveDraft();cleanup();}catch(error){message(error.message+' Your latest changes are not saved. Retry saving, or copy your text before closing.');$('[data-fc="discard"]').hidden=false;}}
+  async function close(){if(closed)return true;if(submitting||gathering)return false;if(['recording','stopping'].includes(recorder.state)){await recorder.stop().catch(error=>message(error.message));await mediaQueue.catch(()=>{});}else recorder.cancel();if(submitted){await Store.clearDraft(draftKey).catch(()=>{});cleanup(true);return true;}try{if(restoring)await ready;await mediaQueue.catch(()=>{});await saveDraft();cleanup();return true;}catch(error){message(error.message+' Your latest changes are not saved. Retry saving, or copy your text before closing.');$('[data-fc="discard"]').hidden=false;return false;}}
   function onVisibility(){if(doc.hidden&&recorder.state==='recording')recorder.stop().catch(error=>message(error.message));}
   function onPageHide(){recorder.cancel();root.clearTimeout(saveTimer);if(!closed)saveDraft().catch(()=>{});}
-  dialog.addEventListener('cancel',event=>{if(event.target!==dialog)return;event.preventDefault();close();});
+  function onKeyDown(event){if(event.key==='Escape'&&!minimized&&!gathering&&!viewer&&dialog.contains(event.target)){event.preventDefault();event.stopPropagation();minimize();}}
+  doc.addEventListener('keydown',onKeyDown);
   dialog.querySelector('form').addEventListener('submit',event=>{event.preventDefault();submit();});
   dialog.addEventListener('input',event=>{if(event.target===textField)queueSave();});
   whenField.addEventListener('change',queueSave);
-  dialog.addEventListener('click',event=>{const b=event.target.closest('[data-fc]');if(!b||b.disabled)return;const action=b.dataset.fc;event.preventDefault();if(action==='close')close();else if(action==='discard')cleanup();else if(action==='images')$('#fc-images').click();else if(action==='audio')$('#fc-audio').click();else if(action==='record')startRecord();else if(action==='stop')recorder.stop().catch(error=>message(error.message));else if(action==='cancel-recording')recorder.cancel();else if(action==='remove')removeAttachment(b.dataset.id);else if(action==='preview')preview(b.dataset.id);else if(action==='select')selectArea();else if(action==='clear-selection'){delete state.context.selection;renderContext();saveDraft().catch(()=>{});}else if(action==='retry'){if(submitted)Store.clearDraft(draftKey).then(()=>cleanup(true),error=>message(error.message));else saveDraft().catch(()=>{});}});
+  dialog.addEventListener('click',event=>{const b=event.target.closest('[data-fc]');if(!b||b.disabled)return;const action=b.dataset.fc;event.preventDefault();if(action==='close')close();else if(action==='minimize')minimize();else if(action==='restore')restore();else if(action==='discard')cleanup();else if(action==='images')$('#fc-images').click();else if(action==='audio')$('#fc-audio').click();else if(action==='record')startRecord();else if(action==='stop')recorder.stop().catch(error=>message(error.message));else if(action==='cancel-recording')recorder.cancel();else if(action==='remove')removeAttachment(b.dataset.id);else if(action==='preview')preview(b.dataset.id);else if(action==='select')gather('element');else if(action==='clear-selection'){delete state.context.selection;renderContext();saveDraft().catch(()=>{});}else if(action==='retry'){if(submitted)Store.clearDraft(draftKey).then(()=>cleanup(true),error=>message(error.message));else saveDraft().catch(()=>{});}});
   $('.fc-drop-zone').addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)&&!$('[data-fc="images"]').disabled){event.preventDefault();$('#fc-images').click();}});
   for(const id of ['#fc-images','#fc-audio'])$(id).addEventListener('change',event=>{for(const file of event.target.files||[])enqueueFile(file,'upload').catch(()=>{});event.target.value='';});
   dialog.addEventListener('paste',event=>{const files=[...(event.clipboardData?.items||[])].filter(item=>item.kind==='file'&&item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);if(files.length){event.preventDefault();for(const file of files)enqueueFile(file,'paste').catch(()=>{});}});
@@ -6737,14 +6963,14 @@ if (typeof module==="object" && module.exports) module.exports = api;
   dialog.addEventListener('drop',event=>{event.preventDefault();dialog.classList.remove('fc-dragging');for(const file of event.dataTransfer?.files||[])enqueueFile(file,'drop').catch(()=>{});});
   doc.addEventListener('visibilitychange',onVisibility);root.addEventListener('pagehide',onPageHide);
   const ready=(async()=>{
-   try{const saved=await Store.getDraft(draftKey);if(closed)return;if(saved?.schema===1&&saved.scenarioId===state.scenarioId){state={...state,...saved};textField.value=state.text;whenField.value=state.when;for(const a of state.attachments){try{const media=await Store.get(a.id);if(closed)return;urls.set(a.id,root.URL.createObjectURL(media.blob));}catch{missing.add(a.id);}}if(missing.size)message('An attachment is no longer on this device. Remove it or add the original again.');}await saveDraft();}
+   try{const saved=await Store.getDraft(draftKey);if(closed)return;if(saved?.schema===1&&saved.scenarioId===state.scenarioId){state={...state,...saved};state.context=contextForAttachments(state.context,state.attachments);textField.value=state.text;whenField.value=state.when;for(const a of state.attachments){try{const media=await Store.get(a.id);if(closed)return;urls.set(a.id,root.URL.createObjectURL(media.blob));}catch{missing.add(a.id);}}if(missing.size)message('An attachment is no longer on this device. Remove it or add the original again.');}await saveDraft();}
    catch(error){if(!closed){message(error.message);saveStatus('Not saved on this device',true);}}
-   finally{restoring=false;if(!closed){renderContext();renderAttachments();refreshButtons();textField.focus();}}
+   finally{restoring=false;if(!closed){renderContext();renderAttachments();refreshButtons();if(!gathering&&!minimized)textField.focus();}}
   })();
-  renderContext();dialog.showModal();refreshButtons();
-  active={ready,close,destroy:()=>cleanup(),getDraft:()=>{if(!closed)sync();return snapshot();},element:dialog};return active;
+  renderContext();refreshButtons();emitState();
+  active={ready,close,draftKey,allowSelection:options.allowSelection!==false,get status(){return {minimized,gathering,submitting,restoring,closed};},restore,minimize,gather,destroy:()=>cleanup(),getDraft:()=>{if(!closed)sync();return snapshot();},element:dialog};if(options.initialGather)void gather(options.initialGather);return active;
  }
- const api={open,payload,canAdd};root.FeedbackComposer=api;if(typeof module==='object'&&module.exports)module.exports=api;
+ const api={open,payload,canAdd,contextForAttachments,mergePageContext};root.FeedbackComposer=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(globalThis);
 
 </script><script>
@@ -6862,7 +7088,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
   function topbar(vm) {
     const isTicket = vm.page === 'ticket';
     const crumb = vm.page === 'updates' ? 'Updates' : vm.page === 'site' ? 'Sample quote' : 'My feedback';
-    return `<header class="fs-topbar"><div class="fs-breadcrumb">${button(isTicket || vm.page === 'site' ? 'back' : 'nav-inbox', isTicket || vm.page === 'site' ? 'Back' : crumb, { quiet: true, icon: isTicket || vm.page === 'site' ? 'back' : 'inbox' })}${isTicket ? `<span class="fs-slash">/</span><span class="fs-ticket-id">${escape(vm.current?.id)}</span>` : ''}</div><div class="fs-top-actions">${isTicket ? button('toggle-context', 'Details', { quiet: true, icon: 'sidebar', controls: 'feedback-details', expanded: vm.contextOpen }) : ''}${button('open-console', 'Walkthrough', { quiet: true, icon: 'play' })}</div></header>`;
+    return `<header class="fs-topbar"><div class="fs-breadcrumb">${button(isTicket || vm.page === 'site' ? 'back' : 'nav-inbox', isTicket || vm.page === 'site' ? 'Back' : crumb, { quiet: true, icon: isTicket || vm.page === 'site' ? 'back' : 'inbox' })}${isTicket ? `<span class="fs-slash">/</span><span class="fs-ticket-id">${escape(vm.current?.id)}</span>` : ''}</div><div class="fs-top-actions">${isTicket ? button('toggle-context', 'Details', { quiet: true, icon: 'sidebar', controls: 'feedback-details', expanded: vm.contextOpen }) : ''}${vm.page === 'site' ? feedbackEntry() : button('open-console', 'Walkthrough', { quiet: true, icon: 'play' })}</div></header>`;
+  }
+
+  function feedbackEntry() {
+    return `<div class="fs-feedback-entry" data-feedback-private><div class="fs-feedback-split">${button('open-composer', 'Feedback', {primary:true, icon:'feedback'})}<button type="button" class="fs-feedback-chevron" data-wq="feedback-context-menu" aria-label="Choose how to gather page context" aria-haspopup="menu" aria-controls="feedback-context-menu" aria-expanded="false">${icon('down',16)}</button></div><div id="feedback-context-menu" class="fs-capture-menu" popover="auto" role="menu" aria-label="Gather page context"><p>Add context to your feedback</p>${[['element','target','Select an element','Attach its location and available page state'],['area','crop','Capture an area','Choose a tab, then crop the screenshot'],['page','camera','Capture this page','Choose this WinQuote tab to capture its visible view']].map(([mode,glyph,label,hint])=>`<button type="button" role="menuitem" data-wq="gather-context" data-value="${mode}">${icon(glyph,18)}<span><strong>${label}</strong><small>${hint}</small></span></button>`).join('')}</div></div>`;
   }
 
   function sampleEntry(vm) {
@@ -7316,6 +7546,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
     }).join('')}</div>`;
   }
 
+  function correctionEvidence(corrections) {
+    if (!array(corrections).length) return '';
+    return panelFold('Updates to this feedback', corrections.length, corrections.map(correction=>`<section class="fs-correction-evidence"><h3>${escape(correction.id)} · Scope revision ${escape(correction.scopeCycle)}</h3><p>${escape(correction.text)}</p>${attachmentRows(array(correction.evidence?.attachments))}</section>`).join(''));
+  }
+
   function details(vm) {
     const p = panelPresentation(vm), c = vm.current.c;
     const tab = vm.contextTab === 'activity' ? 'activity' : 'details';
@@ -7334,7 +7569,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const focus = versionFocus(p);
     const currentBasis = planPending || liveClarification ? `<section class="fs-basis"><div class="fs-inspector-heading"><h3>${escape(reviewState[0])}</h3></div><p class="fs-inspector-empty">${escape(reviewState[1])}</p></section>${shared && array(p.basis).length ? panelFold('Shared plan so far', p.basis.length, basisContents(p)) : ''}` : focus ? focus + panelFold('Full saved plan', undefined, basisContents(p), { hint: 'V' + p.viewedRev }) : basisRows(p);
     const sourceNote = request.source?.note || request.sourceNote;
-    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
+    const content = tab === 'activity' ? `${p.historical ? `<p class="fs-panel-note">Recorded through version ${escape(p.viewedRev)} submission.</p>` : ''}${activityRows(p.activity)}` : `${currentBasis}${correctionEvidence(p.corrections)}${p.adjustmentEvidence ? adjustmentEvidence({adjustment:p.adjustment, reviewFlow:{adjustmentEvidence:p.adjustmentEvidence}}) : ''}
       ${panelFold('Original feedback', undefined, `${request.text ? `<blockquote class="fs-original-quote">${escape(request.text)}</blockquote>` : '<p class="fs-inspector-empty">Original feedback was not saved with this version.</p>'}${contextRows(request.context)}${request.source?.id ? contextRows([{label:'Source record',value:request.source.id}]) : ''}${sourceNote ? `<p class="fs-panel-note">${escape(sourceNote)}</p>` : ''}`)}
       ${attachments.length ? panelFold('Attachments', attachments.length, attachmentRows(attachments), { open: true }) : ''}
       ${questionHistory(p)}
@@ -7382,7 +7617,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       const cost = site.cost !== undefined && Number.isFinite(Number(site.cost)) ? Number(site.cost) : second ? 3200 : 2400;
       content = `<section class="fs-site-section" data-capture-region="Refrigeration options"><div class="fs-site-section-heading"><div><h2>Refrigeration equipment</h2><p>Compartment ${escape(compartment)} · ${second ? 'Freezer' : 'Cooler'}</p></div><span class="fs-small-status">Demo prices</span></div><label class="fs-refrigeration-option"><input type="checkbox" data-wq="site-no-refrigeration"${site.noRefrigeration ? ' checked' : ''}><span><strong>No Refrigeration Required</strong><small>The customer will supply their own refrigeration.</small></span></label><div class="fs-config-table"><div><span>Selected equipment</span><strong>${escape(equipment)}</strong></div><div><span>Equipment cost</span><strong>$${escape(cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}</strong></div></div>${actions(button('site-save', 'Save refrigeration', { primary: true }))}<p class="fs-footnote">Sample quote values are used for this walkthrough.</p></section>`;
     }
-    return `<section class="fs-site" data-feedback-surface><div class="fs-site-heading"><div><span class="fs-quote-id">Quote MW-1042</span><h1>${pageTitle}</h1></div><span class="fs-small-status">Simulation</span></div><div class="fs-site-tabs"><span>Quote details</span><span>Compartments</span><span class="fs-site-tab-active">${pageTitle}</span><span>Workflow</span></div>${notice(vm)}${site.notice ? `<p class="fs-site-saved" role="status">${icon('check', 15)}${escape(site.notice)}</p>` : ''}${content}<div class="fs-site-report"><div>${icon('feedback', 19)}<span><strong>Something getting in your way?</strong><small>Your page context stays with the request.</small></span></div>${button('open-composer', 'Give feedback', { primary: true, icon: 'plus' })}</div></section>`;
+    return `<section class="fs-site" data-feedback-surface><div class="fs-site-heading"><div><span class="fs-quote-id">Quote MW-1042</span><h1>${pageTitle}</h1></div><span class="fs-small-status">Simulation</span></div><div class="fs-site-tabs"><span>Quote details</span><span>Compartments</span><span class="fs-site-tab-active">${pageTitle}</span><span>Workflow</span></div>${notice(vm)}${site.notice ? `<p class="fs-site-saved" role="status">${icon('check', 15)}${escape(site.notice)}</p>` : ''}${content}</section>`;
   }
 
   function demoConsole(vm) {
@@ -7574,11 +7809,11 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const scenes=item?.ux?.walk?.scenes||[],snap=walkCursor===null?null:scenes[walkCursor];
     const display=snap?{...item,c:snap.c,ux:clone(snap.ux||{})}:item;
     const presentation=display?P.describe(display,{rev:historyVersion||undefined,actor}):null;
-    if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[]]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
+    if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[],...(presentation.corrections||[]).flatMap(c=>c.evidence?.attachments||[])]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
     return {presentation,walkHistory:{active:!!snap,index:snap?walkCursor:scenes.length,total:scenes.length,canBack:scenes.length>0&&(walkCursor===null||walkCursor>0),canForward:!!snap,label:snap?.label||'Current task',why:presentation?.why?.text||''}};
   }
   async function hydrateMedia(presentation){
-    const attachments=[...presentation?.request?.attachments||[],...presentation?.adjustmentEvidence?.attachments||[]];
+    const attachments=[...presentation?.request?.attachments||[],...presentation?.adjustmentEvidence?.attachments||[],...(presentation?.corrections||[]).flatMap(c=>c.evidence?.attachments||[])];
     const ids=new Set(attachments.map(a=>a.id).filter(Boolean));visibleMediaIds=ids;
     for(const [id,value] of mediaCache)if(!ids.has(id)){if(value.url)URL.revokeObjectURL(value.url);mediaCache.delete(id);}
     const pending=attachments.filter(a=>a.id&&!mediaCache.has(a.id));if(!pending.length)return;
@@ -7705,10 +7940,10 @@ if (typeof module==="object" && module.exports) module.exports = api;
     else preparationTimer=setTimeout(()=>{preparationTimer=null;prepare('draft-ready');},2000);
     backgroundTimer=setTimeout(()=>{backgroundTimer=null;prepare('team-review-pending');},resume?38000:40000);
   }
-  async function submitPayload(payload,simulated=false){
-    const r=S.add(read(),scenario(),payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
+  async function submitPayload(payload,simulated=false,sourceScenario=scenario()){
+    const r=S.add(read(),sourceScenario,payload,{example:simulated});persist(S.visit(r.data,r.item.id).data);page='ticket';actor='Requester';historyVersion=null;walkCursor=null;syncUI();
     history.replaceState({},'',location.pathname+'?ticket='+encodeURIComponent(r.item.id));notice='Saved as '+r.item.id+'. The website team will review the evidence. You can keep working.';render();
-    if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>');if(!r.duplicate)celebrateSubmission();}
+    if(!simulated){showModal('<div class="fs-receipt-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12 4 4 8-8"/></svg></div><div class="fs-eyebrow">Feedback received · '+esc(r.item.id)+'</div><h2>We have the context.</h2><p>The website team will review your feedback. We’ll put any questions and results in Updates.</p><p class="fs-muted">This demo saves feedback on this device. Email delivery is simulated.</p><div class="fs-actions"><button class="fs-button" data-wq="keep-working">Keep working</button><button class="fs-button fs-primary" data-wq="close-dialog">View feedback</button></div>',{floating:true});if(!r.duplicate)celebrateSubmission();}
     schedulePreparation(r.item.id);
     return r.item;
   }
@@ -7736,8 +7971,39 @@ if (typeof module==="object" && module.exports) module.exports = api;
       Promise.allSettled(animations.map(animation=>animation.finished)).then(cleanup);
     });
   }
-  function openComposer(){stopWatch();composer=root.FeedbackComposer.open({scenarioId,context:contextSnapshot(),feedback:scenario().feedback,draftKey:'winquote:'+scenarioId,selectionRoot:app.querySelector('[data-feedback-surface]')||app,onSubmit:payload=>submitPayload(payload),onClose:()=>{composer=null;}});}
-  function showModal(html){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;modal.innerHTML=html;if(!modal.open)modal.showModal();}
+  async function useComposer(options,mode){
+    stopWatch();
+    if(composer?.element?.isConnected && composer.draftKey!==options.draftKey){
+      if(!await composer.close())return;
+    }
+    // A native capture must start in this user gesture; gather waits for draft restoration internally.
+    composer=root.FeedbackComposer.open({...options,onClose:()=>{composer=null;}});
+    if(mode)void composer.gather(mode);
+    return composer;
+  }
+  function openComposer(mode){
+    const sourceScenario=clone(scenario()),id=scenarioId;
+    return useComposer({scenarioId:id,context:contextSnapshot(),feedback:sourceScenario.feedback,draftKey:'winquote:'+id,selectionRoot:()=>app.querySelector('[data-feedback-surface]')||app,getContext:()=>scenarioId===id&&page==='site'?contextSnapshot():null,onSubmit:payload=>submitPayload(payload,false,sourceScenario)},mode);
+  }
+  function openUpdateComposer(action,note=''){
+    if(historyVersion||walkCursor!==null)throw Error('Return to the current version before adding feedback.');
+    const id=rendered.ticketId,rev=rendered.rev,sequence=rendered.sequence,author=actor;
+    const correction=action==='correct-understanding';
+    return useComposer({scenarioId:scenarioId,title:correction?'Correct our understanding':'What needs to change?',description:'Your note and attachments stay with '+id+' · V'+rev+'. The website team will review them.',label:'Your note',submitLabel:'Send to the team',showTiming:false,allowSelection:false,feedback:note,draftKey:action+':'+id+':V'+rev+':'+sequence,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
+      const fresh=read(),original=S.get(fresh,id);
+      if(!original)throw Error('This feedback is unavailable. Your draft has been kept.');
+      recordScene(original);
+      const message=payload.text||'Please review the attached feedback evidence.';
+      const evidence={attachments:payload.attachments,captureId:payload.captureId,context:payload.context};
+      // Bind to the ticket, version and role at compose time, never to the page now behind the panel.
+      const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor:author,value:correction?{text:message,...evidence}:{rev,reason:message,...evidence}});
+      r.item.ux.drafts={};persist(r.data);routeTicket(id);notice='Your update and materials are with the website team. Saved to '+id+'.';render();
+    }});
+  }
+  function showModal(html,{floating=false}={}){returnFocus=document.activeElement;returnFocusSelector=returnFocus?.dataset?.wq?'[data-wq="'+CSS.escape(returnFocus.dataset.wq)+'"]':null;if(modal.open)modal.close();modal.className='fs-dialog'+(floating?' fs-receipt-floating':'');modal.innerHTML=html;floating?modal.show():modal.showModal();}
+  function closeCaptureMenu(focus=false){const menu=app.querySelector('#feedback-context-menu'),trigger=app.querySelector('[data-wq=feedback-context-menu]');if(menu?.matches(':popover-open'))menu.hidePopover();trigger?.setAttribute('aria-expanded','false');if(focus)trigger?.focus();}
+  function openCaptureMenu(){const menu=app.querySelector('#feedback-context-menu'),trigger=app.querySelector('[data-wq=feedback-context-menu]');if(!menu||!trigger)return;if(menu.matches(':popover-open')){closeCaptureMenu(true);return;}const box=trigger.getBoundingClientRect();Object.assign(menu.style,{top:Math.round(box.bottom+8)+'px',right:Math.max(12,Math.round(innerWidth-box.right))+'px'});menu.showPopover();trigger.setAttribute('aria-expanded','true');menu.querySelector('button')?.focus();menu.ontoggle=()=>trigger.setAttribute('aria-expanded',String(menu.matches(':popover-open')));}
+  app.addEventListener('keydown',event=>{const menu=app.querySelector('#feedback-context-menu');if(event.target.closest('[data-wq=feedback-context-menu]')&&event.key==='ArrowDown'){event.preventDefault();openCaptureMenu();return;}if(!menu?.matches(':popover-open')||!menu.contains(event.target))return;if(event.key==='Escape'){event.preventDefault();closeCaptureMenu(true);return;}const buttons=[...menu.querySelectorAll('button')],index=buttons.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}else if(event.key==='Tab')closeCaptureMenu(false);});
   function restoreFocus(){const usable=el=>el?.isConnected&&el.matches('a[href],button,input,textarea,select,summary,[tabindex]')&&!el.disabled&&!el.closest('[inert]')&&el.getClientRects().length;const prior=usable(returnFocus)?returnFocus:null,matched=returnFocusSelector?app.querySelector(returnFocusSelector):null;const target=prior||(usable(matched)?matched:null)||app.querySelector('#feedback-main');target?.focus({preventScroll:true});}
   function closeModal(){if(modal.open)modal.close();resultState=null;restoreFocus();}
   modal.addEventListener('close',restoreFocus);
@@ -7835,6 +8101,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'open-update':{const ev=S.updates(data).find(x=>x.id===value);if(ev)return routeTicket(ev.ticketId,ev.id);break;}
       case 'start-scenario':return startScenario(value||'pdf');
       case 'open-composer':return openComposer();
+      case 'feedback-context-menu':return openCaptureMenu();
+      case 'gather-context':closeCaptureMenu();return openComposer(value);
       case 'resume':if(current())return routeTicket(current().id);return startScenario(scenarioId);
       case 'open-console':saveDraft();consoleState.open=true;break;
       case 'close-console':saveDraft();consoleState.open=false;break;
@@ -7868,7 +8136,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'legacy-accept':return apply('accept',{rev:rendered.rev});
       case 'legacy-authorize':return apply('authorize',{rev:rendered.rev});
       case 'legacy-publish':return apply('publish',{rev:rendered.rev});
-      case 'legacy-adjust':{const reason=field('reason').trim();if(!reason){showModal('<h2>What needs to change?</h2><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="legacy-adjust">Send to the team</button></div>');return;}const result=apply('adjust',{rev:rendered.rev,reason});closeModal();return result;}
+      case 'legacy-adjust':return openUpdateComposer('adjust');
       case 'keep-working':closeModal();return go('site');
       case 'close-dialog':return closeModal();
       case 'site-select-compartment':site.compartment=value;site.title=value==='1'?'Cooler':'Freezer';break;
@@ -7886,14 +8154,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
       case 'confirm-scope':return apply('confirm-scope',formScope());
       case 'edit-candidate':{if(!app.querySelector('[name=approach]')&&(!modal.open||!modal.querySelector('[name=approach]'))){const scope=current().c.reviewFlow.candidateDraft||current().c.reviewFlow.scope;showModal('<h2>Edit version '+current().c.rev+'</h2><p>Editing this candidate clears its prepared result. Prepare it again before sending.</p><label class="fs-field">Proposed behavior<textarea name="approach" rows="5">'+esc(scope.approach)+'</textarea></label><label class="fs-field">Acceptance checks<textarea name="checks" rows="5">'+esc(scope.checks)+'</textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="edit-candidate">Save draft</button></div>');return;}const updated=apply('edit-candidate',{approach:field('approach'),checks:field('checks')});if(modal.open)closeModal();return updated;}
       case 'prepare-result':if(app.querySelector('[name=approach]'))apply('edit-candidate',{approach:field('approach'),checks:field('checks')},{quiet:true});return apply('prepare-result');
-      case 'adjust':case 'request-release-changes':case 'correct-understanding':{const reason=field('reason').trim();if(!reason){showModal('<h2>'+esc(action==='correct-understanding'?'Correct our understanding':'What needs to change?')+'</h2><p>Tell the team what is missing. Your note stays with this feedback.</p><label class="fs-field">Your note<textarea name="reason" rows="4" maxlength="6000" autofocus></textarea></label><div class="fs-actions"><button class="fs-button" data-wq="close-dialog">Cancel</button><button class="fs-button fs-primary" data-wq="'+action+'">Send to the team</button><button class="fs-button" data-wq="adjustment-media" data-value="'+action+'">Add image or recording</button></div>');return;}const v=action==='correct-understanding'?{text:reason}:{rev:rendered.rev,reason};const result=apply(action,v);closeModal();return result;}
-      case 'adjustment-media':{
-        const note=field('reason'),action=value,rev=rendered.rev,id=rendered.ticketId,sequence=rendered.sequence;
-        closeModal();composer=root.FeedbackComposer.open({title:'What needs to change?',description:'Add a note, image or recording for the website team. It will stay with this version.',label:'Your adjustment',submitLabel:'Send adjustment',showTiming:false,allowSelection:false,feedback:note,draftKey:'adjust:'+id+':V'+rev,context:{page:scenario().target,ticket:id,revision:rev},onSubmit:async payload=>{
-          if(action==='correct-understanding'){const result=apply(action,{text:payload.text||'Please review the attached adjustment evidence.'},{quiet:true});changeRecord(i=>{i.ux.correctionEvidence={rev,attachments:payload.attachments,context:payload.context};});render();return result;}
-          const fresh=read();recordScene(S.get(fresh,id));const r=S.commit(fresh,id,{expectedSequence:sequence,action,actor,value:{rev,reason:payload.text||'Please review the attached adjustment evidence.',attachments:payload.attachments,captureId:payload.captureId,context:payload.context}});r.item.ux.drafts={};persist(r.data);savePresentation();notice='Your adjustment and materials are with the website team.';render();
-        },onClose:()=>{composer=null;}});return;
-      }
+      case 'adjust':case 'request-release-changes':case 'correct-understanding':return openUpdateComposer(action);
+      case 'adjustment-media':{const note=field('reason');closeModal();return openUpdateComposer(value,note);}
       case 'accept':case 'authorize':case 'publish':case 'retry-publish':return apply(action,{rev:current().c.rev});
       case 'publish-failed':return apply(action,{rev:current().c.rev,reason:'The simulated release attempt did not complete. The approved version is unchanged.'});
       case 'open-result':if(value)historyVersion=Number(value);return openResult();
