@@ -409,3 +409,71 @@ test('attention distinguishes tasks on one ticket from unread FYI on another wit
   assert.equal(S.attention(read).hasUnreadFyi,false);
   assert.equal(read.feedbackExperience.clients,undefined);
 });
+
+test('walk scene compaction preserves exact historical JSON, scene metadata and canonical versions',()=>{
+  const {data,item}=review('refrigeration'),canonical=JSON.stringify(item.c);
+  const historical=clone(item.c);historical.rev=7;historical.reviewFlow.scope={approach:'Historical plan unrelated to the current revision',checks:'Historical acceptance basis'};
+  historical.versions=[{rev:7,answers:{Q1:'Past answer',Q2:['A','B']},evidence:{question:'Historical question',basis:['One','Two']}}];
+  const scenes=[{sequence:3,at:'2026-01-01',role:'Requester',label:'Earlier facts',c:historical,ux:{answers:['Past answer'],context:{quote:'OLDER-QUOTE'},note:''}},{sequence:4,at:null,role:'Website team',label:'Current facts',c:clone(item.c),ux:{context:clone(item.ux.context),attachments:[]}}];
+  const expected=scenes.map(scene=>JSON.stringify({c:scene.c,ux:scene.ux}));item.ux.walk.scenes=clone(scenes);
+  const beforeOther=clone({...item,ux:{...item.ux,walk:undefined}});
+  assert.equal(S.compactWalkScenes(data),data);
+  assert.equal(item.ux.walk.scenePool.schema,1);assert.ok(item.ux.walk.scenePool.nodes.length);
+  assert.equal(item.ux.walk.scenes.length,2);
+  for(let index=0;index<2;index++){
+    const scene=item.ux.walk.scenes[index];assert.equal(scene.c,undefined);assert.equal(scene.ux,undefined);
+    assert.deepEqual(Object.fromEntries(Object.entries(scene).filter(([key])=>!['caseRef','uxRef'].includes(key))),Object.fromEntries(Object.entries(scenes[index]).filter(([key])=>!['c','ux'].includes(key))));
+    assert.equal(JSON.stringify(S.sceneSnapshot(item,scene)),expected[index]);
+  }
+  assert.equal(JSON.stringify(item.c),canonical);assert.deepEqual(clone({...item,ux:{...item.ux,walk:undefined}}),beforeOther);
+  const first=S.sceneSnapshot(item,item.ux.walk.scenes[0]);first.c.versions[0].answers.Q1='Edited return';
+  assert.equal(JSON.stringify(S.sceneSnapshot(item,item.ux.walk.scenes[0])),expected[0],'Decoded views cannot mutate the pooled evidence.');
+});
+
+test('appending a plain scene repacks all snapshots losslessly and a packed-only pass is a no-op',()=>{
+  const {data,item}=review();const base=clone(item.c),ux={context:clone(item.ux.context),answers:{Q1:'Keep editing'}};
+  item.ux.walk.scenes=[{sequence:1,c:base,ux}];S.compactWalkScenes(data);
+  const original=JSON.stringify(S.sceneSnapshot(item,item.ux.walk.scenes[0])),poolBefore=JSON.stringify(item.ux.walk.scenePool),nodeCount=item.ux.walk.scenePool.nodes.length;
+  S.compactWalkScenes(data);assert.equal(JSON.stringify(item.ux.walk.scenePool),poolBefore);
+  item.ux.walk.scenes.push({sequence:2,role:'Site owner',c:{...clone(base),receipt:{rev:base.rev,simulated:true}},ux:clone(ux)});
+  const nextExpected=JSON.stringify({c:item.ux.walk.scenes[1].c,ux});S.compactWalkScenes(data);
+  assert.equal(JSON.stringify(S.sceneSnapshot(item,item.ux.walk.scenes[0])),original);
+  assert.equal(JSON.stringify(S.sceneSnapshot(item,item.ux.walk.scenes[1])),nextExpected);
+  assert.ok(item.ux.walk.scenePool.nodes.length<nodeCount+15,'Appending a tiny receipt should reuse the existing case/version/basis subtrees.');
+  const restored=S.migrate(JSON.parse(JSON.stringify(data))),restoredItem=S.get(restored,item.id);
+  assert.equal(JSON.stringify(S.sceneSnapshot(restoredItem,restoredItem.ux.walk.scenes[0])),original);
+  assert.equal(JSON.stringify(S.sceneSnapshot(restoredItem,restoredItem.ux.walk.scenes[1])),nextExpected);
+});
+
+test('plain, partial and marker-shaped snapshots retain their own facts without filling historical gaps',()=>{
+  const data={items:[{c:{rev:99,versions:[{rev:99,answer:'Must not leak'}]},ux:{walk:{scenes:[{sequence:1,label:'Gap'},{sequence:2,c:{rev:1,answers:[]}}, {sequence:3,ux:{answer:null}},{sequence:4,c:JSON.parse('{"$ref":12,"caseRef":7,"__proto__":{"answer":"own data"},"schema":1,"nodes":[[0,"literal"]]}'),ux:{optional:undefined,list:[undefined,''],flag:false}}]}}}]};
+  const item=data.items[0],canonical=JSON.stringify(item.c),scenes=clone(item.ux.walk.scenes),expected=scenes.map(scene=>JSON.stringify(Object.fromEntries(Object.entries(scene).filter(([key])=>['c','ux'].includes(key)))));
+  assert.deepEqual(S.sceneSnapshot(item,item.ux.walk.scenes[0]),{});
+  S.compactWalkScenes(data);
+  assert.deepEqual(item.ux.walk.scenes[0],scenes[0]);
+  item.ux.walk.scenes.forEach((scene,index)=>assert.equal(JSON.stringify(S.sceneSnapshot(item,scene)),expected[index]));
+  assert.equal(JSON.stringify(item.c),canonical);assert.equal({}.answer,undefined);
+});
+
+test('unknown or corrupt snapshot pools fail closed and compaction preserves all original evidence atomically',()=>{
+  const pools=[{schema:2,nodes:[]},{schema:1,nodes:[[9,'future']]},{schema:1,nodes:[[1,[0]]]},{schema:1,nodes:[[2,[['x',9]]]]},{schema:1,nodes:[[0,'safe'],[2,[['duplicate',0],['duplicate',0]]]]}];
+  for(const pool of pools){
+    const item={c:{rev:2},ux:{walk:{scenePool:clone(pool),scenes:[{sequence:1,caseRef:0},{sequence:2,c:{rev:2},ux:{evidence:'Keep me'}}]}}},data={items:[item]},before=JSON.stringify(data);
+    assert.throws(()=>S.sceneSnapshot(item,item.ux.walk.scenes[0]),/snapshot|walkthrough/);
+    S.compactWalkScenes(data);assert.equal(JSON.stringify(data),before);
+  }
+  const item={ux:{walk:{scenes:[{sequence:1,caseRef:9},{sequence:2,c:{evidence:'Keep raw'}}]}}},data={items:[item]},before=JSON.stringify(data);
+  assert.throws(()=>S.sceneSnapshot(item,item.ux.walk.scenes[0]),/pool is missing/);S.compactWalkScenes(data);assert.equal(JSON.stringify(data),before);
+});
+
+test('shared scene pool reduces repeated long answers while preserving every scene and version basis',()=>{
+  const {data,item}=review('refrigeration'),answer='Saved quote and customer PDF must show the same refrigeration decision. '.repeat(42);
+  const q1={id:'Q1',questions:Array.from({length:8},(_,i)=>({id:'q'+i,text:'Question '+i,answer:answer+i})),answers:{first:answer}},q2={id:'Q2',questions:[{id:'followup-1',answer:'Restore previous equipment'},{id:'followup-2',answer}],answers:{last:answer}};
+  item.c.reviewFlow.questionRounds=[q1,q2];item.c.versions=[{rev:1,reviewFlow:{questionRounds:[clone(q1)]},basis:{answers:clone(q1.answers)}},{rev:2,reviewFlow:{questionRounds:clone([q1,q2])},basis:{answers:clone(q2.answers)}}];
+  item.ux.walk.scenes=Array.from({length:12},(_,index)=>({sequence:index+1,label:'Snapshot '+index,c:{...clone(item.c),rev:index<6?1:2},ux:{context:clone(item.ux.context),answers:clone(index<6?q1.answers:q2.answers)}}));
+  const expected=item.ux.walk.scenes.map(scene=>JSON.stringify({c:scene.c,ux:scene.ux})),canonical=JSON.stringify(item.c),before=JSON.stringify(data).length;
+  S.compactWalkScenes(data);const after=JSON.stringify(data).length;
+  assert.equal(item.ux.walk.scenes.length,12);assert.ok(after<before*.25,`${before} -> ${after} should remove repeated snapshot subtrees`);
+  item.ux.walk.scenes.forEach((scene,index)=>assert.equal(JSON.stringify(S.sceneSnapshot(item,scene)),expected[index]));
+  assert.equal(JSON.stringify(item.c),canonical);
+});

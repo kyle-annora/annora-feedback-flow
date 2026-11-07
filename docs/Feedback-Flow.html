@@ -6853,6 +6853,92 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const event=metadataEvent(item,'delay','The next update is delayed',now(next),eventKey);event.expectedAt=promised;event.reason=reason;
     item.ux.events=[...(item.ux.events||[]),event];return {data:next,item,event,duplicate:false};
   }
+  // Walkthrough snapshots are presentation evidence. Intern repeated JSON subtrees
+  // without changing canonical cases or replacing historical facts with today's data.
+  const owns=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
+  function sceneDecoder(pool){
+    if(!pool)fail('The walkthrough snapshot pool is missing. Its saved evidence is unchanged.');
+    if(pool.schema!==1||!Array.isArray(pool.nodes))fail('This walkthrough uses an unsupported snapshot encoding. Its saved evidence is unchanged.');
+    const memo=new Map(),active=new Set(),nodes=pool.nodes;
+    const decode=id=>{
+      if(!Number.isSafeInteger(id)||id<0||id>=nodes.length)fail('A walkthrough snapshot reference is invalid. Its saved evidence is unchanged.');
+      if(memo.has(id))return memo.get(id);
+      if(active.has(id))fail('A walkthrough snapshot contains a circular reference. Its saved evidence is unchanged.');
+      const node=nodes[id];
+      if(!Array.isArray(node)||node.length!==2)fail('A walkthrough snapshot node is invalid. Its saved evidence is unchanged.');
+      active.add(id);let result;
+      if(node[0]===0){
+        const value=node[1];
+        if(value!==null&&!['string','boolean','number'].includes(typeof value)||typeof value==='number'&&!Number.isFinite(value))fail('A walkthrough snapshot primitive is invalid. Its saved evidence is unchanged.');
+        result=value;
+      }else if(node[0]===1){
+        if(!Array.isArray(node[1]))fail('A walkthrough snapshot array is invalid. Its saved evidence is unchanged.');
+        result=node[1].map(decode);
+      }else if(node[0]===2){
+        if(!Array.isArray(node[1]))fail('A walkthrough snapshot object is invalid. Its saved evidence is unchanged.');
+        result={};const keys=new Set();
+        for(const entry of node[1]){
+          if(!Array.isArray(entry)||entry.length!==2||typeof entry[0]!=='string'||keys.has(entry[0]))fail('A walkthrough snapshot property is invalid. Its saved evidence is unchanged.');
+          keys.add(entry[0]);Object.defineProperty(result,entry[0],{value:decode(entry[1]),enumerable:true,writable:true,configurable:true});
+        }
+      }else fail('This walkthrough uses an unsupported snapshot node. Its saved evidence is unchanged.');
+      active.delete(id);memo.set(id,result);return result;
+    };
+    // Unknown nodes cannot be silently discarded by a later compaction.
+    nodes.forEach((_,id)=>decode(id));return decode;
+  }
+  function readScene(scene,decode){
+    if(!scene||typeof scene!=='object'||Array.isArray(scene))fail('A walkthrough scene is invalid. Its saved evidence is unchanged.');
+    const result={};
+    for(const [key,ref] of [['c','caseRef'],['ux','uxRef']]){
+      if(owns(scene,key))result[key]=scene[key];
+      else if(owns(scene,ref)){if(!decode)fail('The walkthrough snapshot pool is missing. Its saved evidence is unchanged.');result[key]=decode(scene[ref]);}
+    }
+    return result;
+  }
+  function sceneSnapshot(item,scene){
+    const needsPool=scene&&(['caseRef','uxRef'].some(ref=>owns(scene,ref)));
+    return clone(readScene(scene,needsPool?sceneDecoder(item?.ux?.walk?.scenePool):null));
+  }
+  /** Lossless, atomic per item. Invalid/unknown encodings are left untouched. */
+  function compactWalkScenes(data){
+    for(const item of data?.items||[]){
+      const walk=item?.ux?.walk,scenes=walk?.scenes;
+      if(!Array.isArray(scenes)||!scenes.some(scene=>scene&&typeof scene==='object'&&(owns(scene,'c')||owns(scene,'ux'))))continue;
+      try{
+        const decode=walk.scenePool===undefined?null:sceneDecoder(walk.scenePool);
+        const nodes=[],interned=new Map(),visiting=new Set(),objectIds=new WeakMap();
+        const intern=value=>{
+          if(value&&typeof value==='object'&&objectIds.has(value))return objectIds.get(value);
+          let node;
+          if(value===null||['string','boolean','number'].includes(typeof value)){
+            if(typeof value==='number'&&!Number.isFinite(value))fail('Unsupported non-JSON snapshot number.');
+            node=[0,value];
+          }else if(value&&typeof value==='object'){
+            if(visiting.has(value))fail('Unsupported circular walkthrough snapshot.');
+            visiting.add(value);
+            if(Array.isArray(value))node=[1,value.map(intern)];
+            else {if(Object.prototype.toString.call(value)!=='[object Object]')fail('Unsupported non-JSON walkthrough snapshot.');node=[2,Object.keys(value).map(key=>[key,intern(value[key])])];}
+            visiting.delete(value);
+          }else fail('Unsupported non-JSON walkthrough snapshot.');
+          // Child IDs uniquely identify their exact JSON values. Object key order
+          // is part of the signature, preserving byte-identical JSON round trips.
+          const signature=JSON.stringify(node);
+          const existing=interned.get(signature);
+          if(existing!==undefined){if(value&&typeof value==='object')objectIds.set(value,existing);return existing;}
+          const id=nodes.length;nodes.push(node);interned.set(signature,id);if(value&&typeof value==='object')objectIds.set(value,id);return id;
+        };
+        const packed=scenes.map(scene=>{
+          // Match existing JSON persistence semantics for optional undefined fields.
+          const snapshot=clone(readScene(scene,decode)),next={...scene};
+          for(const [key,ref] of [['c','caseRef'],['ux','uxRef']])if(owns(snapshot,key)){next[ref]=intern(snapshot[key]);delete next[key];}
+          return next;
+        });
+        walk.scenes=packed;walk.scenePool={schema:1,nodes};
+      }catch{/* Preserve every original scene and its pool until it can be understood. */}
+    }
+    return data;
+  }
   /** Presentation state may contain read-only scene snapshots. It cannot overwrite item.c. */
   function saveWalk(data,id,patch={}){
     const {next,item}=metadataItem(data,id);
@@ -6870,7 +6956,7 @@ if (typeof module==="object" && module.exports) module.exports = api;
     const value=P.preparation(item,stage);item.ux.preparation={...value,at:now(next)};
     return {data:next,item,preparation:clone(item.ux.preparation)};
   }
-  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,attention,setExpectation,recordDelay,saveWalk,preparation};
+  const api={key,client,migrate,get,customerItems,now,status,add,commit,updates,resolve,markRead,advance,visit,digest,attention,setExpectation,recordDelay,saveWalk,preparation,compactWalkScenes,sceneSnapshot};
   root.FeedbackStore=api;if(common)module.exports=api;
 })(globalThis);
 
@@ -8402,7 +8488,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
   }
   function presentationVM(item){
     const scenes=item?.ux?.walk?.scenes||[],snap=walkCursor===null?null:scenes[walkCursor];
-    const display=snap?{...item,c:snap.c,ux:clone(snap.ux||{})}:item;
+    const saved=snap?S.sceneSnapshot(item,snap):null;
+    const display=saved?{...item,c:saved.c,ux:clone(saved.ux||{})}:item;
     const presentation=display?P.describe(display,{rev:historyVersion||undefined,actor}):null;
     if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[],...(presentation.corrections||[]).flatMap(c=>c.evidence?.attachments||[])]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
     return {presentation,walkHistory:{active:!!snap,index:snap?walkCursor:scenes.length,total:scenes.length,canBack:scenes.length>0&&(walkCursor===null||walkCursor>0),canForward:!!snap,label:snap?.label||'Current task',why:presentation?.why?.text||''}};
@@ -8419,7 +8506,8 @@ if (typeof module==="object" && module.exports) module.exports = api;
   function initialSite(){return {compartment:'1',title:'Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
   function persist(next){
     if(brokenStorage)throw Error('The existing saved data needs recovery before it can be changed.');
-    localStorage.setItem(S.key,JSON.stringify(next));data=next;
+    const packed=S.compactWalkScenes(next);
+    localStorage.setItem(S.key,JSON.stringify(packed));data=packed;
   }
   function syncUI(){
     const next=read();if(brokenStorage)return;

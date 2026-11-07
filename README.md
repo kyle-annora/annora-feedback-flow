@@ -74,7 +74,6 @@ The approved Source Serif Pro headings, Inter body and original WinQuote mark ar
 
 Open the single bottom-right Feedback entry, then Describe the problem. Capture context, Add image and Record voice sit next to the text field, separate from Send. Minimize retains the draft and local files; Back to Feedback saves it while returning to tasks and updates. Expand changes only the presentation size. Escape minimizes and returns focus to the entry. Mobile uses a full-height surface, with the host page available again after minimizing.
 
-Correct our understanding and Request changes use this same panel. Their submission is bound to the original ticket, role, version and sequence. Navigating elsewhere cannot redirect the update. A stale version fails safely with the draft intact. Discard draft requires an explicit confirmation, removes only that local draft and frees the entry for a new report; it never changes the submitted ticket or its versions. Correction evidence is saved with its scope revision and included in later submitted snapshots; historical versions keep their original evidence.
 
 ## Reading clarification history
 
@@ -89,3 +88,5 @@ The host renders one bottom-right launcher; it does not add Feedback to its busi
 `FeedbackView.renderHub(vm)` wraps the existing task and inspector. Compact, full-page and minimized are shell states, not case transitions. The original `render(vm)` and explicit legacy walkthrough URLs remain available. Full-page means an in-app workspace, not the browser Fullscreen API. On phones the compact surface uses a full-height sheet.
 
 New report drafts bind scenario, quote, compartment and source section. Additional notes bind their original ticket, version, sequence and author; a stale submit is rejected and its draft retained. Matching legacy drafts are migrated without deleting their source record, and a migration receipt prevents old drafts from reappearing after submission. Page selection targets only the host business surface.
+
+Walkthrough presentation snapshots use a lossless shared-node pool so repeated long questions, answers and version copies do not exhaust local storage during acceptance and release. Existing plain snapshots are upgraded when saved. Canonical cases and submitted versions retain their original structure and exact content; this is storage deduplication only, with no new business state or reconstructed evidence.

@@ -67,7 +67,8 @@
   }
   function presentationVM(item){
     const scenes=item?.ux?.walk?.scenes||[],snap=walkCursor===null?null:scenes[walkCursor];
-    const display=snap?{...item,c:snap.c,ux:clone(snap.ux||{})}:item;
+    const saved=snap?S.sceneSnapshot(item,snap):null;
+    const display=saved?{...item,c:saved.c,ux:clone(saved.ux||{})}:item;
     const presentation=display?P.describe(display,{rev:historyVersion||undefined,actor}):null;
     if(presentation){for(const attachment of [...presentation.request?.attachments||[],...presentation.adjustmentEvidence?.attachments||[],...(presentation.corrections||[]).flatMap(c=>c.evidence?.attachments||[])]){const cached=mediaCache.get(attachment.id);if(cached?.url){attachment.blobUrl=cached.url;if(attachment.kind!=='audio')attachment.thumbnailUrl=cached.url;}}}
     return {presentation,walkHistory:{active:!!snap,index:snap?walkCursor:scenes.length,total:scenes.length,canBack:scenes.length>0&&(walkCursor===null||walkCursor>0),canForward:!!snap,label:snap?.label||'Current task',why:presentation?.why?.text||''}};
@@ -84,7 +85,8 @@
   function initialSite(){return {compartment:'1',title:'Cooler',section:'make-pdf',noRefrigeration:false,savedNoRefrigeration:false,equipment:'Medium-temperature refrigeration',cost:2400,pdfGenerated:false,notice:''};}
   function persist(next){
     if(brokenStorage)throw Error('The existing saved data needs recovery before it can be changed.');
-    localStorage.setItem(S.key,JSON.stringify(next));data=next;
+    const packed=S.compactWalkScenes(next);
+    localStorage.setItem(S.key,JSON.stringify(packed));data=packed;
   }
   function syncUI(){
     const next=read();if(brokenStorage)return;

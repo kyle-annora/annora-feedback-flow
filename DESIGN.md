@@ -265,6 +265,8 @@ Show the latest requester answer once, followed by its proposed behavior and acc
 
 ## Floating feedback composer · November 6 approved correction
 
+The later Persistent Feedback hub decision below supersedes the entry placement and mobile sizing in this historical section.
+
 This section supersedes earlier modal/fullscreen capture descriptions for the current customer workspace. Legacy story URLs remain unchanged. The user approved one top-right split entry on the source business page: icon plus Feedback opens the draft; the icon-only chevron gathers context. Existing ticket correction and adjustment actions open the same composer and retain ticket/version identity.
 
 Keep the approved Cycle workspace and Attio type roles (Refero style 9f0c028b-6b11-415e-ab92-f32e4597cbe2); borrow only the attachment-next-to-input separation from Missive (Refero screen 42cdc92f-9db1-41d0-8b2e-320cd4f16b37). The floating panel is the user's explicit interaction decision. Use a 26px Source Serif Pro title, 13–14px Inter input/body, neutral text, 6px controls and a single navy Send footer. The panel has a soft offset shadow and 12px radius to distinguish its movable layer from the flat workspace.
